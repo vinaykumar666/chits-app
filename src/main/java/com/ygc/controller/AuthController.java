@@ -3,7 +3,9 @@ package com.ygc.controller;
 import com.ygc.model.User;
 import com.ygc.repository.UserRepository;
 import com.ygc.service.UserService;
+import com.ygc.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
@@ -13,29 +15,57 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LoggingUtil loggingUtil;
 
     @GetMapping("/")
     public String home(Authentication auth) {
-        if (auth != null && auth.isAuthenticated()) return "redirect:/dashboard";
-        return "redirect:/login";
+        try {
+            if (auth != null && auth.isAuthenticated()) {
+                loggingUtil.debug("Authenticated user redirecting to dashboard", "AuthController.home");
+                return "redirect:/dashboard";
+            }
+            loggingUtil.debug("Unauthenticated user redirecting to login", "AuthController.home");
+            return "redirect:/login";
+        } catch (Exception e) {
+            loggingUtil.error("Error in home endpoint", "AuthController.home", e);
+            return "redirect:/login";
+        }
     }
 
     @GetMapping("/login")
     public String loginPage(@RequestParam(required = false) String error,
                             @RequestParam(required = false) String logout,
                             Model model) {
-        if (error != null) model.addAttribute("error", "Invalid email or password");
-        if (logout != null) model.addAttribute("message", "Logged out successfully");
-        return "login";
+        try {
+            if (error != null) {
+                loggingUtil.warn("Login error parameter present", "AuthController.loginPage");
+                model.addAttribute("error", "Invalid email or password");
+            }
+            if (logout != null) {
+                loggingUtil.info("User logged out", "AuthController.loginPage");
+                model.addAttribute("message", "Logged out successfully");
+            }
+            return "login";
+        } catch (Exception e) {
+            loggingUtil.error("Error in login page", "AuthController.loginPage", e);
+            return "login";
+        }
     }
 
     @GetMapping("/register")
     public String registerPage() {
-        return "register";
+        try {
+            loggingUtil.debug("Register page accessed", "AuthController.registerPage");
+            return "register";
+        } catch (Exception e) {
+            loggingUtil.error("Error loading register page", "AuthController.registerPage", e);
+            return "register";
+        }
     }
 
     @PostMapping("/register")
@@ -45,11 +75,16 @@ public class AuthController {
                            @RequestParam String address,
                            RedirectAttributes redirectAttributes) {
         try {
+            loggingUtil.debug("User registration request for email: " + email, "AuthController.register");
+
             userService.registerUser(email, fullName, phone, address);
+
+            loggingUtil.info("User registration successful for email: " + email, "AuthController.register");
             redirectAttributes.addFlashAttribute("success",
                     "Registration successful! Check your email for temporary password.");
             return "redirect:/login";
         } catch (Exception e) {
+            loggingUtil.error("User registration failed", "AuthController.register", e);
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/register";
         }
@@ -57,16 +92,44 @@ public class AuthController {
 
     @GetMapping("/dashboard")
     public String dashboard(Authentication auth, Model model) {
-        User user = userRepository.findByEmail(auth.getName()).orElseThrow();
-        if (user.isFirstLogin()) return "redirect:/change-password";
-        model.addAttribute("user", user);
-        if (user.getRole() == User.Role.ADMIN) return "redirect:/admin/dashboard";
-        return "redirect:/member/dashboard";
+        try {
+            loggingUtil.debug("Dashboard access attempt for user: " + auth.getName(), "AuthController.dashboard");
+
+            User user = userRepository.findByEmail(auth.getName())
+                    .orElseThrow(() -> {
+                        loggingUtil.warn("User not found in database: " + auth.getName(), "AuthController.dashboard");
+                        return new RuntimeException("User not found");
+                    });
+
+            if (user.isFirstLogin()) {
+                loggingUtil.info("First time login, redirecting to change password for user: " + auth.getName(), "AuthController.dashboard");
+                return "redirect:/change-password";
+            }
+
+            model.addAttribute("user", user);
+
+            if (user.getRole() == User.Role.ADMIN) {
+                loggingUtil.userAction(auth.getName(), "DASHBOARD_ACCESS_ADMIN", "AuthController.dashboard");
+                return "redirect:/admin/dashboard";
+            }
+
+            loggingUtil.userAction(auth.getName(), "DASHBOARD_ACCESS_MEMBER", "AuthController.dashboard");
+            return "redirect:/member/dashboard";
+        } catch (Exception e) {
+            loggingUtil.error("Error accessing dashboard", "AuthController.dashboard", e);
+            return "redirect:/login?error=session_error";
+        }
     }
 
     @GetMapping("/change-password")
     public String changePasswordPage() {
-        return "change-password";
+        try {
+            loggingUtil.debug("Change password page accessed", "AuthController.changePasswordPage");
+            return "change-password";
+        } catch (Exception e) {
+            loggingUtil.error("Error loading change password page", "AuthController.changePasswordPage", e);
+            return "change-password";
+        }
     }
 
     @PostMapping("/change-password")
@@ -74,13 +137,30 @@ public class AuthController {
                                  @RequestParam String confirmPassword,
                                  Authentication auth,
                                  RedirectAttributes redirectAttributes) {
-        if (!newPassword.equals(confirmPassword)) {
-            redirectAttributes.addFlashAttribute("error", "Passwords do not match");
+        try {
+            loggingUtil.debug("Password change request for user: " + auth.getName(), "AuthController.changePassword");
+
+            if (!newPassword.equals(confirmPassword)) {
+                loggingUtil.validationError("password_confirmation", "Passwords do not match", "AuthController.changePassword");
+                redirectAttributes.addFlashAttribute("error", "Passwords do not match");
+                return "redirect:/change-password";
+            }
+
+            User user = userRepository.findByEmail(auth.getName())
+                    .orElseThrow(() -> {
+                        loggingUtil.warn("User not found: " + auth.getName(), "AuthController.changePassword");
+                        return new RuntimeException("User not found");
+                    });
+
+            userService.changePassword(user, newPassword);
+
+            loggingUtil.info("Password changed successfully for user: " + auth.getName(), "AuthController.changePassword");
+            redirectAttributes.addFlashAttribute("success", "Password changed. Please login again.");
+            return "redirect:/login?logout";
+        } catch (Exception e) {
+            loggingUtil.error("Error changing password", "AuthController.changePassword", e);
+            redirectAttributes.addFlashAttribute("error", "Error changing password: " + e.getMessage());
             return "redirect:/change-password";
         }
-        User user = userRepository.findByEmail(auth.getName()).orElseThrow();
-        userService.changePassword(user, newPassword);
-        redirectAttributes.addFlashAttribute("success", "Password changed. Please login again.");
-        return "redirect:/login?logout";
     }
 }
