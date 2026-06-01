@@ -3,174 +3,287 @@ package com.ygc.util;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /**
- * Utility class for consistent logging with exception handling across the application
- * Provides methods for different log levels with structured error handling
+ * Structured JSON logging utility.
+ *
+ * Output format:
+ *   event=methodName() {"key":"value", ...}
+ *
+ * Example:
+ *   event=submitPayment() {"membershipId":1,"monthNumber":2,"member":"user@ygc.com","status":"START"}
+ *   event=submitPayment() {"membershipId":1,"monthNumber":2,"daysLate":3,"fine":60,"status":"FINE_APPLIED"}
+ *   event=submitPayment() {"membershipId":1,"status":"SUCCESS"}
+ *   event=submitPayment() {"membershipId":1,"error":"Membership not found","status":"FAILED"}
  */
 @Component
 @Slf4j
 public class LoggingUtil {
 
+    // ─────────────────────────────────────────────────────────────────
+    // Core structured JSON builder
+    // ─────────────────────────────────────────────────────────────────
+
     /**
-     * Log debug information with context
+     * Build the log line: event=methodName() {"k1":"v1","k2":"v2"}
      */
+    private String build(String event, Map<String, Object> fields) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("event=").append(event).append("() {");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : fields.entrySet()) {
+            if (!first) sb.append(",");
+            sb.append("\"").append(entry.getKey()).append("\":");
+            Object val = entry.getValue();
+            if (val == null) {
+                sb.append("null");
+            } else if (val instanceof Number || val instanceof Boolean) {
+                sb.append(val);
+            } else {
+                // Escape quotes inside string values
+                sb.append("\"").append(val.toString().replace("\"", "'")).append("\"");
+            }
+            first = false;
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
+    /** Convenience: single key-value */
+    private String build(String event, String k1, Object v1) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put(k1, v1);
+        return build(event, m);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Transaction lifecycle
+    // ─────────────────────────────────────────────────────────────────
+
+    public void transactionStart(String method, String clazz) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("class", clazz);
+        m.put("status", "START");
+        log.info(build(method, m));
+    }
+
+    public void transactionComplete(String method, String clazz) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("class", clazz);
+        m.put("status", "SUCCESS");
+        log.info(build(method, m));
+    }
+
+    public void transactionFailed(String method, String clazz, Exception ex) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("class", clazz);
+        m.put("error", ex.getMessage());
+        m.put("status", "FAILED");
+        log.error(build(method, m), ex);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Method-level structured logging
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Log method entry with input values.
+     * Usage: loggingUtil.entry("submitPayment", "membershipId", membershipId, "monthNumber", monthNumber);
+     * Supports up to 5 key-value pairs (varargs in pairs).
+     */
+    public void entry(String method, Object... kvPairs) {
+        Map<String, Object> m = toMap("START", kvPairs);
+        log.debug(build(method, m));
+    }
+
+    /**
+     * Log method success with result values.
+     * Usage: loggingUtil.success("submitPayment", "paymentId", saved.getId());
+     */
+    public void success(String method, Object... kvPairs) {
+        Map<String, Object> m = toMap("SUCCESS", kvPairs);
+        log.info(build(method, m));
+    }
+
+    /**
+     * Log method failure with error.
+     * Usage: loggingUtil.failure("submitPayment", ex, "membershipId", membershipId);
+     */
+    public void failure(String method, Exception ex, Object... kvPairs) {
+        Map<String, Object> m = toMap("FAILED", kvPairs);
+        m.put("error", ex.getMessage());
+        log.error(build(method, m), ex);
+    }
+
+    /**
+     * Log a named business event mid-method (fine calculation, email sent, etc).
+     * Usage: loggingUtil.event("submitPayment", "LATE_FINE_APPLIED", "daysLate", 3, "fine", 60);
+     */
+    public void event(String method, String eventName, Object... kvPairs) {
+        Map<String, Object> m = toMap(eventName, kvPairs);
+        log.info(build(method, m));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Specialised structured log methods
+    // ─────────────────────────────────────────────────────────────────
+
+    /** DB operation: event=createChit() {"db_op":"INSERT","entity":"Chit","status":"DB"} */
+    public void db(String method, String operation, String entity) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("db_op", operation);
+        m.put("entity", entity);
+        m.put("status", "DB");
+        log.debug(build(method, m));
+    }
+
+    /** User action: event=dashboard() {"user":"admin@ygc.com","action":"DASHBOARD_ACCESS","status":"AUDIT"} */
+    public void audit(String method, String user, String action) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("user", user);
+        m.put("action", action);
+        m.put("status", "AUDIT");
+        log.info(build(method, m));
+    }
+
+    /** Security event: event=jwtFilter() {"event":"ACCESS_DENIED","detail":"...","status":"SECURITY"} */
+    public void security(String method, String secEvent, String detail) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("event", secEvent);
+        m.put("detail", detail);
+        m.put("status", "SECURITY");
+        log.warn(build(method, m));
+    }
+
+    /** Business rule violation: event=placeBid() {"rule":"BID_BELOW_MINIMUM","bid":100,"min":500,"status":"RULE_VIOLATION"} */
+    public void ruleViolation(String method, String rule, Object... kvPairs) {
+        Map<String, Object> m = toMap("RULE_VIOLATION", kvPairs);
+        m.put("rule", rule);
+        log.warn(build(method, m));
+    }
+
+    /** External service call: event=sendEmail() {"service":"JavaMailSender","op":"sendHtmlEmail","status":"EXT_CALL"} */
+    public void externalCall(String method, String service, String operation) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("service", service);
+        m.put("op", operation);
+        m.put("status", "EXT_CALL");
+        log.info(build(method, m));
+    }
+
+    /** Validation error: event=changePassword() {"field":"confirmPassword","error":"Passwords do not match","status":"VALIDATION_ERROR"} */
+    public void validationError(String method, String field, String error) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("field", field);
+        m.put("error", error);
+        m.put("status", "VALIDATION_ERROR");
+        log.warn(build(method, m));
+    }
+
+    /** Performance metric: event=getAllChits() {"durationMs":42,"status":"PERF"} */
+    public void perf(String method, long durationMs) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("durationMs", durationMs);
+        m.put("status", "PERF");
+        log.debug(build(method, m));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Legacy bridge methods — existing call sites still compile
+    // ─────────────────────────────────────────────────────────────────
+
     public void debug(String message, String context) {
-        log.debug("[{}] {}", context, message);
+        log.debug("event=debug() {\"ctx\":\"{}\",\"msg\":\"{}\"}", context, message);
     }
 
-    /**
-     * Log info with context
-     */
     public void info(String message, String context) {
-        log.info("[{}] {}", context, message);
+        log.info("event=info() {\"ctx\":\"{}\",\"msg\":\"{}\"}", context, message);
     }
 
-    /**
-     * Log warning with context
-     */
     public void warn(String message, String context) {
-        log.warn("[{}] {}", context, message);
+        log.warn("event=warn() {\"ctx\":\"{}\",\"msg\":\"{}\"}", context, message);
     }
 
-    /**
-     * Log error with context and exception
-     */
-    public void error(String message, String context, Exception exception) {
-        log.error("[{}] {}", context, message, exception);
+    public void error(String message, String context, Exception ex) {
+        log.error("event=error() {\"ctx\":\"{}\",\"msg\":\"{}\"}", context, message, ex);
     }
 
-    /**
-     * Log error with context only
-     */
     public void error(String message, String context) {
-        log.error("[{}] {}", context, message);
+        log.error("event=error() {\"ctx\":\"{}\",\"msg\":\"{}\"}", context, message);
     }
 
-    /**
-     * Log exception with full stack trace
-     */
-    public void logException(Exception exception, String context, String operation) {
-        log.error("[{}] Exception during {}: {}", context, operation, exception.getMessage(), exception);
+    public void logException(Exception ex, String context, String operation) {
+        log.error("event=exception() {\"ctx\":\"{}\",\"op\":\"{}\",\"error\":\"{}\"}", context, operation, ex.getMessage(), ex);
     }
 
-    /**
-     * Log method entry
-     */
-    public void methodEntry(String methodName, String context) {
-        log.debug("[{}] --> Entering method: {}", context, methodName);
+    public void methodEntry(String method, String context) {
+        log.debug("event={}() {\"ctx\":\"{}\",\"status\":\"START\"}", method, context);
     }
 
-    /**
-     * Log method exit
-     */
-    public void methodExit(String methodName, String context) {
-        log.debug("[{}] <-- Exiting method: {}", context, methodName);
+    public void methodExit(String method, String context) {
+        log.debug("event={}() {\"ctx\":\"{}\",\"status\":\"EXIT\"}", method, context);
     }
 
-    /**
-     * Log method execution with result
-     */
-    public void methodExecuted(String methodName, String context, String result) {
-        log.debug("[{}] Method: {} completed with result: {}", context, methodName, result);
+    public void methodExecuted(String method, String context, String result) {
+        log.debug("event={}() {\"ctx\":\"{}\",\"result\":\"{}\",\"status\":\"DONE\"}", method, context, result);
     }
 
-    /**
-     * Log transaction information
-     */
-    public void transactionStart(String transactionName, String context) {
-        log.info("[{}] --> Starting transaction: {}", context, transactionName);
+    public void userAction(String user, String action, String context) {
+        log.info("event=userAction() {\"ctx\":\"{}\",\"user\":\"{}\",\"action\":\"{}\",\"status\":\"AUDIT\"}", context, user, action);
     }
 
-    /**
-     * Log transaction completion
-     */
-    public void transactionComplete(String transactionName, String context) {
-        log.info("[{}] <-- Transaction completed: {}", context, transactionName);
-    }
-
-    /**
-     * Log transaction failure
-     */
-    public void transactionFailed(String transactionName, String context, Exception exception) {
-        log.error("[{}] Transaction FAILED: {} - {}", context, transactionName, exception.getMessage(), exception);
-    }
-
-    /**
-     * Log user action
-     */
-    public void userAction(String userId, String action, String context) {
-        log.info("[USER_ACTION][{}] {} performed action: {}", context, userId, action);
-    }
-
-    /**
-     * Log business rule violation
-     */
     public void businessRuleViolation(String rule, String context, String details) {
-        log.warn("[BUSINESS_RULE][{}] Violation: {} - {}", context, rule, details);
+        log.warn("event=ruleViolation() {\"ctx\":\"{}\",\"rule\":\"{}\",\"detail\":\"{}\",\"status\":\"RULE_VIOLATION\"}", context, rule, details);
     }
 
-    /**
-     * Log performance metric
-     */
-    public void performanceMetric(String operationName, long executionTimeMs, String context) {
-        log.debug("[PERFORMANCE][{}] Operation: {} completed in {} ms", context, operationName, executionTimeMs);
+    public void performanceMetric(String op, long ms, String context) {
+        log.debug("event={}() {\"ctx\":\"{}\",\"durationMs\":{},\"status\":\"PERF\"}", op, context, ms);
     }
 
-    /**
-     * Log database operation
-     */
-    public void databaseOperation(String operation, String entity, String context) {
-        log.debug("[DB_OPERATION][{}] {} on entity: {}", context, operation, entity);
+    public void databaseOperation(String op, String entity, String context) {
+        log.debug("event=dbOp() {\"ctx\":\"{}\",\"op\":\"{}\",\"entity\":\"{}\",\"status\":\"DB\"}", context, op, entity);
     }
 
-    /**
-     * Log security event
-     */
-    public void securityEvent(String event, String details, String context) {
-        log.warn("[SECURITY][{}] Event: {} - {}", context, event, details);
+    public void securityEvent(String secEvent, String details, String context) {
+        log.warn("event=security() {\"ctx\":\"{}\",\"event\":\"{}\",\"detail\":\"{}\",\"status\":\"SECURITY\"}", context, secEvent, details);
     }
 
-    /**
-     * Log API call
-     */
     public void apiCall(String method, String endpoint, String context) {
-        log.info("[API_CALL][{}] {} {}", context, method, endpoint);
+        log.info("event=apiCall() {\"ctx\":\"{}\",\"method\":\"{}\",\"endpoint\":\"{}\",\"status\":\"REQUEST\"}", context, method, endpoint);
     }
 
-    /**
-     * Log API response
-     */
-    public void apiResponse(String endpoint, int statusCode, String context) {
-        log.info("[API_RESPONSE][{}] {} - Status: {}", context, endpoint, statusCode);
+    public void apiResponse(String endpoint, int status, String context) {
+        log.info("event=apiResponse() {\"ctx\":\"{}\",\"endpoint\":\"{}\",\"httpStatus\":{},\"status\":\"RESPONSE\"}", context, endpoint, status);
     }
 
-    /**
-     * Log external service call
-     */
-    public void externalServiceCall(String serviceName, String operation, String context) {
-        log.info("[EXTERNAL_SERVICE][{}] --> Calling {} - {}", context, serviceName, operation);
+    public void externalServiceCall(String service, String op, String context) {
+        log.info("event=extCall() {\"ctx\":\"{}\",\"service\":\"{}\",\"op\":\"{}\",\"status\":\"EXT_CALL\"}", context, service, op);
     }
 
-    /**
-     * Log external service response
-     */
-    public void externalServiceResponse(String serviceName, boolean success, String context) {
-        String status = success ? "SUCCESS" : "FAILURE";
-        log.info("[EXTERNAL_SERVICE][{}] <-- {} response: {}", context, serviceName, status);
+    public void externalServiceResponse(String service, boolean success, String context) {
+        log.info("event=extResponse() {\"ctx\":\"{}\",\"service\":\"{}\",\"success\":{},\"status\":\"EXT_RESPONSE\"}", context, service, success);
     }
 
-    /**
-     * Log validation error
-     */
-    public void validationError(String field, String error, String context) {
-        log.warn("[VALIDATION][{}] Field: {} - {}", context, field, error);
+    public void cacheOperation(String op, String key, String context) {
+        log.debug("event=cache() {\"ctx\":\"{}\",\"op\":\"{}\",\"key\":\"{}\",\"status\":\"CACHE\"}", context, op, key);
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // Internal helper
+    // ─────────────────────────────────────────────────────────────────
+
     /**
-     * Log cache operation
+     * Convert vararg k/v pairs into an ordered map with a leading "status" key.
+     * kvPairs must be (String key, Object value) pairs — odd length is ignored.
      */
-    public void cacheOperation(String operation, String key, String context) {
-        log.debug("[CACHE][{}] {} - Key: {}", context, operation, key);
+    private Map<String, Object> toMap(String status, Object... kvPairs) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("status", status);
+        for (int i = 0; i + 1 < kvPairs.length; i += 2) {
+            m.put(String.valueOf(kvPairs[i]), kvPairs[i + 1]);
+        }
+        return m;
     }
 }
-

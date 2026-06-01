@@ -1,19 +1,15 @@
 package com.ygc.service;
 
-import com.itextpdf.io.image.ImageData;
-import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.ColorConstants;
+import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
-import com.itextpdf.layout.border.Border;
-import com.itextpdf.layout.border.SolidBorder;
+import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
-import com.itextpdf.layout.properties.VerticalAlignment;
 import com.ygc.model.Auction;
 import com.ygc.model.ChitMembership;
 import com.ygc.util.LoggingUtil;
@@ -48,7 +44,7 @@ public class PdfCertificateService {
             Paragraph header = new Paragraph("YGC INTERNAL")
                     .setFontSize(28)
                     .setBold()
-                    .setFontColor(ColorConstants.fromRgbPercent(0.2f, 0.4f, 0.8f))
+                    .setFontColor(new DeviceRgb(51, 102, 204))
                     .setTextAlignment(TextAlignment.CENTER);
             doc.add(header);
 
@@ -63,7 +59,7 @@ public class PdfCertificateService {
             borderTable.setWidth(500);
             borderTable.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
             Cell borderCell = new Cell();
-            borderCell.setBorder(new SolidBorder(ColorConstants.fromRgbPercent(0.2f, 0.4f, 0.8f), 3));
+            borderCell.setBorder(new SolidBorder(new DeviceRgb(51, 102, 204), 3));
             borderCell.setPadding(30);
 
             // Certificate content
@@ -88,7 +84,7 @@ public class PdfCertificateService {
                     .setFontSize(14)
                     .setBold()
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setFontColor(ColorConstants.fromRgbPercent(0.2f, 0.4f, 0.8f));
+                    .setFontColor(new DeviceRgb(51, 102, 204));
             borderCell.add(chitName);
 
             Paragraph details = new Paragraph("\nWinning Bid Amount: ₹" + auction.getWinningBidAmount() +

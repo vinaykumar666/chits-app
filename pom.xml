@@ -75,11 +75,21 @@
             <version>${jjwt.version}</version>
         </dependency>
 
-        <!-- PDF Generation -->
+        <!-- PDF Generation - iText 7 -->
         <dependency>
             <groupId>com.itextpdf</groupId>
-            <artifactId>itextpdf</artifactId>
-            <version>5.5.13.3</version>
+            <artifactId>kernel</artifactId>
+            <version>7.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>layout</artifactId>
+            <version>7.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>io</artifactId>
+            <version>7.2.5</version>
         </dependency>
 
         <!-- Lombok -->

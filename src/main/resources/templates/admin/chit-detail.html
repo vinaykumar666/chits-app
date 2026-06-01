@@ -100,28 +100,52 @@
         </div>
         <div class="card-body p-0">
             <table class="table table-hover mb-0">
-                <thead class="table-light"><tr><th>Member</th><th>Email</th><th>Status</th><th>Terms</th><th>Won Auction</th><th>Joined</th><th>Actions</th></tr></thead>
+                <thead class="table-light">
+                    <tr><th>Member</th><th>Email</th><th>Status</th><th>Agreement</th><th>Agreement No.</th><th>PDF</th><th>Won</th><th>Joined</th><th>Actions</th></tr>
+                </thead>
                 <tbody>
                 <tr th:each="m : ${memberships}">
                     <td th:text="${m.user.fullName}"></td>
-                    <td th:text="${m.user.email}"></td>
+                    <td><small th:text="${m.user.email}"></small></td>
                     <td><span class="badge" th:classappend="${m.status.name() == 'ACTIVE'} ? 'bg-success' : (${m.status.name() == 'PENDING'} ? 'bg-warning text-dark' : 'bg-secondary')" th:text="${m.status}"></span></td>
-                    <td><span class="badge" th:classappend="${m.termsAccepted} ? 'bg-success' : 'bg-secondary'" th:text="${m.termsAccepted} ? 'Accepted' : 'Pending'"></span></td>
-                    <td><span class="badge" th:classappend="${m.hasWonAuction} ? 'bg-warning text-dark' : 'bg-light text-muted'" th:text="${m.hasWonAuction} ? 'Yes' : 'No'"></span></td>
-                    <td th:text="${#temporals.format(m.joinedAt, 'dd MMM yyyy')}"></td>
                     <td>
-                        <form th:if="${m.status.name() == 'PENDING'}" th:action="@{/admin/memberships/{id}/approve(id=${m.id})}" method="post" class="d-inline">
-                            <button class="btn btn-sm btn-success"><i class="bi bi-check"></i> Approve</button>
-                        </form>
-                        <form th:if="${m.status.name() == 'PENDING'}" th:action="@{/admin/memberships/{id}/reject(id=${m.id})}" method="post" class="d-inline ms-1">
-                            <button class="btn btn-sm btn-danger"><i class="bi bi-x"></i> Reject</button>
-                        </form>
-                        <span th:if="${m.status.name() != 'PENDING'}" class="text-muted small">No action</span>
+                        <div th:if="${m.agreementAccepted}">
+                            <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Accepted</span>
+                            <div class="text-muted" style="font-size:0.72rem;" th:if="${m.agreementAcceptedAt != null}"
+                                 th:text="${#temporals.format(m.agreementAcceptedAt, 'dd MMM HH:mm')}"></div>
+                        </div>
+                        <span th:if="${!m.agreementAccepted}" class="badge bg-secondary">Not Accepted</span>
+                    </td>
+                    <td><small class="text-muted font-monospace" th:text="${m.agreementNumber != null ? m.agreementNumber : '—'}"></small></td>
+                    <td>
+                        <span th:if="${m.agreementPdfPath != null}" class="badge bg-primary">
+                            <i class="bi bi-file-earmark-pdf-fill"></i> Generated
+                        </span>
+                        <span th:if="${m.agreementPdfPath == null}" class="text-muted small">—</span>
+                    </td>
+                    <td><span class="badge" th:classappend="${m.hasWonAuction} ? 'bg-warning text-dark' : 'bg-light text-muted'" th:text="${m.hasWonAuction} ? 'Yes' : 'No'"></span></td>
+                    <td><small th:text="${#temporals.format(m.joinedAt, 'dd MMM yyyy')}"></small></td>
+                    <td>
+                        <div th:if="${m.status.name() == 'PENDING'}" class="d-flex gap-1">
+                            <form th:action="@{/admin/memberships/{id}/approve(id=${m.id})}" method="post">
+                                <button class="btn btn-sm btn-success" title="Approve &amp; generate agreement PDF">
+                                    <i class="bi bi-check"></i> Approve
+                                </button>
+                            </form>
+                            <form th:action="@{/admin/memberships/{id}/reject(id=${m.id})}" method="post">
+                                <button class="btn btn-sm btn-danger"><i class="bi bi-x"></i> Reject</button>
+                            </form>
+                        </div>
+                        <span th:if="${m.status.name() != 'PENDING'}" class="text-muted small">—</span>
                     </td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(memberships)}"><td colspan="7" class="text-center text-muted py-4">No members yet</td></tr>
+                <tr th:if="${#lists.isEmpty(memberships)}"><td colspan="9" class="text-center text-muted py-4">No members yet</td></tr>
                 </tbody>
             </table>
+        </div>
+        <div class="card-footer text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Approving a member automatically generates a signed agreement PDF and emails it to both the member and admin.
         </div>
     </div>
 </div>

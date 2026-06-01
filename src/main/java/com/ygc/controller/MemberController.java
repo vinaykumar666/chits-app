@@ -1,122 +1,3 @@
-
-            User user = getCurrentUser(auth);
-            Chit chit = chitService.findById(id);
-
-            ChitMembership membership = chitService.requestJoin(id, user);
-
-            // Send agreement emails
-            ChitAgreementService agreementService = new ChitAgreementService(emailService, new LoggingUtil());
-            agreementService.sendAgreement(user.getEmail(), user.getFullName(), chit.getName(), "admin@ygcinternal.com");
-
-            redirectAttributes.addFlashAttribute("success", "Request submitted! Agreement sent to email.");
-            return "redirect:/member/dashboard";
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
-            return "redirect:/member/chits";
-        }
-package com.ygc.service;
-
-import com.ygc.model.Payment;
-import com.ygc.util.LoggingUtil;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import java.io.ByteArrayOutputStream;
-import java.util.List;
-
-@Service
-@RequiredArgsConstructor
-@Slf4j
-public class ReportExportService {
-    private final LoggingUtil loggingUtil;
-
-    public byte[] exportPaymentsToCSV(List<Payment> payments) {
-        loggingUtil.transactionStart("exportPaymentsToCSV", "ReportExportService");
-        try {
-            StringBuilder csv = new StringBuilder();
-            csv.append("ID,Member,Chit,Amount,Late Fine,Total,Month,Status,Date\n");
-
-            for (Payment p : payments) {
-                csv.append(p.getId()).append(",")
-                   .append(p.getMembership().getUser().getFullName()).append(",")
-                   .append(p.getMembership().getChit().getName()).append(",")
-                   .append(p.getAmount()).append(",")
-                   .append(p.getLateFine()).append(",")
-                   .append(p.getTotalAmount()).append(",")
-                   .append(p.getMonthNumber()).append(",")
-                   .append(p.getStatus()).append(",")
-                   .append(p.getPaidDate()).append("\n");
-            }
-
-            loggingUtil.transactionComplete("exportPaymentsToCSV", "ReportExportService");
-            return csv.toString().getBytes();
-        } catch (Exception e) {
-            loggingUtil.error("Error exporting payments", "ReportExportService", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    public String getReportHTML(String title, List<String[]> rows, String[] headers) {
-        loggingUtil.debug("Generating report HTML: " + title, "ReportExportService");
-
-    @GetMapping("/chits/{id}/join-agreement")
-    public String joinAgreement(@PathVariable Long id, Authentication auth, Model model) {
-        try {
-            User user = getCurrentUser(auth);
-            Chit chit = chitService.findById(id);
-
-            model.addAttribute("user", user);
-            model.addAttribute("chit", chit);
-
-            ChitAgreementService agreementService = new ChitAgreementService(emailService, new LoggingUtil());
-            model.addAttribute("agreementHTML", agreementService.getAgreementHTML(chit.getName(), user.getFullName()));
-
-            return "member/chit-join-agreement";
-        } catch (Exception e) {
-            model.addAttribute("error", "Error loading agreement: " + e.getMessage());
-            return "redirect:/member/chits";
-        }
-    }
-
-    @PostMapping("/chits/{id}/join")
-    public String joinChit(@PathVariable Long id,
-                          @RequestParam boolean acceptTerms,
-                          Authentication auth,
-                          RedirectAttributes redirectAttributes) {
-        try {
-            if (!acceptTerms) {
-                redirectAttributes.addFlashAttribute("error", "You must accept the agreement");
-                return "redirect:/member/chits/" + id + "/join-agreement";
-            }
-            .append("td { padding: 10px; border-bottom: 1px solid #ddd; }")
-            .append("tr:hover { background: #f5f5f5; }")
-            .append("</style></head><body>")
-            .append("<h1>").append(title).append("</h1>")
-            .append("<table>")
-            .append("<thead><tr>");
-
-        for (String header : headers) {
-            html.append("<th>").append(header).append("</th>");
-        }
-        html.append("</tr></thead><tbody>");
-
-        for (String[] row : rows) {
-            html.append("<tr>");
-            for (String cell : row) {
-                html.append("<td>").append(cell).append("</td>");
-            }
-            html.append("</tr>");
-        }
-
-        html.append("</tbody></table>")
-            .append("<p style='text-align: center; margin-top: 40px; color: #999;'>Generated on ")
-            .append(java.time.LocalDateTime.now())
-            .append("</p>")
-            .append("</body></html>");
-
-        return html.toString();
-    }
-}
 package com.ygc.controller;
 
 import com.ygc.model.*;
@@ -131,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/member")
@@ -144,6 +26,7 @@ public class MemberController {
     private final ChitMembershipRepository membershipRepository;
     private final AuctionRepository auctionRepository;
     private final PdfCertificateService pdfCertificateService;
+    private final BidCalculationService bidCalculationService;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -159,6 +42,7 @@ public class MemberController {
         model.addAttribute("memberships", memberships);
         model.addAttribute("activeCount", activeCount);
         model.addAttribute("availableChits", chitService.getAvailableChits());
+        model.addAttribute("openAuctions", auctionService.getOpenAuctions());
         return "member/dashboard";
     }
 
@@ -169,13 +53,35 @@ public class MemberController {
         return "member/chits";
     }
 
+    /**
+     * GET: Show chit join agreement page with all 3 mandatory checkboxes.
+     */
+    @GetMapping("/chits/{id}/join")
+    public String joinChitAgreementPage(@PathVariable Long id, Authentication auth, Model model) {
+        Chit chit = chitService.findById(id);
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("chit", chit);
+        return "member/chit-join-agreement";
+    }
+
+    /**
+     * POST: Submit join request. Validates all 3 agreement checkboxes.
+     */
     @PostMapping("/chits/{id}/join")
-    public String joinChit(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+    public String joinChit(@PathVariable Long id,
+                           @RequestParam(defaultValue = "false") boolean agreementRead,
+                           @RequestParam(defaultValue = "false") boolean termsAccepted,
+                           @RequestParam(defaultValue = "false") boolean infoProcessingAuthorized,
+                           Authentication auth,
+                           RedirectAttributes ra) {
         try {
-            chitService.requestJoin(id, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Join request submitted! Awaiting admin approval.");
+            chitService.requestJoin(id, getCurrentUser(auth),
+                    agreementRead, termsAccepted, infoProcessingAuthorized);
+            ra.addFlashAttribute("success",
+                    "Join request submitted! Awaiting admin approval. You'll receive a signed agreement by email upon approval.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
+            return "redirect:/member/chits/" + id + "/join";
         }
         return "redirect:/member/chits";
     }
@@ -189,12 +95,65 @@ public class MemberController {
         }
         List<Payment> payments = paymentService.getPaymentsForMembership(membership);
         List<Auction> auctions = auctionService.getAuctionsByChit(membership.getChit());
+
+        // Current month number based on chit start date
+        Chit chit = membership.getChit();
+        int currentMonthNumber = Math.max(1,
+                (int) java.time.temporal.ChronoUnit.MONTHS.between(
+                        chit.getStartDate(), java.time.LocalDate.now()) + 1);
+        currentMonthNumber = Math.min(currentMonthNumber, chit.getDurationMonths());
+
+        // Bid recommendations for open auctions in this chit
+        Map<String, Object> bidRecommendations = null;
+        boolean hasOpenAuction = auctions.stream()
+                .anyMatch(a -> a.getStatus() == Auction.AuctionStatus.OPEN);
+        if (hasOpenAuction && !membership.isHasWonAuction()) {
+            bidRecommendations = bidCalculationService.calculateBidRecommendations(chit, currentMonthNumber);
+        }
+
         model.addAttribute("user", user);
         model.addAttribute("membership", membership);
         model.addAttribute("payments", payments);
         model.addAttribute("totalPaid", paymentService.getTotalPaid(membership));
         model.addAttribute("auctions", auctions);
+        model.addAttribute("bidRecommendations", bidRecommendations);
+        model.addAttribute("hasOpenAuction", hasOpenAuction);
         return "member/membership-detail";
+    }
+
+    /**
+     * AJAX endpoint: get bid calculations for a given bid amount.
+     */
+    @GetMapping("/chits/{chitId}/bid-calculator")
+    @ResponseBody
+    public Map<String, Object> bidCalculator(@PathVariable Long chitId,
+                                              @RequestParam(required = false) BigDecimal bidAmount,
+                                              @RequestParam(defaultValue = "1") Integer monthNumber) {
+        Chit chit = chitService.findById(chitId);
+        Map<String, Object> recs = bidCalculationService.calculateBidRecommendations(chit, monthNumber);
+        if (bidAmount != null) {
+            Map<String, BigDecimal> calc = bidCalculationService.calculateForBidAmount(chit, bidAmount);
+            recs.put("inputBidCommission", calc.get("commission"));
+            recs.put("inputBidPayout", calc.get("payout"));
+        }
+        return recs;
+    }
+
+    @PostMapping("/memberships/{id}/accept-terms")
+    public String acceptTerms(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try {
+            ChitMembership membership = membershipRepository.findById(id).orElseThrow();
+            User user = getCurrentUser(auth);
+            if (!membership.getUser().getId().equals(user.getId())) {
+                ra.addFlashAttribute("error", "Unauthorized action.");
+                return "redirect:/member/dashboard";
+            }
+            membershipRepository.save(membership);
+            ra.addFlashAttribute("success", "Terms accepted.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/member/memberships/" + id;
     }
 
     @PostMapping("/payments/submit")
@@ -204,7 +163,7 @@ public class MemberController {
                                 Authentication auth, RedirectAttributes ra) {
         try {
             paymentService.submitPayment(membershipId, screenshot, monthNumber, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Payment submitted for verification!");
+            ra.addFlashAttribute("success", "Payment submitted!");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
         }
@@ -212,12 +171,11 @@ public class MemberController {
     }
 
     @PostMapping("/auctions/{id}/bid")
-    public String placeBid(@PathVariable Long id,
-                           @RequestParam BigDecimal bidAmount,
+    public String placeBid(@PathVariable Long id, @RequestParam BigDecimal bidAmount,
                            Authentication auth, RedirectAttributes ra) {
         try {
             auctionService.placeBid(id, bidAmount, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Bid placed successfully! Best of luck.");
+            ra.addFlashAttribute("success", "Bid placed successfully!");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
         }
@@ -228,29 +186,9 @@ public class MemberController {
     public String requestEarlyExit(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
         try {
             settlementService.requestEarlyExit(id, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Early exit request submitted. Awaiting admin approval.");
+            ra.addFlashAttribute("success", "Early exit request submitted.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
-        }
-        return "redirect:/member/memberships/" + id;
-    }
-
-    @PostMapping("/memberships/{id}/accept-terms")
-    public String acceptTerms(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
-        try {
-            ChitMembership membership = membershipRepository.findById(id).orElseThrow();
-            User user = getCurrentUser(auth);
-            if (!membership.getUser().getId().equals(user.getId())) {
-                ra.addFlashAttribute("error", "Unauthorized access");
-                return "redirect:/member/dashboard";
-            }
-            membership.setTermsAccepted(true);
-            String certPath = pdfCertificateService.generateMemberCertificate(membership);
-            membership.setCertificatePath(certPath);
-            membershipRepository.save(membership);
-            ra.addFlashAttribute("success", "Terms accepted! Your digital certificate has been generated.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", "Could not accept terms: " + e.getMessage());
         }
         return "redirect:/member/memberships/" + id;
     }

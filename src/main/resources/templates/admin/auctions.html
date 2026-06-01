@@ -66,6 +66,52 @@
         </div>
     </div>
 
+    <!-- Bid Recommendations for Open Auctions -->
+    <div th:if="${!#lists.isEmpty(openAuctions)}" class="mb-4">
+        <h6 class="text-muted mb-3"><i class="bi bi-calculator-fill me-2"></i>Intelligent Bid Recommendations — Currently Open Auctions</h6>
+        <div class="row g-3">
+            <div class="col-md-6" th:each="auction : ${openAuctions}">
+                <div class="card border-success border-opacity-50 h-100" th:with="recs=${bidRecommendations[auction.id]}">
+                    <div class="card-header bg-success bg-opacity-10 d-flex align-items-center gap-2 py-2">
+                        <i class="bi bi-hammer text-success"></i>
+                        <strong th:text="${auction.chit.name}"></strong>
+                        <span class="badge bg-primary ms-auto">Month <span th:text="${auction.monthNumber}"></span></span>
+                    </div>
+                    <div class="card-body py-3" th:if="${recs != null}">
+                        <div class="row g-2 text-center mb-3">
+                            <div class="col-4">
+                                <div class="text-muted" style="font-size:0.75rem;">Rec. Min Bid</div>
+                                <div class="fw-bold text-success">₹<span th:text="${recs.recommendedMinBid}"></span></div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted" style="font-size:0.75rem;">Rec. Max Bid</div>
+                                <div class="fw-bold text-warning">₹<span th:text="${recs.recommendedMaxBid}"></span></div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted" style="font-size:0.75rem;">Est. Payout</div>
+                                <div class="fw-bold text-primary">₹<span th:text="${recs.estimatedPayout}"></span></div>
+                            </div>
+                        </div>
+                        <div class="row g-2 text-center">
+                            <div class="col-6">
+                                <small class="text-muted">Commission (<span th:text="${recs.commissionPercentage}"></span>%)</small>
+                                <div class="small fw-semibold text-danger">₹<span th:text="${recs.estimatedCommission}"></span></div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Historical Avg Win</small>
+                                <div class="small fw-semibold" th:text="${recs.historicalAvgBid != null ? '₹' + recs.historicalAvgBid : 'No data yet'}"></div>
+                            </div>
+                        </div>
+                        <div class="text-muted mt-2" style="font-size:0.75rem;">
+                            Absolute range: ₹<span th:text="${recs.absoluteMinBid}"></span> – ₹<span th:text="${recs.absoluteMaxBid}"></span>
+                            &nbsp;|&nbsp; Month <span th:text="${recs.currentMonthNumber}"></span> of <span th:text="${recs.currentMonthNumber + recs.monthsRemaining - 1}"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- All Auctions Table -->
     <div class="card panel">
         <div class="card-header d-flex justify-content-between">

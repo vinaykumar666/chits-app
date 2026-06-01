@@ -23,6 +23,7 @@ public class AdminController {
     private final AuctionService auctionService;
     private final SettlementService settlementService;
     private final ChitRepository chitRepository;
+    private final BidCalculationService bidCalculationService;
     private final AuditLogRepository auditLogRepository;
     private final CommissionLedgerRepository commissionLedgerRepository;
     private final ChitMembershipRepository membershipRepository;
@@ -103,8 +104,12 @@ public class AdminController {
     @PostMapping("/memberships/{id}/approve")
     public String approveMembership(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
         try {
+            ChitMembership membership = membershipRepository.findById(id).orElseThrow();
+            Long chitId = membership.getChit().getId();
             chitService.approveMembership(id, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Membership approved");
+            ra.addFlashAttribute("success",
+                "Membership approved! Signed agreement PDF generated and emailed to member and admin.");
+            return "redirect:/admin/chits/" + chitId;
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
         }
@@ -115,9 +120,11 @@ public class AdminController {
     public String rejectMembership(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
         try {
             ChitMembership membership = membershipRepository.findById(id).orElseThrow();
+            Long chitId = membership.getChit().getId();
             membership.setStatus(ChitMembership.MembershipStatus.EXITED);
             membershipRepository.save(membership);
             ra.addFlashAttribute("success", "Membership rejected");
+            return "redirect:/admin/chits/" + chitId;
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
         }
@@ -154,6 +161,15 @@ public class AdminController {
         model.addAttribute("chits", chitService.getAllChits());
         model.addAttribute("openAuctions", auctionService.getOpenAuctions());
         model.addAttribute("allAuctions", auctionService.getAllAuctions());
+
+        // Pre-compute bid recommendations for each open auction's chit
+        java.util.Map<Long, java.util.Map<String, Object>> bidRecs = new java.util.HashMap<>();
+        for (Auction auction : auctionService.getOpenAuctions()) {
+            Chit chit = auction.getChit();
+            int month = auction.getMonthNumber() != null ? auction.getMonthNumber() : 1;
+            bidRecs.put(auction.getId(), bidCalculationService.calculateBidRecommendations(chit, month));
+        }
+        model.addAttribute("bidRecommendations", bidRecs);
         return "admin/auctions";
     }
 
@@ -227,6 +243,29 @@ public class AdminController {
         return "redirect:/admin/settlements";
     }
 
+    // --- Payment Approve Page (separate from verify flow) ---
+    @GetMapping("/payments/{id}/approve")
+    public String approvePaymentPage(@PathVariable Long id, Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("payment", paymentService.getAllPayments().stream()
+                .filter(p -> p.getId().equals(id)).findFirst().orElseThrow());
+        return "admin/payments-approve";
+    }
+
+    @PostMapping("/payments/{id}/approve")
+    public String approvePayment(@PathVariable Long id,
+                                 @RequestParam(required = false, defaultValue = "Approved") String remarks,
+                                 Authentication auth, RedirectAttributes ra) {
+        try {
+            paymentService.verifyPayment(id, true, remarks, getCurrentUser(auth));
+            ra.addFlashAttribute("success", "Payment approved");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/admin/payments";
+    }
+
+
     // --- Commission Reports ---
     @GetMapping("/reports/commission")
     public String commissionReport(Model model, Authentication auth) {
@@ -257,3 +296,4 @@ public class AdminController {
         return "admin/audit";
     }
 }
+// This will be appended - but let's check the existing class structure first

@@ -29,6 +29,15 @@ public class ChitMembership {
     private boolean termsAccepted = false;
     private String certificatePath;
 
+    // Agreement workflow fields
+    private boolean agreementRead = false;
+    private boolean agreementAccepted = false;
+    private boolean infoProcessingAuthorized = false;
+    private LocalDateTime agreementAcceptedAt;
+    private LocalDateTime agreementApprovedAt;
+    private String agreementNumber;
+    private String agreementPdfPath;
+
     private LocalDateTime joinedAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 
