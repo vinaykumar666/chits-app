@@ -9,6 +9,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import jakarta.mail.internet.MimeMessage;
 
+import java.io.File;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -23,16 +25,42 @@ public class EmailService {
 
     @Async
     public void sendHtmlEmail(String to, String subject, String htmlBody) {
+        sendHtmlEmailWithAttachment(to, subject, htmlBody, null, null);
+    }
+
+    /**
+     * Send an HTML email with an optional file attachment.
+     *
+     * @param attachmentPath  absolute path to the file to attach (null = no attachment)
+     * @param attachmentName  display name for the attachment (null = use filename)
+     */
+    @Async
+    public void sendHtmlEmailWithAttachment(String to, String subject, String htmlBody,
+                                             String attachmentPath, String attachmentName) {
         try {
-            loggingUtil.externalServiceCall("JavaMailSender", "sendHtmlEmail", "EmailService");
+            loggingUtil.externalServiceCall("JavaMailSender", "sendHtmlEmailWithAttachment", "EmailService");
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            // multipart=true required for attachments
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setTo(to);
             helper.setSubject("[YGC Internal] " + subject);
             helper.setText(htmlBody, true);
             helper.setFrom("noreply@ygcinternal.com");
+
+            if (attachmentPath != null) {
+                File file = new File(attachmentPath);
+                if (file.exists() && file.isFile()) {
+                    String name = (attachmentName != null) ? attachmentName : file.getName();
+                    helper.addAttachment(name, file);
+                    loggingUtil.debug("Attachment added: " + name, "EmailService.sendHtmlEmailWithAttachment");
+                } else {
+                    loggingUtil.warn("Attachment file not found, sending without: " + attachmentPath,
+                            "EmailService.sendHtmlEmailWithAttachment");
+                }
+            }
+
             mailSender.send(message);
-            loggingUtil.debug("HTML email sent to: " + to, "EmailService");
+            loggingUtil.debug("Email sent to: " + to, "EmailService");
         } catch (Exception e) {
             loggingUtil.error("Failed to send email to: " + to, "EmailService", e);
         }

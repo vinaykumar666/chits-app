@@ -20,6 +20,7 @@ public class SettlementService {
     private final PaymentRepository paymentRepository;
     private final EmailService emailService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Value("${ygc.early-exit-deduction-percentage:2}")
     private BigDecimal earlyExitDeduction;
@@ -83,8 +84,18 @@ public class SettlementService {
             membership.setStatus(ChitMembership.MembershipStatus.SETTLED);
             membershipRepository.save(membership);
             User member = membership.getUser();
+            String chitName = membership.getChit().getName();
             emailService.sendSettlementConfirmation(member.getEmail(), member.getFullName(),
-                    membership.getChit().getName(), settlement.getFinalSettlementAmount().toString());
+                    chitName, settlement.getFinalSettlementAmount().toString());
+
+            // Push chit maturity notification for MATURITY type, payment reminder for others
+            if (settlement.getType() == Settlement.SettlementType.MATURITY) {
+                notificationService.notifyChitMaturity(member.getEmail(), chitName);
+            } else {
+                notificationService.notifyPaymentReminder(
+                        member.getEmail(), chitName, "settlement processed",
+                        settlement.getFinalSettlementAmount().toPlainString());
+            }
         }
         auditService.log(admin, approved ? "APPROVE_SETTLEMENT" : "REJECT_SETTLEMENT",
                 "Settlement", settlementId, remarks);

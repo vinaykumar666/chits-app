@@ -43,8 +43,9 @@ public class ChitAgreementService {
     private final EmailService emailService;
     private final AuditService auditService;
     private final LoggingUtil loggingUtil;
+    private final NotificationService notificationService;
 
-    private static final String ADMIN_EMAIL = "ygchitsinternal@gmail.com";
+    private static final String ADMIN_EMAIL = "admin@ygcinternal.com";
     private static final String AGREEMENT_DIR = "uploads/agreements/";
 
     /**
@@ -97,6 +98,12 @@ public class ChitAgreementService {
 
             auditService.log(admin, "AGREEMENT_PDF_GENERATED", "ChitMembership",
                     membership.getId(), "Agreement PDF generated and emailed: " + pdfPath);
+
+            // Push real-time notification to the member
+            notificationService.notifyAgreementApproved(
+                    membership.getUser().getEmail(),
+                    membership.getChit().getName(),
+                    membership.getAgreementNumber());
 
             loggingUtil.transactionComplete("generateAndDistributeAgreementPdf", "ChitAgreementService");
             return pdfPath;
@@ -287,13 +294,18 @@ public class ChitAgreementService {
                 + "Contact: +91 8919508889<br>"
                 + "Regards,<br>YGC Internal Team";
 
-        emailService.sendHtmlEmail(to, subject,
-                "<html><body style='font-family:Arial;'>"
+        String htmlBody = "<html><body style='font-family:Arial;'>"
                 + "<div style='background:linear-gradient(135deg,#3366cc,#1a4d99);color:white;padding:20px;border-radius:5px;'>"
                 + "<h1 style='margin:0;'>YGC Internal</h1></div>"
                 + "<div style='padding:20px;border:1px solid #ddd;margin-top:10px;border-radius:5px;'>"
                 + body
                 + "</div><div style='text-align:center;margin-top:20px;color:#999;font-size:12px;'>"
-                + "<p>Save Rupee, Rupee Will Save You In Future</p></div></body></html>");
+                + "<p>Save Rupee, Rupee Will Save You In Future</p></div></body></html>";
+
+        // Attach the signed agreement PDF directly in the email
+        String attachmentName = "Agreement_" + membership.getAgreementNumber() + ".pdf";
+        emailService.sendHtmlEmailWithAttachment(to, subject, htmlBody, pdfPath, attachmentName);
+        loggingUtil.info("Agreement email sent to " + to + " with PDF attachment: " + attachmentName,
+                "ChitAgreementService.sendAgreementEmail");
     }
 }

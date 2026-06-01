@@ -25,6 +25,7 @@ public class AuctionService {
     private final EmailService emailService;
     private final AuditService auditService;
     private final LoggingUtil loggingUtil;
+    private final NotificationService notificationService;
 
     @Transactional
     public Auction createAuction(Long chitId, Integer monthNumber, LocalDate auctionDate,
@@ -90,6 +91,19 @@ public class AuctionService {
             loggingUtil.databaseOperation("UPDATE", "Auction", "AuctionService.openAuction");
             auctionRepository.save(auction);
 
+            // Notify all active members that bid window is open
+            List<ChitMembership> activeMembers = membershipRepository
+                    .findByChit(auction.getChit()).stream()
+                    .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE
+                              && !m.isHasWonAuction())
+                    .toList();
+            for (ChitMembership m : activeMembers) {
+                notificationService.notifyBidWindowOpen(
+                        m.getUser().getEmail(),
+                        auction.getChit().getName(),
+                        auction.getMonthNumber());
+            }
+
             auditService.log(admin, "OPEN_AUCTION", "Auction", auctionId, "Auction opened for bidding");
             loggingUtil.transactionComplete("openAuction", "AuctionService");
             loggingUtil.userAction(admin.getEmail(), "OPEN_AUCTION", "AuctionService.openAuction");
@@ -153,6 +167,10 @@ public class AuctionService {
             auditService.log(bidder, "PLACE_BID", "Bid", saved.getId(), "Bid placed: ₹" + bidAmount);
             loggingUtil.transactionComplete("placeBid", "AuctionService");
             loggingUtil.userAction(bidder.getEmail(), "PLACE_BID", "AuctionService.placeBid");
+
+            // Push bid confirmation to the bidder
+            notificationService.notifyBidSubmitted(
+                    bidder.getEmail(), chit.getName(), bidAmount.toPlainString());
 
             return saved;
         } catch (Exception e) {
@@ -226,6 +244,15 @@ public class AuctionService {
                     "Winner: " + winningBid.getBidder().getEmail() + " | Payout: ₹" + payout);
             loggingUtil.transactionComplete("closeAuction", "AuctionService");
             loggingUtil.userAction(admin.getEmail(), "CLOSE_AUCTION", "AuctionService.closeAuction");
+
+            // Notify winner and all other members about auction result
+            String winnerEmail = winningBid.getBidder().getEmail();
+            notificationService.notifyBidWinnerAnnounced(winnerEmail, chit.getName(), auction.getMonthNumber(), true);
+            membershipRepository.findByChit(chit).stream()
+                    .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE
+                              && !m.getUser().getEmail().equals(winnerEmail))
+                    .forEach(m -> notificationService.notifyBidWinnerAnnounced(
+                            m.getUser().getEmail(), chit.getName(), auction.getMonthNumber(), false));
 
         } catch (Exception e) {
             loggingUtil.transactionFailed("closeAuction", "AuctionService", e);

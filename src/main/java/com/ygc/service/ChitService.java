@@ -23,6 +23,7 @@ public class ChitService {
     private final EmailService emailService;
     private final ChitAgreementService agreementService;
     private final LoggingUtil loggingUtil;
+    private final NotificationService notificationService;
 
     @Transactional
     public Chit createChit(Chit chit, User admin) {
@@ -122,6 +123,13 @@ public class ChitService {
 
             auditService.log(admin, "APPROVE_MEMBERSHIP", "ChitMembership", membershipId,
                     "Membership approved for user: " + membership.getUser().getEmail());
+
+            // Push chit registration approval notification
+            notificationService.notifyChitRegistrationApproved(
+                    membership.getUser().getEmail(),
+                    membership.getUser().getFullName(),
+                    membership.getChit().getName());
+
             loggingUtil.transactionComplete("approveMembership", "ChitService");
         } catch (Exception e) {
             loggingUtil.transactionFailed("approveMembership", "ChitService", e);

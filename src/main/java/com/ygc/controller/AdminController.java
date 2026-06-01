@@ -27,6 +27,7 @@ public class AdminController {
     private final AuditLogRepository auditLogRepository;
     private final CommissionLedgerRepository commissionLedgerRepository;
     private final ChitMembershipRepository membershipRepository;
+    private final NotificationService notificationService;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -121,8 +122,13 @@ public class AdminController {
         try {
             ChitMembership membership = membershipRepository.findById(id).orElseThrow();
             Long chitId = membership.getChit().getId();
+            String userEmail = membership.getUser().getEmail();
+            String userName  = membership.getUser().getFullName();
+            String chitName  = membership.getChit().getName();
             membership.setStatus(ChitMembership.MembershipStatus.EXITED);
             membershipRepository.save(membership);
+            // Push rejection notification to the member
+            notificationService.notifyChitRegistrationRejected(userEmail, userName, chitName);
             ra.addFlashAttribute("success", "Membership rejected");
             return "redirect:/admin/chits/" + chitId;
         } catch (Exception e) {

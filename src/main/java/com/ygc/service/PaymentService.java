@@ -30,6 +30,7 @@ public class PaymentService {
     private final EmailService emailService;
     private final AuditService auditService;
     private final LoggingUtil loggingUtil;
+    private final NotificationService notificationService;
 
     @Value("${ygc.late-fine-per-day:20}")
     private int lateFinePerDay;
@@ -165,6 +166,16 @@ public class PaymentService {
                     "Payment", paymentId, remarks);
             loggingUtil.audit("verifyPayment", admin.getEmail(),
                     approved ? "APPROVE_PAYMENT" : "REJECT_PAYMENT");
+
+            // Push real-time notification to the member
+            String chitName = payment.getMembership().getChit().getName();
+            if (approved) {
+                notificationService.notifyPaymentReminder(
+                        member.getEmail(), chitName,
+                        "confirmed", payment.getTotalAmount().toPlainString());
+            } else {
+                notificationService.notifyPaymentDueAlert(member.getEmail(), chitName, 0);
+            }
 
             // event=verifyPayment() {"status":"SUCCESS","paymentId":5,"decision":"APPROVED"}
             loggingUtil.success("verifyPayment",

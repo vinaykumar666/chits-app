@@ -1,22 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <property name="LOG_FILE" value="logs/application.log"/>
-    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
-    <property name="LOG_PATTERN_FILE" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"/>
 
-    <!-- Console Appender -->
+    <!--
+        Pure JSON log pattern.
+        Every line is a single valid JSON object with the fields:
+          timestamp, level, thread, logger, message
+        The %replace trick escapes embedded double-quotes so the
+        message content never breaks JSON structure.
+    -->
+    <property name="JSON_PATTERN"
+              value="{&quot;timestamp&quot;:&quot;%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}&quot;,&quot;level&quot;:&quot;%-5level&quot;,&quot;thread&quot;:&quot;%thread&quot;,&quot;logger&quot;:&quot;%logger{36}&quot;,&quot;message&quot;:&quot;%replace(%msg){'&quot;','\\&quot;'}&quot;}%n"/>
+
+    <!-- Console – JSON -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
+            <pattern>${JSON_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
 
-    <!-- File Appender with Rolling Policy -->
+    <!-- Rolling file – JSON -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_FILE}</file>
         <encoder>
-            <pattern>${LOG_PATTERN_FILE}</pattern>
+            <pattern>${JSON_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -27,58 +35,52 @@
         </rollingPolicy>
     </appender>
 
-    <!-- Async Appender for better performance -->
+    <!-- Async wrapper for the rolling file -->
     <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>512</queueSize>
         <discardingThreshold>0</discardingThreshold>
         <appender-ref ref="FILE"/>
     </appender>
 
-    <!-- Error File Appender -->
+    <!-- Error-only rolling file – JSON -->
     <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>logs/error.log</file>
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>ERROR</level>
         </filter>
         <encoder>
-            <pattern>${LOG_PATTERN_FILE}</pattern>
+            <pattern>${JSON_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>logs/error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
             <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
+            <totalSizeCap>500MB</totalSizeCap>
         </rollingPolicy>
     </appender>
 
-    <!-- Application specific loggers -->
-    <logger name="com.ygc" level="DEBUG"/>
-    <logger name="com.ygc.service" level="DEBUG"/>
-    <logger name="com.ygc.controller" level="DEBUG"/>
-    <logger name="com.ygc.exception" level="DEBUG"/>
-    <logger name="com.ygc.util" level="DEBUG"/>
-    <logger name="com.ygc.security" level="DEBUG"/>
+    <!-- Application loggers -->
+    <logger name="com.ygc"                                   level="DEBUG"/>
+    <logger name="com.ygc.service"                           level="DEBUG"/>
+    <logger name="com.ygc.controller"                        level="DEBUG"/>
+    <logger name="com.ygc.exception"                         level="DEBUG"/>
+    <logger name="com.ygc.util"                              level="DEBUG"/>
+    <logger name="com.ygc.security"                          level="DEBUG"/>
 
-    <!-- Spring Framework loggers -->
-    <logger name="org.springframework" level="INFO"/>
-    <logger name="org.springframework.web" level="DEBUG"/>
-    <logger name="org.springframework.security" level="DEBUG"/>
+    <!-- Spring / Hibernate -->
+    <logger name="org.springframework"                       level="INFO"/>
+    <logger name="org.springframework.web"                   level="DEBUG"/>
+    <logger name="org.springframework.security"              level="DEBUG"/>
     <logger name="org.springframework.security.authentication" level="DEBUG"/>
-
-    <!-- Hibernate loggers -->
-    <logger name="org.hibernate" level="INFO"/>
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <logger name="org.hibernate"                             level="INFO"/>
+    <logger name="org.hibernate.SQL"                         level="DEBUG"/>
     <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+    <logger name="org.h2"                                    level="INFO"/>
 
-    <!-- Database drivers -->
-    <logger name="org.h2" level="INFO"/>
-
-    <!-- Root logger configuration -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC_FILE"/>
         <appender-ref ref="ERROR_FILE"/>
     </root>
 </configuration>
-
