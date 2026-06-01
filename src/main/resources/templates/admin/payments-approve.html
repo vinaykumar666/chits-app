@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approve Payments - YGC Internal</title>
+    <link rel="stylesheet" th:href="@{/css/responsive.css}">
+    <style>
+        .payment-card { border-left: 4px solid #3366cc; }
+        .screenshot-modal { display: none; }
+        .screenshot-modal.show { display: flex; }
+        .screenshot-container { max-width: 800px; }
+        img.payment-screenshot { width: 100%; max-height: 500px; object-fit: contain; border-radius: 5px; }
+    </style>
+</head>
+<body>
+<div class="container mt-2">
+    <h1>Approve Payments</h1>
+
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <div class="grid">
+        <div th:each="payment : ${payments}" class="card payment-card">
+            <h3 th:text="${payment.membership.user.fullName}"></h3>
+            <p><strong>Chit:</strong> <span th:text="${payment.membership.chit.name}"></span></p>
+            <p><strong>Amount:</strong> ₹<span th:text="${payment.totalAmount}"></span></p>
+            <p><strong>Month:</strong> <span th:text="${payment.monthNumber}"></span></p>
+            <p><strong>Status:</strong> <span class="badge badge-warning" th:text="${payment.status}"></span></p>
+
+            <div th:if="${payment.screenshotPath != 'N/A'}" style="margin: 15px 0;">
+                <button class="btn btn-primary" onclick="viewScreenshot([[${payment.id}]])">
+                    📸 View Screenshot
+                </button>
+            </div>
+
+            <form method="post" th:action="@{/admin/payments/{id}/approve(id=${payment.id})}" style="display: inline;">
+                <textarea name="remarks" placeholder="Admin remarks..." style="width: 100%; height: 80px;"></textarea>
+                <button type="submit" class="btn btn-success" onclick="return confirm('Approve this payment?')">✓ Approve</button>
+                <button type="button" class="btn btn-danger" onclick="rejectPayment([[${payment.id}]])">✗ Reject</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Screenshot Modal -->
+<div id="screenshotModal" class="modal screenshot-modal">
+    <div class="modal-content screenshot-container">
+        <span onclick="closeScreenshot()" style="cursor: pointer; font-size: 24px; float: right;">&times;</span>
+        <h2>Payment Screenshot</h2>
+        <img id="screenshotImg" class="payment-screenshot" src="" alt="Payment Screenshot">
+    </div>
+</div>
+
+<script>
+function viewScreenshot(paymentId) {
+    fetch('/admin/payments/' + paymentId + '/view-screenshot')
+        .then(r => r.blob())
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            document.getElementById('screenshotImg').src = url;
+            document.getElementById('screenshotModal').classList.add('show');
+        });
+}
+
+function closeScreenshot() {
+    document.getElementById('screenshotModal').classList.remove('show');
+}
+</script>
+</body>
+</html>
+

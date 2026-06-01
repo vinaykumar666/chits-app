@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Chit - YGC Internal</title>
+    <link rel="stylesheet" th:href="@{/css/responsive.css}">
+    <style>
+        .agreement-text {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .agreement-header {
+            background: linear-gradient(135deg, #3366cc 0%, #1a4d99 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-2">
+    <h1>Request to Join Chit</h1>
+
+    <div class="card">
+        <div class="agreement-header">
+            <h2 style="color: white; margin: 0;" th:text="${chit.name}"></h2>
+            <p style="margin: 5px 0 0 0;">Monthly Amount: ₹<span th:text="${chit.monthlyAmount}"></span></p>
+        </div>
+
+        <div class="agreement-text" id="agreement" th:innerHTML="${agreementHTML}"></div>
+
+        <form method="post" th:action="@{/member/chits/{id}/join(id=${chit.id})}" style="margin-top: 20px;">
+            <div class="form-group">
+                <input type="checkbox" name="acceptTerms" id="acceptTerms" required>
+                <label for="acceptTerms" style="display: inline; margin-left: 10px;">
+                    I have read and accept the Chit Fund Participation Agreement
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                ✓ Accept & Join Chit
+            </button>
+            <a href="/member/chits" class="btn" style="width: 100%; background: #ddd; margin-top: 10px;">
+                ✗ Cancel
+            </a>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+

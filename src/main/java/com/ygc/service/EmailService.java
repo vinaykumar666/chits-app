@@ -3,10 +3,11 @@ package com.ygc.service;
 import com.ygc.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 @RequiredArgsConstructor
@@ -17,21 +18,39 @@ public class EmailService {
 
     @Async
     public void sendEmail(String to, String subject, String body) {
+        sendHtmlEmail(to, subject, getPlainHtmlTemplate(subject, body));
+    }
+
+    @Async
+    public void sendHtmlEmail(String to, String subject, String htmlBody) {
         try {
-            loggingUtil.externalServiceCall("JavaMailSender", "sendEmail", "EmailService");
-
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(to);
-            message.setSubject("[YGC Internal] " + subject);
-            message.setText(body);
-
+            loggingUtil.externalServiceCall("JavaMailSender", "sendHtmlEmail", "EmailService");
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(to);
+            helper.setSubject("[YGC Internal] " + subject);
+            helper.setText(htmlBody, true);
+            helper.setFrom("noreply@ygcinternal.com");
             mailSender.send(message);
-            loggingUtil.externalServiceResponse("JavaMailSender", true, "EmailService");
-            loggingUtil.debug("Email sent successfully to: " + to, "EmailService.sendEmail");
+            loggingUtil.debug("HTML email sent to: " + to, "EmailService");
         } catch (Exception e) {
-            loggingUtil.error("Failed to send email to: " + to, "EmailService.sendEmail", e);
-            loggingUtil.externalServiceResponse("JavaMailSender", false, "EmailService");
+            loggingUtil.error("Failed to send email to: " + to, "EmailService", e);
         }
+    }
+
+    private String getPlainHtmlTemplate(String subject, String body) {
+        return "<html><body style='font-family: Arial; margin: 20px;'>" +
+                "<div style='background: linear-gradient(135deg, #3366cc 0%, #1a4d99 100%); color: white; padding: 20px; text-align: center; border-radius: 5px;'>" +
+                "<h1 style='margin: 0;'>YGC Internal</h1>" +
+                "</div>" +
+                "<div style='padding: 20px; border: 1px solid #ddd; margin-top: 10px; border-radius: 5px;'>" +
+                "<h2>" + subject + "</h2>" +
+                "<p style='color: #333;'>" + body.replace("\n", "<br>") + "</p>" +
+                "</div>" +
+                "<div style='text-align: center; margin-top: 20px; color: #999; font-size: 12px;'>" +
+                "<p>Save Rupee, Rupee Will Save You In Future</p>" +
+                "</div>" +
+                "</body></html>";
     }
 
     public void sendRegistrationConfirmation(String email, String name, String tempPassword) {

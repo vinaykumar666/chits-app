@@ -1,3 +1,122 @@
+
+            User user = getCurrentUser(auth);
+            Chit chit = chitService.findById(id);
+
+            ChitMembership membership = chitService.requestJoin(id, user);
+
+            // Send agreement emails
+            ChitAgreementService agreementService = new ChitAgreementService(emailService, new LoggingUtil());
+            agreementService.sendAgreement(user.getEmail(), user.getFullName(), chit.getName(), "admin@ygcinternal.com");
+
+            redirectAttributes.addFlashAttribute("success", "Request submitted! Agreement sent to email.");
+            return "redirect:/member/dashboard";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error: " + e.getMessage());
+            return "redirect:/member/chits";
+        }
+package com.ygc.service;
+
+import com.ygc.model.Payment;
+import com.ygc.util.LoggingUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import java.io.ByteArrayOutputStream;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ReportExportService {
+    private final LoggingUtil loggingUtil;
+
+    public byte[] exportPaymentsToCSV(List<Payment> payments) {
+        loggingUtil.transactionStart("exportPaymentsToCSV", "ReportExportService");
+        try {
+            StringBuilder csv = new StringBuilder();
+            csv.append("ID,Member,Chit,Amount,Late Fine,Total,Month,Status,Date\n");
+
+            for (Payment p : payments) {
+                csv.append(p.getId()).append(",")
+                   .append(p.getMembership().getUser().getFullName()).append(",")
+                   .append(p.getMembership().getChit().getName()).append(",")
+                   .append(p.getAmount()).append(",")
+                   .append(p.getLateFine()).append(",")
+                   .append(p.getTotalAmount()).append(",")
+                   .append(p.getMonthNumber()).append(",")
+                   .append(p.getStatus()).append(",")
+                   .append(p.getPaidDate()).append("\n");
+            }
+
+            loggingUtil.transactionComplete("exportPaymentsToCSV", "ReportExportService");
+            return csv.toString().getBytes();
+        } catch (Exception e) {
+            loggingUtil.error("Error exporting payments", "ReportExportService", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public String getReportHTML(String title, List<String[]> rows, String[] headers) {
+        loggingUtil.debug("Generating report HTML: " + title, "ReportExportService");
+
+    @GetMapping("/chits/{id}/join-agreement")
+    public String joinAgreement(@PathVariable Long id, Authentication auth, Model model) {
+        try {
+            User user = getCurrentUser(auth);
+            Chit chit = chitService.findById(id);
+
+            model.addAttribute("user", user);
+            model.addAttribute("chit", chit);
+
+            ChitAgreementService agreementService = new ChitAgreementService(emailService, new LoggingUtil());
+            model.addAttribute("agreementHTML", agreementService.getAgreementHTML(chit.getName(), user.getFullName()));
+
+            return "member/chit-join-agreement";
+        } catch (Exception e) {
+            model.addAttribute("error", "Error loading agreement: " + e.getMessage());
+            return "redirect:/member/chits";
+        }
+    }
+
+    @PostMapping("/chits/{id}/join")
+    public String joinChit(@PathVariable Long id,
+                          @RequestParam boolean acceptTerms,
+                          Authentication auth,
+                          RedirectAttributes redirectAttributes) {
+        try {
+            if (!acceptTerms) {
+                redirectAttributes.addFlashAttribute("error", "You must accept the agreement");
+                return "redirect:/member/chits/" + id + "/join-agreement";
+            }
+            .append("td { padding: 10px; border-bottom: 1px solid #ddd; }")
+            .append("tr:hover { background: #f5f5f5; }")
+            .append("</style></head><body>")
+            .append("<h1>").append(title).append("</h1>")
+            .append("<table>")
+            .append("<thead><tr>");
+
+        for (String header : headers) {
+            html.append("<th>").append(header).append("</th>");
+        }
+        html.append("</tr></thead><tbody>");
+
+        for (String[] row : rows) {
+            html.append("<tr>");
+            for (String cell : row) {
+                html.append("<td>").append(cell).append("</td>");
+            }
+            html.append("</tr>");
+        }
+
+        html.append("</tbody></table>")
+            .append("<p style='text-align: center; margin-top: 40px; color: #999;'>Generated on ")
+            .append(java.time.LocalDateTime.now())
+            .append("</p>")
+            .append("</body></html>");
+
+        return html.toString();
+    }
+}
 package com.ygc.controller;
 
 import com.ygc.model.*;
