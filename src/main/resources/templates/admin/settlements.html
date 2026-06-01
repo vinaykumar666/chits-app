@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><title>Settlements - YGC Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="sidebar">
+    <div class="brand"><div class="brand-icon">Y</div><div><div class="brand-name">YGC Internal</div><div class="brand-tag">Save Rupee, Save Future</div></div></div>
+    <nav class="sidebar-nav">
+        <a th:href="@{/admin/dashboard}" class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a th:href="@{/admin/chits}" class="nav-link"><i class="bi bi-collection"></i> Chit Groups</a>
+        <a th:href="@{/admin/members}" class="nav-link"><i class="bi bi-people"></i> Members</a>
+        <a th:href="@{/admin/payments}" class="nav-link"><i class="bi bi-cash-coin"></i> Payments</a>
+        <a th:href="@{/admin/auctions}" class="nav-link"><i class="bi bi-hammer"></i> Auctions</a>
+        <a th:href="@{/admin/settlements}" class="nav-link active"><i class="bi bi-bank"></i> Settlements</a>
+        <a th:href="@{/admin/reports/commission}" class="nav-link"><i class="bi bi-graph-up"></i> Commission</a>
+        <a th:href="@{/admin/audit}" class="nav-link"><i class="bi bi-shield-check"></i> Audit Log</a>
+        <a th:href="@{/help}" class="nav-link"><i class="bi bi-question-circle"></i> Help & Rules</a>
+        <a th:href="@{/logout}" class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    </nav>
+</div>
+<div class="main-content">
+    <div class="topbar">
+        <div><h4><i class="bi bi-bank text-warning me-2"></i>Settlement Management</h4><div class="sub">Early exit and maturity settlement approvals</div></div>
+        <div class="user-badge" th:text="${user.fullName}">Admin</div>
+    </div>
+    <div th:if="${success}" class="alert alert-success alert-dismissible"><span th:text="${success}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible"><span th:text="${error}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i><strong>Settlement Rules:</strong> Early exit = 2% deduction on total paid + pending dues deducted. Maturity = Total paid + Profit share.
+    </div>
+
+    <!-- Pending settlements -->
+    <div class="card panel mb-4">
+        <div class="card-header d-flex justify-content-between">
+            <span><i class="bi bi-clock-history text-warning me-2"></i>Pending Settlements</span>
+            <span class="badge bg-warning text-dark" th:text="${settlements.size()} + ' pending'"></span>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                <tr><th>Member</th><th>Chit</th><th>Type</th><th>Total Paid</th><th>Late Fines</th><th>Deduction</th><th>Final Amount</th><th>Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${settlements}">
+                    <td><div class="fw-semibold" th:text="${s.membership.user.fullName}"></div><small class="text-muted" th:text="${s.membership.user.email}"></small></td>
+                    <td th:text="${s.membership.chit.name}"></td>
+                    <td><span class="badge" th:classappend="${s.type.name() == 'EARLY_EXIT'} ? 'bg-warning text-dark' : 'bg-success'" th:text="${s.type}"></span></td>
+                    <td th:text="'₹' + ${s.totalPaidAmount}"></td>
+                    <td class="text-danger" th:text="'₹' + ${s.lateFines != null ? s.lateFines : 0}"></td>
+                    <td class="text-danger" th:text="'₹' + ${s.deductionAmount != null ? s.deductionAmount : 0}"></td>
+                    <td class="fw-bold text-success" th:text="'₹' + ${s.finalSettlementAmount}"></td>
+                    <td th:text="${#temporals.format(s.requestedAt, 'dd MMM yyyy')}"></td>
+                    <td>
+                        <form th:action="@{/admin/settlements/{id}/process(id=${s.id})}" method="post" class="d-inline">
+                            <input type="hidden" name="approved" value="true">
+                            <input type="hidden" name="remarks" value="Approved by admin">
+                            <button class="btn btn-sm btn-success fw-bold"><i class="bi bi-check"></i> Approve</button>
+                        </form>
+                        <form th:action="@{/admin/settlements/{id}/process(id=${s.id})}" method="post" class="d-inline ms-1">
+                            <input type="hidden" name="approved" value="false">
+                            <input type="hidden" name="remarks" value="Rejected by admin">
+                            <button class="btn btn-sm btn-danger"><i class="bi bi-x"></i> Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(settlements)}"><td colspan="9" class="text-center text-muted py-4"><i class="bi bi-check-all fs-3 d-block mb-2"></i>No pending settlements</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Settlement history -->
+    <div class="card panel">
+        <div class="card-header"><i class="bi bi-archive me-2"></i>All Settlement History</div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                <tr><th>Member</th><th>Chit</th><th>Type</th><th>Final Amount</th><th>Status</th><th>Processed</th><th>Approved By</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${allSettlements}">
+                    <td th:text="${s.membership.user.fullName}"></td>
+                    <td th:text="${s.membership.chit.name}"></td>
+                    <td><span class="badge" th:classappend="${s.type.name() == 'EARLY_EXIT'} ? 'bg-warning text-dark' : 'bg-success'" th:text="${s.type}"></span></td>
+                    <td class="fw-bold" th:text="'₹' + ${s.finalSettlementAmount}"></td>
+                    <td><span class="badge" th:classappend="${s.status.name() == 'APPROVED'} ? 'bg-success' : (${s.status.name() == 'REJECTED'} ? 'bg-danger' : (${s.status.name() == 'COMPLETED'} ? 'bg-primary' : 'bg-secondary'))" th:text="${s.status}"></span></td>
+                    <td th:text="${s.processedAt != null ? #temporals.format(s.processedAt, 'dd MMM yyyy') : '-'}"></td>
+                    <td th:text="${s.approvedBy != null ? s.approvedBy.fullName : '-'}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(allSettlements)}"><td colspan="7" class="text-center text-muted py-3">No settlement records</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body></html>

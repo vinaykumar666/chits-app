@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+  <head th:fragment="head(pageTitle)">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${pageTitle + ' | YGC Internal'}">YGC Internal</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+  </head>
+  <body>
+    <aside class="sidebar" th:fragment="sidebar(active)">
+      <a class="brand" th:href="@{/}">
+        <span class="brand-mark">Y</span>
+        <span>
+          <strong>YGC Internal</strong>
+          <small>Save Rupee, Rupee Will Save You In Future</small>
+        </span>
+      </a>
+      <nav class="nav">
+        <a th:href="@{/}" th:classappend="${active == 'dashboard'} ? ' active'">Dashboard</a>
+        <a th:href="@{/members}" th:classappend="${active == 'members'} ? ' active'">Members</a>
+        <a th:href="@{/chits}" th:classappend="${active == 'chits'} ? ' active'">Chits</a>
+        <a th:href="@{/payments}" th:classappend="${active == 'payments'} ? ' active'">Payments</a>
+        <a th:href="@{/auctions}" th:classappend="${active == 'auctions'} ? ' active'">Auctions</a>
+        <a th:href="@{/settlements}" th:classappend="${active == 'settlements'} ? ' active'">Settlements</a>
+        <a th:href="@{/reports}" th:classappend="${active == 'reports'} ? ' active'">Reports</a>
+        <a th:href="@{/audit}" th:classappend="${active == 'audit'} ? ' active'">Audit</a>
+        <a class="logout" th:href="@{/logout}">Logout</a>
+      </nav>
+    </aside>
+
+    <div th:fragment="topbar(title, eyebrow)" class="topbar">
+      <div>
+        <p class="eyebrow" th:text="${eyebrow}">Enterprise Chit Operations</p>
+        <h1 th:text="${title}">Dashboard</h1>
+      </div>
+      <div>
+        <span class="badge" sec:authentication="name">admin@ygc.internal</span>
+      </div>
+    </div>
+
+    <div th:fragment="alerts">
+      <div class="notice" th:if="${success}" th:text="${success}">Saved</div>
+      <div class="notice error" th:if="${error}" th:text="${error}">Error</div>
+    </div>
+  </body>
+</html>

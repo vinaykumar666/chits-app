@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><title>Membership Details - YGC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="sidebar member-sidebar">
+    <div class="brand"><div class="brand-icon">Y</div><div><div class="brand-name">YGC Internal</div><div class="brand-tag">Save Rupee, Save Future</div></div></div>
+    <nav class="sidebar-nav">
+        <a th:href="@{/member/dashboard}" class="nav-link"><i class="bi bi-house"></i> My Dashboard</a>
+        <a th:href="@{/member/chits}" class="nav-link"><i class="bi bi-search"></i> Browse Chits</a>
+        <a th:href="@{/member/help}" class="nav-link"><i class="bi bi-question-circle"></i> Help & Rules</a>
+        <a th:href="@{/terms}" class="nav-link"><i class="bi bi-file-text"></i> Terms & Agreement</a>
+        <a th:href="@{/logout}" class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    </nav>
+    <div style="padding:16px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
+        <small class="text-muted d-block">Support</small>
+        <a href="tel:+918919508889" class="text-warning text-decoration-none small fw-bold"><i class="bi bi-telephone me-1"></i>+91 8919508889</a>
+    </div>
+</div>
+<div class="main-content">
+    <div class="topbar">
+        <div>
+            <a th:href="@{/member/dashboard}" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+            <h4 class="mt-1"><i class="bi bi-collection text-warning me-2"></i><span th:text="${membership.chit.name}">Chit</span></h4>
+            <div class="sub">Membership details, payments & auction</div>
+        </div>
+        <div class="user-badge" th:text="${user.fullName}">User</div>
+    </div>
+    <div th:if="${success}" class="alert alert-success alert-dismissible"><span th:text="${success}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible"><span th:text="${error}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+
+    <!-- Terms Accept Banner -->
+    <div th:if="${!membership.termsAccepted}" class="alert alert-warning d-flex align-items-center justify-content-between mb-4">
+        <div><i class="bi bi-exclamation-triangle-fill me-2"></i><strong>Action Required:</strong> Please accept the Terms & Conditions to activate your membership and receive your digital certificate.</div>
+        <form th:action="@{/member/memberships/{id}/accept-terms(id=${membership.id})}" method="post">
+            <button type="submit" class="btn btn-warning ms-3 fw-bold">Accept Terms &amp; Get Certificate</button>
+        </form>
+    </div>
+    <div th:if="${membership.termsAccepted}" class="alert alert-success">
+        <i class="bi bi-patch-check-fill me-2"></i><strong>Terms Accepted.</strong> Your digital membership certificate has been generated.
+        <a th:href="@{/terms}" class="ms-2 alert-link">View Terms</a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Chit Details -->
+        <div class="col-md-5">
+            <div class="card panel mb-4">
+                <div class="card-header"><i class="bi bi-info-circle me-2 text-primary"></i>Chit Information</div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td class="text-muted">Chit Name</td><td class="fw-semibold" th:text="${membership.chit.name}"></td></tr>
+                        <tr><td class="text-muted">Monthly Amount</td><td class="fw-bold text-success" th:text="'₹' + ${membership.chit.monthlyAmount}"></td></tr>
+                        <tr><td class="text-muted">Total Value</td><td th:text="'₹' + ${membership.chit.totalChitValue}"></td></tr>
+                        <tr><td class="text-muted">Duration</td><td th:text="${membership.chit.durationMonths} + ' months'"></td></tr>
+                        <tr><td class="text-muted">Start Date</td><td th:text="${membership.chit.startDate}"></td></tr>
+                        <tr><td class="text-muted">End Date</td><td th:text="${membership.chit.endDate}"></td></tr>
+                        <tr><td class="text-muted">Commission</td><td th:text="${membership.chit.adminCommissionPercentage} + '%'"></td></tr>
+                        <tr><td class="text-muted">My Status</td><td><span class="badge" th:classappend="${membership.status.name() == 'ACTIVE'} ? 'bg-success' : (${membership.status.name() == 'PENDING'} ? 'bg-warning text-dark' : 'bg-secondary')" th:text="${membership.status}"></span></td></tr>
+                        <tr><td class="text-muted">Total Paid</td><td class="fw-bold text-success" th:text="'₹' + ${totalPaid}"></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Submit Payment -->
+            <div class="card panel" th:if="${membership.status.name() == 'ACTIVE'}">
+                <div class="card-header"><i class="bi bi-upload text-success me-2"></i>Submit Payment Proof</div>
+                <div class="card-body">
+                    <div class="alert alert-info small py-2"><i class="bi bi-qr-code me-1"></i>Pay via QR code provided by admin, then upload screenshot proof.</div>
+                    <form th:action="@{/member/payments/submit}" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="membershipId" th:value="${membership.id}">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Month Number</label>
+                            <input type="number" name="monthNumber" class="form-control" min="1" th:max="${membership.chit.durationMonths}" required placeholder="e.g. 1">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Payment Screenshot</label>
+                            <input type="file" name="screenshot" class="form-control" accept="image/*">
+                            <small class="text-muted">Upload your payment screenshot as proof</small>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-upload me-1"></i>Submit for Verification</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <!-- Payment History -->
+            <div class="card panel mb-4">
+                <div class="card-header d-flex justify-content-between">
+                    <span><i class="bi bi-receipt me-2 text-warning"></i>Payment History</span>
+                    <span class="badge bg-secondary" th:text="${payments.size()} + ' records'"></span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Month</th><th>Amount</th><th>Fine</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+                        <tbody>
+                        <tr th:each="p : ${payments}">
+                            <td th:text="'Month ' + ${p.monthNumber}"></td>
+                            <td th:text="'₹' + ${p.amount}"></td>
+                            <td><span th:classappend="${p.lateFine.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'text-danger fw-bold' : 'text-muted'" th:text="'₹' + ${p.lateFine}"></span></td>
+                            <td class="fw-bold" th:text="'₹' + ${p.totalAmount}"></td>
+                            <td><span class="badge" th:classappend="${p.status.name() == 'APPROVED'} ? 'bg-success' : (${p.status.name() == 'REJECTED'} ? 'bg-danger' : (${p.status.name() == 'OVERDUE'} ? 'bg-warning text-dark' : 'bg-secondary'))" th:text="${p.status}"></span></td>
+                            <td th:text="${p.paidDate}"></td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(payments)}"><td colspan="6" class="text-center text-muted py-3">No payments yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Active Auctions -->
+            <div class="card panel mb-4" th:if="${!#lists.isEmpty(auctions)}">
+                <div class="card-header"><i class="bi bi-hammer text-warning me-2"></i>Auctions for this Chit</div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Month</th><th>Date</th><th>Status</th><th>Winner</th><th>Payout</th><th>Bid</th></tr></thead>
+                        <tbody>
+                        <tr th:each="auction : ${auctions}">
+                            <td th:text="'Month ' + ${auction.monthNumber}"></td>
+                            <td th:text="${auction.auctionDate}"></td>
+                            <td><span class="badge" th:classappend="${auction.status.name() == 'OPEN'} ? 'bg-success' : (${auction.status.name() == 'CLOSED'} ? 'bg-secondary' : 'bg-info text-dark')" th:text="${auction.status}"></span></td>
+                            <td th:text="${auction.winner != null ? auction.winner.fullName : '-'}"></td>
+                            <td th:text="${auction.lumpSumPayout != null ? '₹' + auction.lumpSumPayout : '-'}"></td>
+                            <td>
+                                <div th:if="${auction.status.name() == 'OPEN' and !membership.hasWonAuction}">
+                                    <form th:action="@{/member/auctions/{id}/bid(id=${auction.id})}" method="post" class="d-flex gap-1">
+                                        <input type="number" name="bidAmount" class="form-control form-control-sm" style="width:110px"
+                                               th:placeholder="${membership.chit.minBidAmount != null ? '₹' + membership.chit.minBidAmount : '₹0'}"
+                                               th:min="${membership.chit.minBidAmount}" th:max="${membership.chit.maxBidAmount}" required>
+                                        <button type="submit" class="btn btn-sm btn-warning fw-bold">Bid</button>
+                                    </form>
+                                </div>
+                                <span th:if="${auction.status.name() != 'OPEN'}" class="text-muted small">Closed</span>
+                                <span th:if="${auction.status.name() == 'OPEN' and membership.hasWonAuction}" class="badge bg-success">Won</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Early Exit -->
+            <div class="card panel border-danger" th:if="${membership.status.name() == 'ACTIVE'}">
+                <div class="card-header bg-danger bg-opacity-10"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Early Exit Settlement</div>
+                <div class="card-body">
+                    <p class="text-muted small">If you wish to exit this chit before completion, a <strong>2% deduction</strong> will be applied on your total paid amount. Pending dues and fines will also be adjusted.</p>
+                    <div class="d-flex gap-2">
+                        <form th:action="@{/member/memberships/{id}/exit(id=${membership.id})}" method="post"
+                              onsubmit="return confirm('Are you sure you want to request early exit? A 2% deduction will apply.')">
+                            <button type="submit" class="btn btn-outline-danger fw-bold">
+                                <i class="bi bi-door-open me-1"></i>Request Early Exit
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body></html>
