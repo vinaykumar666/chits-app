@@ -1,18 +1,36 @@
-# Build stage
+# ─── Build Stage ──────────────────────────────────────────────
 FROM maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /build
 COPY pom.xml .
-RUN mvn dependency:resolve
+RUN mvn dependency:resolve -q
 COPY src ./src
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -q
 
-# Runtime stage
+# ─── Runtime Stage ────────────────────────────────────────────
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-RUN addgroup -g 1001 -S nonroot && adduser -u 1001 -S nonroot -G nonroot
-COPY --from=builder /build/target/*.jar app.jar
-RUN chown -R nonroot:nonroot /app
-USER nonroot
-EXPOSE 8080
-CMD ["java", "-jar", "app.jar"]
 
+# Non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser  -u 1001 -S appuser -G appgroup
+
+# App jar
+COPY --from=builder /build/target/*.jar app.jar
+
+# Persistent uploads directory (mount as Docker volume on EC2)
+RUN mkdir -p /app/uploads/agreements && \
+    chown -R appuser:appgroup /app
+
+USER appuser
+
+EXPOSE 8080
+
+# Health check — waits for Spring Boot to be ready
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget -qO- http://localhost:8080/login || exit 1
+
+ENTRYPOINT ["java", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-jar", "app.jar"]

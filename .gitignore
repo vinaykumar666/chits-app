@@ -1,5 +1,24 @@
+# Maven
 target/
+*.jar
+*.war
+
+# IDE
 .idea/
-.vscode/
 *.iml
+.vscode/
+
+# Env & secrets
+.env
+*.env
+
+# Logs
+logs/
 *.log
+
+# Uploads (runtime data)
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db
