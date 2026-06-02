@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -37,6 +38,7 @@ public class NotificationService {
 
     /** user-email → list of active SSE emitters (user may have multiple tabs) */
     private final Map<String, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
+    private final Map<SseEmitter, ScheduledFuture<?>> heartbeatTasks = new ConcurrentHashMap<>();
 
     // ─────────────────────────────────────────────────────────────────
     // SSE subscription management
@@ -64,15 +66,16 @@ public class NotificationService {
     }
 
     private void scheduleHeartbeat(String userEmail, SseEmitter emitter) {
-        heartbeatExecutor.scheduleAtFixedRate(() -> {
+        ScheduledFuture<?> heartbeatTask = heartbeatExecutor.scheduleAtFixedRate(() -> {
             if (!isEmitterActive(userEmail, emitter)) return;
             try {
                 emitter.send(SseEmitter.event().name("PING").data("keepalive"));
             } catch (IOException e) {
                 removeEmitter(userEmail, emitter);
-                loggingUtil.warn("SSE heartbeat failed for: " + userEmail, "NotificationService");
+                loggingUtil.debug("SSE heartbeat disconnected for: " + userEmail, "NotificationService");
             }
         }, 20, 20, TimeUnit.SECONDS);
+        heartbeatTasks.put(emitter, heartbeatTask);
     }
 
     private boolean isEmitterActive(String userEmail, SseEmitter emitter) {
@@ -81,6 +84,8 @@ public class NotificationService {
     }
 
     private void removeEmitter(String userEmail, SseEmitter emitter) {
+        ScheduledFuture<?> heartbeatTask = heartbeatTasks.remove(emitter);
+        if (heartbeatTask != null) heartbeatTask.cancel(true);
         List<SseEmitter> list = emitters.get(userEmail);
         if (list != null) {
             list.remove(emitter);
