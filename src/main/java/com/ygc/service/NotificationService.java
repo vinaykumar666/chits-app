@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Real-time push notification service using Server-Sent Events (SSE).
@@ -30,6 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class NotificationService {
 
     private final LoggingUtil loggingUtil;
+    private final ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor();
 
     /** user-email → list of active SSE emitters (user may have multiple tabs) */
     private final Map<String, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
@@ -43,8 +47,8 @@ public class NotificationService {
      * opens the SSE stream.
      */
     public SseEmitter subscribe(String userEmail) {
-        // 5-minute timeout; client auto-reconnects
-        SseEmitter emitter = new SseEmitter(5 * 60 * 1000L);
+        // Keep stream open for long-lived Render connections.
+        SseEmitter emitter = new SseEmitter(0L);
 
         emitters.computeIfAbsent(userEmail, k -> new CopyOnWriteArrayList<>()).add(emitter);
 
@@ -52,10 +56,28 @@ public class NotificationService {
         emitter.onCompletion(cleanup);
         emitter.onTimeout(cleanup);
         emitter.onError(e -> cleanup.run());
+        scheduleHeartbeat(userEmail, emitter);
 
         loggingUtil.event("subscribe", "SSE_CONNECTED", "user", userEmail,
                 "activeConnections", countConnections());
         return emitter;
+    }
+
+    private void scheduleHeartbeat(String userEmail, SseEmitter emitter) {
+        heartbeatExecutor.scheduleAtFixedRate(() -> {
+            if (!isEmitterActive(userEmail, emitter)) return;
+            try {
+                emitter.send(SseEmitter.event().name("PING").data("keepalive"));
+            } catch (IOException e) {
+                removeEmitter(userEmail, emitter);
+                loggingUtil.warn("SSE heartbeat failed for: " + userEmail, "NotificationService");
+            }
+        }, 20, 20, TimeUnit.SECONDS);
+    }
+
+    private boolean isEmitterActive(String userEmail, SseEmitter emitter) {
+        List<SseEmitter> list = emitters.get(userEmail);
+        return list != null && list.contains(emitter);
     }
 
     private void removeEmitter(String userEmail, SseEmitter emitter) {

@@ -147,9 +147,13 @@
   let reconnectDelay = 5000;
   let notificationLog = [];
 
+  function isAuthenticatedPage() {
+    return !!document.querySelector('.sidebar, .member-sidebar') || !!document.getElementById('ygc-bell-btn');
+  }
+
   function connectSSE() {
     // Only connect on authenticated pages
-    if (!document.getElementById('ygc-toast-container')) return;
+    if (!isAuthenticatedPage()) return;
 
     if (sseConnection) { sseConnection.close(); sseConnection = null; }
 
@@ -520,7 +524,7 @@
     registerSW();
     showIOSInstallHint();
     initOfflineDetection();
-    connectSSE();
+    if (document.getElementById('ygc-toast-container')) connectSSE();
     injectBottomNav();
     injectMobileSidebarToggle();
     initKeyboardHandling();

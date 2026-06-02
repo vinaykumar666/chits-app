@@ -3,6 +3,7 @@ package com.ygc.service;
 import com.ygc.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -17,6 +18,10 @@ import java.io.File;
 public class EmailService {
     private final JavaMailSender mailSender;
     private final LoggingUtil loggingUtil;
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+    @Value("${ygc.mail.from:}")
+    private String configuredFromAddress;
 
     @Async
     public void sendEmail(String to, String subject, String body) {
@@ -45,7 +50,7 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject("[YGC Internal] " + subject);
             helper.setText(htmlBody, true);
-            helper.setFrom("noreply@ygcinternal.com");
+            helper.setFrom(resolveFromAddress());
 
             if (attachmentPath != null) {
                 File file = new File(attachmentPath);
@@ -64,6 +69,16 @@ public class EmailService {
         } catch (Exception e) {
             loggingUtil.error("Failed to send email to: " + to, "EmailService", e);
         }
+    }
+
+    private String resolveFromAddress() {
+        if (configuredFromAddress != null && !configuredFromAddress.isBlank()) {
+            return configuredFromAddress.trim();
+        }
+        if (mailUsername != null && !mailUsername.isBlank()) {
+            return mailUsername.trim();
+        }
+        return "noreply@localhost";
     }
 
     private String getPlainHtmlTemplate(String subject, String body) {
