@@ -6,11 +6,12 @@
 
 (function () {
   'use strict';
+  const APP_VERSION = 'v2.1';
 
   // ─── Service Worker Registration ──────────────────────────────────────────
   function registerSW() {
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=2.1', { scope: '/' })
       .then(reg => {
         console.log('[YGC] SW registered, scope:', reg.scope);
         // Check for updates every 60 s
@@ -498,6 +499,32 @@
     });
   }
 
+  function showVersionBadge() {
+    if (document.getElementById('ygc-version-badge')) return;
+    const badge = document.createElement('div');
+    badge.id = 'ygc-version-badge';
+    badge.textContent = APP_VERSION;
+    badge.style.cssText = `
+      position:fixed;bottom:12px;left:12px;z-index:9998;
+      background:#1a1a2e;color:#f0a500;border:1px solid rgba(240,165,0,.45);
+      border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;
+      font-family:system-ui,sans-serif;opacity:.88;pointer-events:none;`;
+    document.body.appendChild(badge);
+  }
+
+  // ─── Mobile: Make data tables scrollable ──────────────────────────────────
+  function enhanceTablesForMobile() {
+    if (!isMobile()) return;
+    document.querySelectorAll('.main-content table').forEach(table => {
+      const parent = table.parentElement;
+      if (parent && parent.classList.contains('table-responsive')) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-responsive';
+      table.parentNode.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    });
+  }
+
   // ─── Active link highlighting ──────────────────────────────────────────────
   function highlightActiveNav() {
     const path = window.location.pathname;
@@ -528,6 +555,8 @@
     injectBottomNav();
     injectMobileSidebarToggle();
     initKeyboardHandling();
+    enhanceTablesForMobile();
+    showVersionBadge();
     highlightActiveNav();
     initBellIcon();
 

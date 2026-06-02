@@ -3,9 +3,9 @@
  * Handles: caching, offline support, background sync, push notifications
  */
 
-const CACHE_NAME = 'ygc-v2';
-const STATIC_CACHE = 'ygc-static-v2';
-const RUNTIME_CACHE = 'ygc-runtime-v2';
+const CACHE_NAME = 'ygc-v2.1';
+const STATIC_CACHE = 'ygc-static-v2.1';
+const RUNTIME_CACHE = 'ygc-runtime-v2.1';
 
 // Assets to pre-cache at install time
 const PRECACHE_ASSETS = [
