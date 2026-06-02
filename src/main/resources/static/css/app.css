@@ -534,3 +534,24 @@ body { overflow-x: hidden; }
 
 /* Fix Bootstrap modal on iOS */
 body.modal-open { overflow: hidden; position: fixed; width: 100%; }
+
+/* ─── Bell Icon Button ──────────────────────────────────────── */
+#ygc-bell-btn {
+  color: #6c757d;
+  transition: color .2s, transform .2s;
+  line-height: 1;
+}
+#ygc-bell-btn:hover {
+  color: #f0a500;
+  transform: scale(1.1);
+}
+#ygc-bell-btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+#ygc-bell-btn .badge {
+  min-width: 16px;
+  min-height: 16px;
+  font-size: .6rem;
+  padding: 2px 4px;
+}

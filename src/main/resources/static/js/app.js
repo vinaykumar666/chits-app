@@ -260,6 +260,68 @@
     badge.style.display = 'inline-flex';
   }
 
+  // ─── Bell Icon: Notification Panel ───────────────────────────────────────
+  function initBellIcon() {
+    const btn = document.getElementById('ygc-bell-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+      let panel = document.getElementById('ygc-notif-panel');
+      if (panel) { panel.remove(); return; }
+
+      // Reset badge
+      const badge = document.getElementById('ygc-notif-badge');
+      if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
+
+      // Build panel
+      panel = document.createElement('div');
+      panel.id = 'ygc-notif-panel';
+      panel.style.cssText = `
+        position:fixed;top:60px;right:12px;z-index:9999;
+        width:320px;max-width:calc(100vw - 24px);
+        background:#fff;border-radius:14px;
+        box-shadow:0 8px 40px rgba(0,0,0,.18);
+        font-family:system-ui,sans-serif;overflow:hidden;
+        border:1px solid #e8e8e8;`;
+
+      const logs = notificationLog.slice(0, 15);
+      const items = logs.length
+        ? logs.map(n => `
+          <div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-start">
+            <span style="font-size:1.2rem">${(n.style && n.style.icon) || '🔔'}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:.85rem;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(n.title || '')}</div>
+              <div style="font-size:.78rem;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(n.message || '')}</div>
+              <div style="font-size:.7rem;color:#aaa;margin-top:2px">${n.receivedAt ? new Date(n.receivedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+            </div>
+          </div>`).join('')
+        : `<div style="padding:24px;text-align:center;color:#aaa;font-size:.85rem">
+            <div style="font-size:2rem;margin-bottom:8px">🔕</div>No notifications yet
+          </div>`;
+
+      panel.innerHTML = `
+        <div style="padding:12px 14px;background:#f8f9fa;border-bottom:1px solid #e8e8e8;
+             display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700;font-size:.9rem;color:#1a1a2e">🔔 Notifications</span>
+          <button onclick="document.getElementById('ygc-notif-panel').remove()"
+            style="background:none;border:none;cursor:pointer;color:#aaa;font-size:1.1rem;line-height:1">✕</button>
+        </div>
+        <div style="max-height:320px;overflow-y:auto">${items}</div>`;
+
+      document.body.appendChild(panel);
+
+      // Close on outside click
+      setTimeout(() => {
+        document.addEventListener('click', function handler(e) {
+          if (!panel.contains(e.target) && e.target !== btn) {
+            panel.remove();
+            document.removeEventListener('click', handler);
+          }
+        });
+      }, 50);
+    });
+  }
+
   // ─── Web Push Permission Request ──────────────────────────────────────────
   async function requestNotificationPermission() {
     if (!('Notification' in window)) return 'unsupported';
@@ -463,6 +525,7 @@
     injectMobileSidebarToggle();
     initKeyboardHandling();
     highlightActiveNav();
+    initBellIcon();
 
     // Request notification permission after a short delay on authenticated pages
     const isAuthPage = document.querySelector('.sidebar, .member-sidebar');
