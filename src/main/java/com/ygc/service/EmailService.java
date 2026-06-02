@@ -50,7 +50,7 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject("[YGC Internal] " + subject);
             helper.setText(htmlBody, true);
-            helper.setFrom(resolveFromAddress());
+            helper.setFrom("onboarding@resend.dev");
 
             if (attachmentPath != null) {
                 File file = new File(attachmentPath);
