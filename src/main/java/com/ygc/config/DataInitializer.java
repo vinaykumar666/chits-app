@@ -3,6 +3,7 @@ package com.ygc.config;
 import com.ygc.model.User;
 import com.ygc.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -12,6 +13,10 @@ import org.springframework.stereotype.Component;
 public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    @Value("${spring.mail.username)}")
+    private String defaultAdminEmail;
+    @Value("${spring.mail.password)}")
+    private String defaultAdminPassword;
 
     @Override
     public void run(String... args) {
@@ -30,6 +35,8 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("Email: medipalli.vinaykumar@gmail.com");
             System.out.println("Password: Admin@123");
             System.out.println("==============================================");
+            System.out.println("username: " + defaultAdminEmail);
+            System.out.println("password: " + defaultAdminPassword);
         }
     }
 }
