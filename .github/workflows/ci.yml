@@ -20,8 +20,8 @@ jobs:
         run: mvn clean verify
       - name: SonarCloud Analysis
         run: |
-             - mvn sonar
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.organization=vinaykumar666
-            -Dsonar.projectKey=vinaykumar666_chits-app
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          mvn sonar:sonar \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization=vinaykumar666 \
+            -Dsonar.projectKey=vinaykumar666_chits-app \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
