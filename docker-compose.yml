@@ -22,7 +22,7 @@ services:
 
   # ── Spring Boot App ────────────────────────────────────────
   app:
-    image: vinaykumar666/chits-app:latest .
+    image: vinaykumar666/chits-app:latest
     container_name: ygc-app
     restart: unless-stopped
     depends_on:
