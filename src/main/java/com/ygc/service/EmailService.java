@@ -27,6 +27,30 @@ public class EmailService {
     public void sendHtmlEmail(String to, String subject, String htmlBody) {
         sendHtmlEmailWithAttachment(to, subject, htmlBody, null, null);
     }
+    /**
+     * Sent to the removed member AND to admin (two separate calls with different recipients).
+     * When sending to admin, the caller passes adminName as the name parameter and a
+     * prefixed chitName so the subject line is self-explanatory in the inbox.
+     */
+    public void sendMemberRemovedFromChit(String email, String name,
+                                          String chitName, String reason) {
+        try {
+            String html = getStyledEmailTemplate(
+                    "⚠️ Removed from Chit — " + chitName,
+                    "Dear " + name + ",",
+                    "Your membership in chit <strong>" + chitName + "</strong> has been "
+                            + "<span style='color:#dc3545;font-weight:600'>removed</span> by the administrator.",
+                    new String[][]{
+                            {"Chit Name",       chitName},
+                            {"Reason",          reason},
+                            {"Action Required", "Please contact admin at +91 8919508889 if you have questions."}
+                    },
+                    "danger");
+            sendHtmlEmail(email, "Membership Removed — " + chitName, html);
+        } catch (Exception e) {
+            loggingUtil.error("Error sending member-removed email", "EmailService.sendMemberRemovedFromChit", e);
+        }
+    }
 
     /**
      * Send an HTML email with an optional file attachment.

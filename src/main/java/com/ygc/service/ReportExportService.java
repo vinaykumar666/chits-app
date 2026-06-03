@@ -43,6 +43,257 @@ public class ReportExportService {
     private static final DeviceRgb WHITE = new DeviceRgb(255, 255, 255);
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
+    // ── Chit Analysis PDF (full archive report) ───────────────────────────────
+    //
+    //  TWO entry-points:
+    //    1. generateChitAnalysisPdf(Chit, json)   — called just before close/delete
+    //    2. generateChitAnalysisPdfFromJson(...)   — regenerate from stored snapshot
+    //
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Full chit analysis PDF.  Called by ChitHistoryService with a live Chit
+     * object (before deletion) and the pre-built JSON snapshot string.
+     */
+    public byte[] generateChitAnalysisPdf(com.ygc.model.Chit chit, String snapshotJson) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> data = mapper.readValue(snapshotJson, java.util.Map.class);
+            return buildChitAnalysisPdfFromMap(chit.getName(), data);
+        } catch (Exception e) {
+            log.error("Failed to generate chit analysis PDF for chit {}", chit.getId(), e);
+            throw new RuntimeException("Chit analysis PDF generation failed", e);
+        }
+    }
+
+    /**
+     * Regenerate the analysis PDF purely from the stored JSON string
+     * (used when the original PDF file is missing on disk).
+     */
+    public byte[] generateChitAnalysisPdfFromJson(String chitName, String snapshotJson) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> data = mapper.readValue(snapshotJson, java.util.Map.class);
+            return buildChitAnalysisPdfFromMap(chitName, data);
+        } catch (Exception e) {
+            log.error("Failed to regenerate chit analysis PDF from JSON for chit '{}'", chitName, e);
+            throw new RuntimeException("Chit analysis PDF regeneration failed", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private byte[] buildChitAnalysisPdfFromMap(String chitName,
+                                               java.util.Map<String, Object> data) throws Exception {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            Document doc = new Document(pdf, PageSize.A4);
+            doc.setMargins(40, 40, 50, 40);
+
+            java.util.Map<String, Object> chit     = (java.util.Map<String, Object>) data.getOrDefault("chit",     java.util.Collections.emptyMap());
+            java.util.Map<String, Object> summary  = (java.util.Map<String, Object>) data.getOrDefault("summary",  java.util.Collections.emptyMap());
+            java.util.List<java.util.Map<String,Object>> members     = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("members",     java.util.Collections.emptyList());
+            java.util.List<java.util.Map<String,Object>> payments    = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("payments",    java.util.Collections.emptyList());
+            java.util.List<java.util.Map<String,Object>> auctions    = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("auctions",    java.util.Collections.emptyList());
+            java.util.List<java.util.Map<String,Object>> commissions = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("commissions", java.util.Collections.emptyList());
+            java.util.List<java.util.Map<String,Object>> settlements = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("settlements", java.util.Collections.emptyList());
+
+            // ── Header ─────────────────────────────────────────────────
+            addHeader(doc, "Chit Analysis Report", "Complete Record for: " + chitName);
+
+            // ── Meta info row ──────────────────────────────────────────
+            String status    = str(chit.get("status"));
+            String archivedAt = str(summary.get("archivedAt"));
+            addMetaRow(doc, "Final Status", status, "Archived At", archivedAt);
+            addMetaRow(doc,
+                    "Start Date",  str(chit.get("startDate")),
+                    "End Date",    str(chit.get("endDate")));
+
+            String closingReason = str(chit.get("closingReason"));
+            if (closingReason != null && !closingReason.isBlank()) {
+                doc.add(new Paragraph("Closing Reason: " + closingReason)
+                        .setFontSize(9).setFontColor(DANGER).setMarginBottom(8));
+            }
+
+            // ── Summary boxes ──────────────────────────────────────────
+            addThreeSummaryBoxes(doc,
+                    "Total Members",      str(summary.get("totalMembers")),  BLUE,
+                    "Total Collected",    "₹" + str(summary.get("totalCollected")),  SUCCESS,
+                    "Commission Earned",  "₹" + str(summary.get("totalCommissionEarned")),  GOLD);
+
+            addThreeSummaryBoxes(doc,
+                    "Total Auctions",     str(summary.get("totalAuctions")),  NAVY,
+                    "Payments Approved",  str(summary.get("completedPayments")),  SUCCESS,
+                    "Payments Pending",   str(summary.get("pendingPayments")),  DANGER);
+
+            // ── Chit Configuration ─────────────────────────────────────
+            sectionTitle(doc, "Chit Configuration");
+            Table configTable = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1, 1}))
+                    .useAllAvailableWidth().setMarginBottom(16).setFontSize(9);
+            addConfigRow(configTable, "Monthly Amount", "₹" + str(chit.get("monthlyAmount")),
+                    "Duration",       str(chit.get("durationMonths")) + " months");
+            addConfigRow(configTable, "Total Members",  str(chit.get("totalMembers")),
+                    "Total Chit Value", "₹" + str(chit.get("totalChitValue")));
+            addConfigRow(configTable, "Commission %",   str(chit.get("adminCommissionPercentage")) + "%",
+                    "Created By",     str(chit.get("createdBy")));
+            addConfigRow(configTable, "Min Bid",        "₹" + str(chit.get("minBidAmount")),
+                    "Max Bid",        "₹" + str(chit.get("maxBidAmount")));
+            doc.add(configTable);
+
+            // ── Members ────────────────────────────────────────────────
+            sectionTitle(doc, "Members (" + members.size() + ")");
+            if (!members.isEmpty()) {
+                float[] mCols = {30f, 150f, 170f, 80f, 60f, 60f, 120f};
+                Table mt = createTable(mCols);
+                addHeaderRow(mt, "#", "Full Name", "Email", "Status", "Won", "Joined", "Agreement No.");
+                int idx = 1;
+                for (java.util.Map<String, Object> m : members) {
+                    addDataRow(mt, idx % 2 == 0,
+                            String.valueOf(idx++),
+                            str(m.get("fullName")),
+                            str(m.get("email")),
+                            str(m.get("status")),
+                            Boolean.TRUE.equals(m.get("hasWonAuction")) ? "Yes" : "No",
+                            safe(str(m.get("joinedAt")), 10),
+                            str(m.get("agreementNumber")));
+                }
+                doc.add(mt);
+            } else {
+                doc.add(new Paragraph("No members recorded.").setFontSize(9).setFontColor(DANGER));
+            }
+
+            // ── Auctions ───────────────────────────────────────────────
+            sectionTitle(doc, "Auctions (" + auctions.size() + ")");
+            if (!auctions.isEmpty()) {
+                float[] aCols = {40f, 60f, 80f, 130f, 90f, 90f, 90f, 60f};
+                Table at = createTable(aCols);
+                addHeaderRow(at, "#", "Month", "Date", "Winner", "Bid Amount", "Payout", "Commission", "Released");
+                int idx = 1;
+                for (java.util.Map<String, Object> a : auctions) {
+                    addDataRow(at, idx % 2 == 0,
+                            String.valueOf(idx++),
+                            "M" + str(a.get("monthNumber")),
+                            safe(str(a.get("auctionDate")), 10),
+                            str(a.get("winnerName")),
+                            "₹" + str(a.get("winningBidAmount")),
+                            "₹" + str(a.get("lumpSumPayout")),
+                            "₹" + str(a.get("adminCommission")),
+                            Boolean.TRUE.equals(a.get("payoutReleased")) ? "Yes" : "No");
+                }
+                doc.add(at);
+            } else {
+                doc.add(new Paragraph("No auctions conducted.").setFontSize(9).setFontColor(DANGER));
+            }
+
+            // ── Payments ───────────────────────────────────────────────
+            sectionTitle(doc, "Payments (" + payments.size() + ")");
+            if (!payments.isEmpty()) {
+                float[] pCols = {30f, 120f, 40f, 60f, 50f, 70f, 60f, 70f};
+                Table pt = createTable(pCols);
+                addHeaderRow(pt, "#", "Member", "Mo.", "Amount", "Fine", "Total", "Status", "Paid Date");
+                int idx = 1;
+                for (java.util.Map<String, Object> p : payments) {
+                    String pStatus = str(p.get("status"));
+                    addDataRow(pt, idx % 2 == 0,
+                            String.valueOf(idx++),
+                            str(p.get("memberName")),
+                            "M" + str(p.get("monthNumber")),
+                            "₹" + str(p.get("amount")),
+                            nullToZero(str(p.get("lateFine"))),
+                            "₹" + str(p.get("totalAmount")),
+                            pStatus,
+                            safe(str(p.get("paidDate")), 10));
+                }
+                doc.add(pt);
+            } else {
+                doc.add(new Paragraph("No payments recorded.").setFontSize(9).setFontColor(DANGER));
+            }
+
+            // ── Commissions ────────────────────────────────────────────
+            sectionTitle(doc, "Commission Ledger (" + commissions.size() + " entries)");
+            if (!commissions.isEmpty()) {
+                float[] cCols = {40f, 100f, 100f, 200f, 100f};
+                Table ct = createTable(cCols);
+                addHeaderRow(ct, "#", "Amount", "Percentage", "Source", "Month");
+                int idx = 1;
+                for (java.util.Map<String, Object> c : commissions) {
+                    addDataRow(ct, idx % 2 == 0,
+                            String.valueOf(idx++),
+                            "₹" + str(c.get("commissionAmount")),
+                            str(c.get("commissionPercentage")) + "%",
+                            str(c.get("source")),
+                            safe(str(c.get("month")), 10));
+                }
+                doc.add(ct);
+            } else {
+                doc.add(new Paragraph("No commission entries.").setFontSize(9).setFontColor(DANGER));
+            }
+
+            // ── Settlements ────────────────────────────────────────────
+            if (!settlements.isEmpty()) {
+                sectionTitle(doc, "Settlements (" + settlements.size() + ")");
+                float[] sCols = {30f, 120f, 60f, 70f, 70f, 50f, 80f, 60f};
+                Table st = createTable(sCols);
+                addHeaderRow(st, "#", "Member", "Type", "Total Paid", "Deduction", "Status", "Final Amount", "Processed");
+                int idx = 1;
+                for (java.util.Map<String, Object> s : settlements) {
+                    addDataRow(st, idx % 2 == 0,
+                            String.valueOf(idx++),
+                            str(s.get("memberName")),
+                            str(s.get("type")),
+                            "₹" + str(s.get("totalPaidAmount")),
+                            "₹" + str(s.get("deductionAmount")),
+                            str(s.get("status")),
+                            "₹" + str(s.get("finalSettlementAmount")),
+                            safe(str(s.get("processedAt")), 10));
+                }
+                doc.add(st);
+            }
+
+            addDigitalSeal(doc, "Chit Analysis Report | YGC Internal | " + chitName);
+            addFooter(doc);
+            doc.close();
+            return baos.toByteArray();
+        }
+    }
+
+    // ── Small helpers used by chit analysis builder only ──────────────────
+
+    private void sectionTitle(Document doc, String title) {
+        doc.add(new Paragraph(title).setFontSize(12).setBold().setFontColor(NAVY)
+                .setMarginTop(16).setMarginBottom(4));
+        LineSeparator ls = new LineSeparator(new SolidLine(0.8f));
+        ls.setStrokeColor(BLUE);
+        doc.add(ls);
+        doc.add(new Paragraph("").setMarginBottom(6));
+    }
+
+    private void addConfigRow(Table table, String k1, String v1, String k2, String v2) {
+        table.addCell(styledCell(k1, 9, true));
+        table.addCell(styledCell(v1 != null ? v1 : "-", 9, false));
+        table.addCell(styledCell(k2, 9, true));
+        table.addCell(styledCell(v2 != null ? v2 : "-", 9, false));
+    }
+
+    private String str(Object o) {
+        if (o == null) return "-";
+        String s = o.toString().trim();
+        return s.isEmpty() ? "-" : s;
+    }
+
+    private String nullToZero(String s) {
+        if (s == null || s.equals("-")) return "₹0";
+        return "₹" + s;
+    }
+
+    /** Return only the first {@code len} chars of a string (e.g. date prefix). */
+    private String safe(String s, int len) {
+        if (s == null || s.equals("-")) return "-";
+        return s.length() > len ? s.substring(0, len) : s;
+    }
 
     // ── Commission Report PDF ────────────────────────────────────────────────
     public byte[] generateCommissionReport(List<CommissionLedger> ledger, BigDecimal totalCommission) {
