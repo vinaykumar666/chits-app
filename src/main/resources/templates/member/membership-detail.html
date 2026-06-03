@@ -49,7 +49,13 @@
             <h4 class="mt-1"><i class="bi bi-collection text-warning me-2"></i><span th:text="${membership.chit.name}">Chit</span></h4>
             <div class="sub">Membership details, payments &amp; auction bidding</div>
         </div>
-        <div class="user-badge" th:text="${user.fullName}">User</div>
+        <div class="d-flex align-items-center gap-2">
+            <a th:href="@{/member/reports/memberships/{id}/payments/pdf(id=${membership.id})}"
+               class="btn btn-sm btn-outline-warning fw-bold" title="Download payment statement for this chit">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Payment Statement
+            </a>
+            <div class="user-badge" th:text="${user.fullName}">User</div>
+        </div>
     </div>
     <div th:if="${success}" class="alert alert-success alert-dismissible"><i class="bi bi-check-circle me-2"></i><span th:text="${success}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <div th:if="${error}" class="alert alert-danger alert-dismissible"><i class="bi bi-exclamation-circle me-2"></i><span th:text="${error}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
