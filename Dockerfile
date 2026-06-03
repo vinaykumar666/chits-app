@@ -2,9 +2,15 @@
 FROM maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /build
 COPY pom.xml .
-RUN mvn dependency:resolve -q
+COPY .mvn .mvn
+COPY mvnw .
+RUN chmod +x mvnw
+
+RUN ./mvnw dependency:go-offline
+
 COPY src ./src
-RUN mvn clean package -DskipTests -q
+
+RUN ./mvnw clean package -DskipTests
 
 # ─── Runtime Stage ────────────────────────────────────────────
 FROM eclipse-temurin:17-jre-alpine
