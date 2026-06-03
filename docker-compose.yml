@@ -64,8 +64,14 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
+
     ports:
       - "3000:3000"
+
+    environment:
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_USERS_ALLOW_SIGN_UP=false
 
   # ── Loki ───────────────────────────────────────────────────
   loki:
