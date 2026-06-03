@@ -4,8 +4,10 @@ import com.ygc.util.LoggingUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
@@ -14,10 +16,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Global exception handler for the application
- * Provides centralized exception handling with comprehensive logging
+ * Global exception handler for the application.
+ * Uses @ControllerAdvice (not @RestControllerAdvice) so that Thymeleaf MVC
+ * controllers are NOT intercepted — they redirect/flash errors themselves.
+ * JSON responses are only returned for @RestController endpoints via @ResponseBody.
  */
-@RestControllerAdvice
+@ControllerAdvice(annotations = RestController.class)
 @Slf4j
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
