@@ -8,13 +8,12 @@ services:
     container_name: ygc-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB:       ${DB_NAME:-ygcdb}
-      POSTGRES_USER:     ${DB_USERNAME:-ygcuser}
+      POSTGRES_DB: ${DB_NAME:-ygcdb}
+      POSTGRES_USER: ${DB_USERNAME:-ygcuser}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-#    ports:
-#      - "5432:5432"          # remove this line if you don't need external DB access
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-ygcuser} -d ${DB_NAME:-ygcdb}"]
       interval: 10s
@@ -29,32 +28,65 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      # Database
-      DB_HOST:     postgres
-      DB_PORT:     5432
-      DB_NAME:     ${DB_NAME:-ygcdb}
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ygcdb}
       DB_USERNAME: ${DB_USERNAME:-ygcuser}
       DB_PASSWORD: ${DB_PASSWORD}
-      # JWT
-      JWT_SECRET:    ${JWT_SECRET}
+
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
-      # Mail
-      MAIL_HOST:     ${MAIL_HOST}
-      MAIL_PORT:     ${MAIL_PORT:-587}
+
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
+
     volumes:
-      - uploads_data:/app/uploads      # persistent file uploads
+      - uploads_data:/app/uploads
+
     ports:
       - "8080:8080"
+
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/login || exit 1"]
       interval: 30s
       timeout: 10s
       start_period: 60s
       retries: 3
+
+  # ── Grafana ────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+  # ── Loki ───────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+
+  # ── Promtail ───────────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+
+    volumes:
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./promtail-config.yml:/etc/promtail/config.yml
+
+    command: -config.file=/etc/promtail/config.yml
 
 volumes:
   postgres_data:
