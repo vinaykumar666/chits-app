@@ -116,6 +116,7 @@ public class AdminController {
                            @RequestParam(required = false) BigDecimal minBidAmount,
                            @RequestParam(required = false) BigDecimal maxBidAmount,
                            @RequestParam String status,
+                           @RequestParam(required = false) String closingReason,
                            Authentication auth, RedirectAttributes ra) {
         try {
             Chit chit = chitService.findById(id);
@@ -123,7 +124,16 @@ public class AdminController {
             chit.setMonthlyAmount(monthlyAmount); chit.setTotalMembers(totalMembers);
             chit.setDurationMonths(durationMonths); chit.setAdminCommissionPercentage(adminCommissionPercentage);
             chit.setMinBidAmount(minBidAmount); chit.setMaxBidAmount(maxBidAmount);
-            chit.setStatus(Chit.ChitStatus.valueOf(status));
+            Chit.ChitStatus newStatus = Chit.ChitStatus.valueOf(status);
+            chit.setStatus(newStatus);
+            // Store closing reason when admin cancels or completes a chit
+            if (newStatus == Chit.ChitStatus.CANCELLED || newStatus == Chit.ChitStatus.COMPLETED) {
+                if (closingReason != null && !closingReason.isBlank()) {
+                    chit.setClosingReason(closingReason);
+                }
+            } else {
+                chit.setClosingReason(null);
+            }
             chitRepository.save(chit);
 
             // Notify all active members of this chit
