@@ -49,6 +49,9 @@ public class Chit {
 
     private String qrCodePath;
 
+    // Set by admin when chit is CANCELLED or COMPLETED with a reason
+    private String closingReason;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @ManyToOne

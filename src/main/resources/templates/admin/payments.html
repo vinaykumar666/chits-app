@@ -72,11 +72,11 @@
                             <input type="hidden" name="remarks" value="Approved by admin">
                             <button class="btn btn-sm btn-success"><i class="bi bi-check"></i> Approve</button>
                         </form>
-                        <form th:action="@{/admin/payments/{id}/verify(id=${payment.id})}" method="post" class="d-inline ms-1">
-                            <input type="hidden" name="approved" value="false">
-                            <input type="hidden" name="remarks" value="Rejected by admin">
-                            <button class="btn btn-sm btn-danger"><i class="bi bi-x"></i> Reject</button>
-                        </form>
+                        <!-- FIX 3: Open reject modal to enter reason instead of hardcoded text -->
+                        <button class="btn btn-sm btn-danger ms-1" data-bs-toggle="modal"
+                                th:data-bs-target="'#payRejectModal' + ${payment.id}">
+                            <i class="bi bi-x"></i> Reject
+                        </button>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(payments)}"><td colspan="9" class="text-center text-muted py-4"><i class="bi bi-check-all fs-3 d-block mb-2"></i>No pending payments</td></tr>
@@ -90,7 +90,7 @@
         <div class="card-body p-0">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                <tr><th>Member</th><th>Chit</th><th>Month</th><th>Total</th><th>Status</th><th>Due Date</th><th>Verified By</th></tr>
+                <tr><th>Member</th><th>Chit</th><th>Month</th><th>Total</th><th>Status</th><th>Reason</th><th>Due Date</th><th>Verified By</th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="payment : ${allPayments}">
@@ -101,14 +101,52 @@
                     <td>
                         <span class="badge" th:classappend="${payment.status.name() == 'APPROVED'} ? 'bg-success' : (${payment.status.name() == 'REJECTED'} ? 'bg-danger' : (${payment.status.name() == 'OVERDUE'} ? 'bg-warning text-dark' : 'bg-secondary'))" th:text="${payment.status}"></span>
                     </td>
+                    <td>
+                        <span th:if="${payment.status.name() == 'REJECTED'}" class="text-danger small"
+                              th:text="${payment.rejectionReason != null ? payment.rejectionReason : (payment.adminRemarks != null ? payment.adminRemarks : '-')}"></span>
+                        <span th:if="${payment.status.name() != 'REJECTED'}" class="text-muted small">—</span>
+                    </td>
                     <td th:text="${payment.dueDate}"></td>
                     <td th:text="${payment.verifiedBy != null ? payment.verifiedBy.fullName : '-'}"></td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(allPayments)}"><td colspan="7" class="text-center text-muted py-3">No payment records</td></tr>
+                <tr th:if="${#lists.isEmpty(allPayments)}"><td colspan="8" class="text-center text-muted py-3">No payment records</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<!-- FIX 3: Payment rejection reason modals -->
+<div th:each="payment : ${payments}">
+    <div class="modal fade" th:id="'payRejectModal' + ${payment.id}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Reject Payment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/payments/{id}/verify(id=${payment.id})}" method="post">
+                    <input type="hidden" name="approved" value="false">
+                    <div class="modal-body">
+                        <div class="alert alert-warning py-2 mb-3">
+                            Rejecting payment by <strong th:text="${payment.membership.user.fullName}"></strong>
+                            for <strong th:text="'Month ' + ${payment.monthNumber}"></strong>
+                            (<strong th:text="'₹' + ${payment.totalAmount}"></strong>)
+                        </div>
+                        <label class="form-label fw-semibold">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea name="remarks" class="form-control" rows="3" required
+                                  placeholder="e.g. Screenshot unclear, wrong amount, duplicate submission..."></textarea>
+                        <small class="text-muted mt-1 d-block"><i class="bi bi-info-circle me-1"></i>Member will see this reason in their payment history.</small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Confirm Rejection</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div th:replace="~{fragments :: pushNotifications}"></div>
 </body></html>

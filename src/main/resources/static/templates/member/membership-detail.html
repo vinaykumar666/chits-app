@@ -2,13 +2,17 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a2e">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="YGC Chits">
     <link rel="manifest" th:href="@{/manifest.json}">
-    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}"><title>Membership Details - YGC</title>
+    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}">
+    <title>Membership Details - YGC</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="stylesheet" th:href="@{/css/responsive.css}">
     <style>
         .bid-card { background: linear-gradient(135deg, #e8f5e9, #f1f8e9); border: 1px solid #c8e6c9; border-radius: 10px; }
         .bid-range-bar { height: 10px; border-radius: 5px; background: linear-gradient(to right, #ef5350, #ffee58, #66bb6a); position: relative; }
@@ -16,6 +20,11 @@
             border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,.3); }
         .bid-live-preview { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 14px; }
         .agreement-badge { padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; }
+        .closed-banner { background: linear-gradient(135deg, #fff3cd, #ffe8a1); border: 2px solid #ffc107; border-radius: 12px; }
+        .settlement-track-card { border-left: 4px solid #0d6efd; background: #f8f9ff; border-radius: 8px; }
+        .settlement-track-card.pending  { border-left-color: #ffc107; background: #fffdf0; }
+        .settlement-track-card.approved { border-left-color: #198754; background: #f0fff4; }
+        .settlement-track-card.rejected { border-left-color: #dc3545; background: #fff5f5; }
     </style>
 </head>
 <body>
@@ -40,17 +49,35 @@
             <h4 class="mt-1"><i class="bi bi-collection text-warning me-2"></i><span th:text="${membership.chit.name}">Chit</span></h4>
             <div class="sub">Membership details, payments &amp; auction bidding</div>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <span class="ygc-conn-dot" title="Live notifications active"></span>
-            <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
-              <i class="bi bi-bell"></i>
-              <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
-            </button>
-            <div class="user-badge" th:text="${user.fullName}">User</div>
-        </div>
+        <div class="user-badge" th:text="${user.fullName}">User</div>
     </div>
     <div th:if="${success}" class="alert alert-success alert-dismissible"><i class="bi bi-check-circle me-2"></i><span th:text="${success}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <div th:if="${error}" class="alert alert-danger alert-dismissible"><i class="bi bi-exclamation-circle me-2"></i><span th:text="${error}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+
+    <!-- ================================================================
+         FIX 1: CHIT CLOSED BY ADMIN — show banner with reason
+         ================================================================ -->
+    <div th:if="${membership.chit.status.name() == 'CANCELLED' or membership.chit.status.name() == 'COMPLETED'}"
+         class="closed-banner p-4 mb-4 d-flex align-items-start gap-3">
+        <i class="bi bi-exclamation-triangle-fill text-warning fs-3 mt-1"></i>
+        <div>
+            <div class="fw-bold fs-5 mb-1">
+                <span th:if="${membership.chit.status.name() == 'CANCELLED'}">This Chit Has Been Closed by Admin</span>
+                <span th:if="${membership.chit.status.name() == 'COMPLETED'}">This Chit Has Been Completed</span>
+            </div>
+            <div class="text-muted mb-2">
+                Payments and early exit requests are no longer available for this chit.
+                Please contact support if you have any questions.
+            </div>
+            <div th:if="${membership.chit.closingReason != null and !membership.chit.closingReason.isEmpty()}"
+                 class="alert alert-warning py-2 mb-0 d-inline-flex align-items-center gap-2">
+                <i class="bi bi-chat-left-text-fill text-warning"></i>
+                <span><strong>Reason:</strong> <span th:text="${membership.chit.closingReason}"></span></span>
+            </div>
+            <div th:if="${membership.chit.closingReason == null or membership.chit.closingReason.isEmpty()}"
+                 class="text-muted small fst-italic">No reason provided by admin.</div>
+        </div>
+    </div>
 
     <!-- Agreement Status Banner -->
     <div class="card mb-4 border-0 shadow-sm">
@@ -78,8 +105,10 @@
         </div>
     </div>
 
-    <!-- Intelligent Bid Recommendation Panel -->
-    <div th:if="${hasOpenAuction and !membership.hasWonAuction and bidRecommendations != null}"
+    <!-- Intelligent Bid Recommendation Panel — only for ACTIVE chits -->
+    <div th:if="${hasOpenAuction and !membership.hasWonAuction and bidRecommendations != null
+                 and membership.chit.status.name() != 'CANCELLED'
+                 and membership.chit.status.name() != 'COMPLETED'}"
          class="card panel mb-4 border-0 shadow-sm">
         <div class="card-header bg-success bg-opacity-10 border-0 d-flex align-items-center gap-2">
             <i class="bi bi-calculator-fill text-success fs-5"></i>
@@ -214,29 +243,104 @@
                         <tr><td class="text-muted">Start Date</td><td th:text="${membership.chit.startDate}"></td></tr>
                         <tr><td class="text-muted">End Date</td><td th:text="${membership.chit.endDate}"></td></tr>
                         <tr><td class="text-muted">Commission</td><td th:text="${membership.chit.adminCommissionPercentage} + '%'"></td></tr>
+                        <tr>
+                            <td class="text-muted">Chit Status</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${membership.chit.status.name() == 'ACTIVE'} ? 'bg-success' :
+                                                      (${membership.chit.status.name() == 'OPEN'} ? 'bg-primary' :
+                                                      (${membership.chit.status.name() == 'CANCELLED'} ? 'bg-danger' : 'bg-secondary'))"
+                                      th:text="${membership.chit.status}"></span>
+                            </td>
+                        </tr>
                         <tr><td class="text-muted">My Status</td><td><span class="badge" th:classappend="${membership.status.name() == 'ACTIVE'} ? 'bg-success' : (${membership.status.name() == 'PENDING'} ? 'bg-warning text-dark' : 'bg-secondary')" th:text="${membership.status}"></span></td></tr>
                         <tr><td class="text-muted">Total Paid</td><td class="fw-bold text-success" th:text="'₹' + ${totalPaid}"></td></tr>
+                        <!-- FIX 1: Show closing reason inside Chit Information table -->
+                        <tr th:if="${membership.chit.closingReason != null and !membership.chit.closingReason.isEmpty()}">
+                            <td class="text-muted align-top">Reason for Closing</td>
+                            <td>
+                                <span class="text-danger fw-semibold" th:text="${membership.chit.closingReason}"></span>
+                            </td>
+                        </tr>
                     </table>
                 </div>
             </div>
 
-            <!-- Submit Payment -->
-            <div class="card panel" th:if="${membership.status.name() == 'ACTIVE'}">
-                <div class="card-header"><i class="bi bi-upload text-success me-2"></i>Submit Payment Proof</div>
+            <!-- FIX 1: Submit Payment — DISABLED when chit is closed -->
+            <div class="card panel mb-4"
+                 th:if="${membership.status.name() == 'ACTIVE'}">
+                <!-- Chit is active — show normal payment form -->
+                <div th:if="${membership.chit.status.name() != 'CANCELLED' and membership.chit.status.name() != 'COMPLETED'}">
+                    <div class="card-header"><i class="bi bi-upload text-success me-2"></i>Submit Payment Proof</div>
+                    <div class="card-body">
+                        <div class="alert alert-info small py-2"><i class="bi bi-qr-code me-1"></i>Pay via QR code, then upload screenshot proof.</div>
+                        <form th:action="@{/member/payments/submit}" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="membershipId" th:value="${membership.id}">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Month Number</label>
+                                <input type="number" name="monthNumber" class="form-control" min="1" th:max="${membership.chit.durationMonths}" required placeholder="e.g. 1">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Payment Screenshot</label>
+                                <input type="file" name="screenshot" class="form-control" accept="image/*">
+                            </div>
+                            <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-upload me-1"></i>Submit for Verification</button>
+                        </form>
+                    </div>
+                </div>
+                <!-- Chit is closed — payment section disabled -->
+                <div th:if="${membership.chit.status.name() == 'CANCELLED' or membership.chit.status.name() == 'COMPLETED'}">
+                    <div class="card-header bg-secondary bg-opacity-10"><i class="bi bi-lock text-secondary me-2"></i>Submit Payment Proof</div>
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-lock-fill text-secondary fs-2 mb-2 d-block"></i>
+                        <div class="text-muted fw-semibold">Payments are disabled</div>
+                        <div class="text-muted small mt-1">This chit has been closed by admin. No further payments can be made.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FIX 2: Early Exit Settlement Tracking -->
+            <div th:if="${!#lists.isEmpty(mySettlements)}" class="card panel mb-4">
+                <div class="card-header"><i class="bi bi-clock-history me-2 text-info"></i>Early Exit Request Tracking</div>
                 <div class="card-body">
-                    <div class="alert alert-info small py-2"><i class="bi bi-qr-code me-1"></i>Pay via QR code, then upload screenshot proof.</div>
-                    <form th:action="@{/member/payments/submit}" method="post" enctype="multipart/form-data">
-                        <input type="hidden" name="membershipId" th:value="${membership.id}">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Month Number</label>
-                            <input type="number" name="monthNumber" class="form-control" min="1" th:max="${membership.chit.durationMonths}" required placeholder="e.g. 1">
+                    <div th:each="s : ${mySettlements}" class="settlement-track-card p-3 mb-3"
+                         th:classappend="${s.status.name() == 'PENDING'} ? 'pending' : (${s.status.name() == 'APPROVED' or s.status.name() == 'COMPLETED'} ? 'approved' : 'rejected')">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold">
+                                <i class="bi bi-door-open me-1"></i>
+                                <span th:text="${s.type.name() == 'EARLY_EXIT' ? 'Early Exit Request' : 'Maturity Settlement'}"></span>
+                            </span>
+                            <span class="badge"
+                                  th:classappend="${s.status.name() == 'PENDING'} ? 'bg-warning text-dark' :
+                                                  (${s.status.name() == 'APPROVED' or s.status.name() == 'COMPLETED'} ? 'bg-success' : 'bg-danger')"
+                                  th:text="${s.status}"></span>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Payment Screenshot</label>
-                            <input type="file" name="screenshot" class="form-control" accept="image/*">
+                        <div class="row g-2 small text-muted">
+                            <div class="col-6"><span class="fw-semibold text-dark">Total Paid:</span> ₹<span th:text="${s.totalPaidAmount}"></span></div>
+                            <div class="col-6" th:if="${s.deductionAmount != null}"><span class="fw-semibold text-dark">2% Deduction:</span> <span class="text-danger">-₹<span th:text="${s.deductionAmount}"></span></span></div>
+                            <div class="col-6" th:if="${s.lateFines != null}"><span class="fw-semibold text-dark">Late Fines:</span> <span class="text-danger">₹<span th:text="${s.lateFines}"></span></span></div>
+                            <div class="col-6"><span class="fw-semibold text-dark">Settlement Amount:</span> <span class="text-success fw-bold">₹<span th:text="${s.finalSettlementAmount}"></span></span></div>
                         </div>
-                        <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-upload me-1"></i>Submit for Verification</button>
-                    </form>
+                        <div class="mt-2">
+                            <div class="text-muted small"><i class="bi bi-calendar me-1"></i>Requested: <span th:text="${s.requestedAt}"></span></div>
+                            <div th:if="${s.processedAt != null}" class="text-muted small"><i class="bi bi-calendar-check me-1"></i>Processed: <span th:text="${s.processedAt}"></span></div>
+                        </div>
+                        <!-- FIX 3: Show rejection reason to user -->
+                        <div th:if="${s.status.name() == 'REJECTED' and s.adminRemarks != null}"
+                             class="alert alert-danger py-2 mt-2 mb-0 small">
+                            <i class="bi bi-x-circle me-1"></i>
+                            <strong>Rejection Reason:</strong> <span th:text="${s.adminRemarks}"></span>
+                        </div>
+                        <div th:if="${s.status.name() == 'APPROVED' and s.adminRemarks != null}"
+                             class="alert alert-success py-2 mt-2 mb-0 small">
+                            <i class="bi bi-check-circle me-1"></i>
+                            <strong>Admin Remarks:</strong> <span th:text="${s.adminRemarks}"></span>
+                        </div>
+                        <div th:if="${s.status.name() == 'PENDING'}"
+                             class="mt-2 text-muted small fst-italic">
+                            <i class="bi bi-hourglass-split me-1"></i>Awaiting admin review…
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -259,10 +363,22 @@
                             <td><span th:classappend="${p.lateFine.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'text-danger fw-bold' : 'text-muted'" th:text="'₹' + ${p.lateFine}"></span></td>
                             <td class="fw-bold" th:text="'₹' + ${p.totalAmount}"></td>
                             <td>
-                              <span class="badge" th:classappend="${p.status.name() == 'APPROVED'} ? 'bg-success' : (${p.status.name() == 'REJECTED'} ? 'bg-danger' : (${p.status.name()=='PENDING'} ? 'bg-warning text-dark' : 'bg-secondary'))" th:text="${p.status}"></span>
-                              <div th:if="${p.rejectionReason != null and p.status.name() == 'REJECTED'}" class="text-danger small mt-1">
-                                <i class="bi bi-exclamation-circle me-1"></i><span th:text="${p.rejectionReason}"></span>
-                              </div>
+                                <span class="badge"
+                                      th:classappend="${p.status.name() == 'APPROVED'} ? 'bg-success' :
+                                                      (${p.status.name() == 'REJECTED'} ? 'bg-danger' :
+                                                      (${p.status.name() == 'PENDING'} ? 'bg-warning text-dark' : 'bg-secondary'))"
+                                      th:text="${p.status}"></span>
+                                <!-- FIX 3: Show payment rejection reason to user -->
+                                <div th:if="${p.status.name() == 'REJECTED' and p.rejectionReason != null and !p.rejectionReason.isEmpty()}"
+                                     class="text-danger small mt-1">
+                                    <i class="bi bi-exclamation-circle me-1"></i>
+                                    <span th:text="${p.rejectionReason}"></span>
+                                </div>
+                                <div th:if="${p.status.name() == 'REJECTED' and p.adminRemarks != null and p.rejectionReason == null}"
+                                     class="text-danger small mt-1">
+                                    <i class="bi bi-exclamation-circle me-1"></i>
+                                    <span th:text="${p.adminRemarks}"></span>
+                                </div>
                             </td>
                             <td th:text="${p.paidDate}"></td>
                         </tr>
@@ -291,24 +407,53 @@
                 </div>
             </div>
 
-            <!-- Early Exit -->
-            <div class="card panel border-danger" th:if="${membership.status.name() == 'ACTIVE'}">
-                <div class="card-header bg-danger bg-opacity-10"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Early Exit Settlement</div>
-                <div class="card-body">
-                    <p class="text-muted small">A <strong>2% deduction</strong> applies on your total paid amount for early exit. All pending dues and fines will be adjusted.</p>
-                    <form th:action="@{/member/memberships/{id}/exit(id=${membership.id})}" method="post"
-                          onsubmit="return confirm('Are you sure you want to request early exit? A 2% deduction will apply.')">
-                        <button type="submit" class="btn btn-outline-danger fw-bold">
-                            <i class="bi bi-door-open me-1"></i>Request Early Exit
-                        </button>
-                    </form>
+            <!-- FIX 1+2: Early Exit — hidden when chit is closed -->
+            <div class="card panel border-danger"
+                 th:if="${membership.status.name() == 'ACTIVE'
+                          and membership.chit.status.name() != 'CANCELLED'
+                          and membership.chit.status.name() != 'COMPLETED'}">
+                <!-- Only show if no pending/approved settlement already exists -->
+                <div th:if="${#lists.isEmpty(mySettlements) or mySettlements[0].status.name() == 'REJECTED'}">
+                    <div class="card-header bg-danger bg-opacity-10"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Early Exit Settlement</div>
+                    <div class="card-body">
+                        <p class="text-muted small">A <strong>2% deduction</strong> applies on your total paid amount for early exit. All pending dues and fines will be adjusted.</p>
+                        <form th:action="@{/member/memberships/{id}/exit(id=${membership.id})}" method="post"
+                              onsubmit="return confirm('Are you sure you want to request early exit? A 2% deduction will apply.')">
+                            <button type="submit" class="btn btn-outline-danger fw-bold">
+                                <i class="bi bi-door-open me-1"></i>Request Early Exit
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <!-- Already requested — show status hint -->
+                <div th:if="${!#lists.isEmpty(mySettlements) and mySettlements[0].status.name() != 'REJECTED'}">
+                    <div class="card-header bg-warning bg-opacity-10"><i class="bi bi-hourglass-split text-warning me-2"></i>Early Exit Settlement</div>
+                    <div class="card-body text-center py-3">
+                        <i class="bi bi-hourglass-split fs-3 text-warning d-block mb-2"></i>
+                        <div class="fw-semibold">Early exit request submitted</div>
+                        <div class="text-muted small mt-1">Your request is being reviewed by admin. Check the tracking panel above for updates.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- When chit is closed, show a note instead of early exit -->
+            <div class="card panel border-secondary"
+                 th:if="${membership.status.name() == 'ACTIVE'
+                          and (membership.chit.status.name() == 'CANCELLED'
+                               or membership.chit.status.name() == 'COMPLETED')}">
+                <div class="card-header bg-secondary bg-opacity-10">
+                    <i class="bi bi-lock text-secondary me-2"></i>Early Exit Settlement
+                </div>
+                <div class="card-body text-center py-3">
+                    <i class="bi bi-lock-fill text-secondary fs-3 d-block mb-2"></i>
+                    <div class="fw-semibold text-muted">Early exit is not available</div>
+                    <div class="text-muted small mt-1">This chit has been closed by admin. Please contact support for settlement assistance.</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
     const commissionPct = /*[[${bidRecommendations?.commissionPercentage}]]*/ 0;
 
@@ -337,5 +482,5 @@
         });
     }
 </script>
-<div th:replace="~{fragments :: appScripts}"></div>
+<div th:replace="~{fragments :: pushNotifications}"></div>
 </body></html>
