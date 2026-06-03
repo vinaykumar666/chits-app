@@ -12,6 +12,20 @@
       <div class="sub">YGC Internal Chit Management</div>
     </div>
     <div class="d-flex align-items-center gap-2">
+      <!-- Quick Export Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-warning fw-bold dropdown-toggle" data-bs-toggle="dropdown" title="Export Reports">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Export
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+          <li><h6 class="dropdown-header"><i class="bi bi-shield-lock me-1"></i>Admin Reports</h6></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/chits/pdf}"><i class="bi bi-collection me-2 text-warning"></i>Chit Groups</a></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/members/pdf}"><i class="bi bi-people me-2 text-info"></i>All Members</a></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/payments/pdf}"><i class="bi bi-cash-coin me-2 text-success"></i>All Payments</a></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/settlements/pdf}"><i class="bi bi-bank me-2 text-primary"></i>Settlements</a></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/commission/pdf}"><i class="bi bi-graph-up me-2 text-warning"></i>Commission</a></li>
+        </ul>
+      </div>
       <span class="ygc-conn-dot" title="Live notifications active"></span>
       <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" aria-label="Show notifications" style="font-size:1.3rem;line-height:1">
         <i class="bi bi-bell"></i>
