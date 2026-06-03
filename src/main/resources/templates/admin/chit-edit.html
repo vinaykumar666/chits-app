@@ -61,11 +61,24 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Status</label>
-                        <select name="status" class="form-select">
+                        <select name="status" class="form-select" id="chitStatusSelect">
                             <option th:each="s : ${T(com.ygc.model.Chit.ChitStatus).values()}"
                                     th:value="${s}" th:text="${s}"
                                     th:selected="${s == chit.status}"></option>
                         </select>
+                    </div>
+                    <!-- Closing reason — shown only when status is CANCELLED or COMPLETED -->
+                    <div class="col-12" id="closingReasonRow"
+                         th:style="${chit.status.name() == 'CANCELLED' or chit.status.name() == 'COMPLETED'} ? '' : 'display:none'">
+                        <label class="form-label fw-semibold text-danger">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Reason for Closing <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="closingReason" id="closingReason" class="form-control border-danger" rows="2"
+                                  th:text="${chit.closingReason}"
+                                  placeholder="e.g. Insufficient members enrolled, regulatory compliance, admin decision..."></textarea>
+                        <small class="text-muted d-block mt-1">
+                            <i class="bi bi-info-circle me-1"></i>This reason will be visible to all members in their membership details page.
+                        </small>
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Description</label>
@@ -110,4 +123,19 @@
     </div>
 </div>
 <div th:replace="~{fragments :: appScripts}"></div>
+<script>
+    const statusSelect = document.getElementById('chitStatusSelect');
+    const closingReasonRow = document.getElementById('closingReasonRow');
+    const closingReasonInput = document.getElementById('closingReason');
+
+    function toggleClosingReason() {
+        const val = statusSelect.value;
+        const isClosing = val === 'CANCELLED' || val === 'COMPLETED';
+        closingReasonRow.style.display = isClosing ? '' : 'none';
+        closingReasonInput.required = isClosing;
+    }
+
+    statusSelect.addEventListener('change', toggleClosingReason);
+    toggleClosingReason();
+</script>
 </body></html>

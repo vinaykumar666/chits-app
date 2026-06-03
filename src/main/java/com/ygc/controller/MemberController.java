@@ -28,7 +28,6 @@ public class MemberController {
     private final AuctionRepository auctionRepository;
     private final PdfCertificateService pdfCertificateService;
     private final BidCalculationService bidCalculationService;
-
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
     }
@@ -124,6 +123,11 @@ public class MemberController {
         model.addAttribute("auctions", auctions);
         model.addAttribute("bidRecommendations", bidRecommendations);
         model.addAttribute("hasOpenAuction", hasOpenAuction);
+        // Early-exit settlement tracking: find any settlement for this membership
+        List<Settlement> mySettlements = settlementRepository.findAll().stream()
+                .filter(s -> s.getMembership().getId().equals(membership.getId()))
+                .toList();
+        model.addAttribute("mySettlements", mySettlements);
         return "member/membership-detail";
     }
 
