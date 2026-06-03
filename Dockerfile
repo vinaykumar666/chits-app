@@ -24,6 +24,7 @@ RUN mkdir -p /app/uploads/agreements && \
 USER appuser
 
 EXPOSE 8080
+ENV NODE_OPTIONS=--no-deprecation
 
 # Health check — waits for Spring Boot to be ready
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
