@@ -35,6 +35,7 @@ public class AdminController {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final SettlementRepository settlementRepository;
+    private final ChitHistoryService chitHistoryService;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -448,4 +449,200 @@ public class AdminController {
                 .stream().sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp())).toList());
         return "admin/audit";
     }
+    // ── Chit Member Management ─────────────────────────────────────────────
+    //  Add a member directly to a chit (admin-initiated)
+    //  Remove an active/pending member with reason + email notifications
+
+    /**
+     * POST /admin/chits/{chitId}/members/add
+     * Admin adds an existing user to a chit by email.
+     */
+    @PostMapping("/chits/{chitId}/members/add")
+    public String addMemberToChit(@PathVariable Long chitId,
+                                  @RequestParam String memberEmail,
+                                  Authentication auth,
+                                  RedirectAttributes ra) {
+        try {
+            Chit chit = chitService.findById(chitId);
+            User member = userRepository.findByEmail(memberEmail)
+                    .orElseThrow(() -> new RuntimeException("No user found with email: " + memberEmail));
+
+            if (membershipRepository.existsByChitAndUser(chit, member)) {
+                ra.addFlashAttribute("error", "Member " + member.getFullName() + " is already in this chit.");
+                return "redirect:/admin/chits/" + chitId;
+            }
+
+            ChitMembership membership = new ChitMembership();
+            membership.setChit(chit);
+            membership.setUser(member);
+            membership.setStatus(ChitMembership.MembershipStatus.PENDING);
+            membershipRepository.save(membership);
+
+            // Notify
+            notificationService.notifyUserUpdated(member.getEmail(),
+                    "You have been added to chit '" + chit.getName() + "' by admin. Pending approval.");
+            emailService.sendUserUpdated(member.getEmail(), member.getFullName(),
+                    "You have been enrolled in chit '" + chit.getName() + "' by the admin. "
+                            + "Your membership is pending approval.");
+
+            ra.addFlashAttribute("success",
+                    member.getFullName() + " added to chit as PENDING. Notification sent.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Add member failed: " + e.getMessage());
+        }
+        return "redirect:/admin/chits/" + chitId;
+    }
+
+    /**
+     * POST /admin/chits/{chitId}/members/{membershipId}/remove
+     * Admin removes a member from a chit with a mandatory reason.
+     * Sends email to both admin and the removed member.
+     */
+    @PostMapping("/chits/{chitId}/members/{membershipId}/remove")
+    public String removeMemberFromChit(@PathVariable Long chitId,
+                                       @PathVariable Long membershipId,
+                                       @RequestParam String reason,
+                                       Authentication auth,
+                                       RedirectAttributes ra) {
+        try {
+            Chit chit           = chitService.findById(chitId);
+            ChitMembership m    = membershipRepository.findById(membershipId)
+                    .orElseThrow(() -> new RuntimeException("Membership not found: " + membershipId));
+            User admin          = getCurrentUser(auth);
+
+            m.setStatus(ChitMembership.MembershipStatus.EXITED);
+            m.setRejectionReason(reason);
+            membershipRepository.save(m);
+
+            // Email to removed member
+            emailService.sendMemberRemovedFromChit(
+                    m.getUser().getEmail(), m.getUser().getFullName(),
+                    chit.getName(), reason);
+
+            // Email to admin (confirmation)
+            emailService.sendMemberRemovedFromChit(
+                    admin.getEmail(), admin.getFullName(),
+                    "[Admin Copy] Removed " + m.getUser().getFullName() + " from " + chit.getName(),
+                    reason);
+
+            // Push notification to user
+            notificationService.notifyUserUpdated(m.getUser().getEmail(),
+                    "You have been removed from chit '" + chit.getName() + "'. Reason: " + reason);
+
+            ra.addFlashAttribute("success",
+                    m.getUser().getFullName() + " removed from chit. Notifications sent to member and admin.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Remove member failed: " + e.getMessage());
+        }
+        return "redirect:/admin/chits/" + chitId;
+    }
+
+    // ── Chit History (Closed / Archived Chits) ─────────────────────────────
+
+    /**
+     * GET /admin/chit-history
+     * Lists all archived chit entries from the chit_history table.
+     */
+    @GetMapping("/chit-history")
+    public String chitHistory(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("histories", chitHistoryService.findAll());
+        return "admin/chit-history";
+    }
+
+    /**
+     * GET /admin/chit-history/{id}/pdf
+     * Download the analysis PDF for a closed chit.
+     */
+    @GetMapping("/chit-history/{id}/pdf")
+    public org.springframework.http.ResponseEntity<byte[]> downloadChitHistoryPdf(
+            @PathVariable Long id) {
+        try {
+            byte[] pdf = chitHistoryService.getPdfBytesForHistory(id);
+            com.ygc.model.ChitHistory history = chitHistoryService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("History not found: " + id));
+            String filename = "ChitAnalysis_" + history.getChitName().replaceAll("[^a-zA-Z0-9_-]", "_") + ".pdf";
+            return org.springframework.http.ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            return org.springframework.http.ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
+     * GET /admin/chit-history/{id}/json
+     * View the raw JSON snapshot for a closed chit (admin only).
+     */
+    @GetMapping("/chit-history/{id}/json")
+    public org.springframework.http.ResponseEntity<String> viewChitHistoryJson(@PathVariable Long id) {
+        return chitHistoryService.findById(id)
+                .map(h -> org.springframework.http.ResponseEntity.ok()
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .body(h.getCompleteDataJson()))
+                .orElse(org.springframework.http.ResponseEntity.notFound().build());
+    }
+
+    // ── Modified deleteChit — archive before delete ─────────────────────────
+
+    /**
+     * POST /admin/chits/{id}/delete-with-archive
+     *
+     * Archives complete chit data to chit_history (with PDF),
+     * emails admin the analysis PDF, THEN deletes the chit.
+     *
+     * Replace or supplement the existing /delete endpoint with this one.
+     */
+    @PostMapping("/chits/{id}/delete-with-archive")
+    public String deleteChitWithArchive(@PathVariable Long id,
+                                        @RequestParam(required = false, defaultValue = "") String closingReason,
+                                        Authentication auth,
+                                        RedirectAttributes ra) {
+        try {
+            Chit chit   = chitService.findById(id);
+            User admin  = getCurrentUser(auth);
+
+            if (chit.getStatus() == Chit.ChitStatus.ACTIVE) {
+                ra.addFlashAttribute("error", "Cannot delete an active chit — cancel it first.");
+                return "redirect:/admin/chits/" + id;
+            }
+
+            // 1. Archive to chit_history + generate PDF
+            String reason = closingReason.isBlank() ? "Deleted by admin" : closingReason;
+            com.ygc.model.ChitHistory history = chitHistoryService.archiveChit(chit, "DELETED", reason, admin);
+
+            // 2. Email the PDF to admin
+            if (history.getAnalysisPdfPath() != null) {
+                String subject  = "Chit Deleted & Archived — " + chit.getName();
+                String body     = "<p>Chit <strong>" + chit.getName() + "</strong> has been deleted and archived.</p>"
+                        + "<p><strong>Reason:</strong> " + reason + "</p>"
+                        + "<p>Complete analysis PDF is attached.</p>";
+                emailService.sendHtmlEmailWithAttachment(
+                        admin.getEmail(), subject, body,
+                        history.getAnalysisPdfPath(),
+                        "ChitAnalysis_" + chit.getName().replaceAll("[^a-zA-Z0-9_-]", "_") + ".pdf");
+            }
+
+            // 3. Notify all active members the chit is being closed
+            chitService.getMembershipsForChit(chit).stream()
+                    .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE
+                            || m.getStatus() == ChitMembership.MembershipStatus.PENDING)
+                    .forEach(m -> {
+                        notificationService.notifyUserUpdated(m.getUser().getEmail(),
+                                "Chit '" + chit.getName() + "' has been permanently closed. Reason: " + reason);
+                        emailService.sendChitUpdated(m.getUser().getEmail(), m.getUser().getFullName(),
+                                chit.getName(), "Chit permanently closed/deleted. Reason: " + reason);
+                    });
+
+            // 4. Hard-delete
+            chitRepository.deleteById(id);
+            ra.addFlashAttribute("success",
+                    "Chit deleted. Full analysis PDF emailed to admin and saved to Chit History.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Delete failed: " + e.getMessage());
+        }
+        return "redirect:/admin/chits";
+    }
+
 }

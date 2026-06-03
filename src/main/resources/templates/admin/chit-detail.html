@@ -7,7 +7,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="YGC Chits">
     <link rel="manifest" th:href="@{/manifest.json}">
-    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}"><title>Chit Detail - YGC Admin</title>
+    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}">
+    <title>Chit Detail - YGC Admin</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link rel="stylesheet" th:href="@{/css/app.css}">
@@ -25,10 +26,12 @@
         <a th:href="@{/admin/settlements}" class="nav-link"><i class="bi bi-bank"></i> Settlements</a>
         <a th:href="@{/admin/reports/commission}" class="nav-link"><i class="bi bi-graph-up"></i> Commission</a>
         <a th:href="@{/admin/audit}" class="nav-link"><i class="bi bi-shield-check"></i> Audit Log</a>
-        <a th:href="@{/help}" class="nav-link"><i class="bi bi-question-circle"></i> Help & Rules</a>
+        <a th:href="@{/admin/chit-history}" class="nav-link"><i class="bi bi-archive"></i> Chit History</a>
+        <a th:href="@{/help}" class="nav-link"><i class="bi bi-question-circle"></i> Help &amp; Rules</a>
         <a th:href="@{/logout}" class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
     </nav>
 </div>
+
 <div class="main-content">
     <div class="topbar">
         <div>
@@ -36,8 +39,16 @@
             <h4 class="mt-1"><i class="bi bi-collection text-warning me-2"></i><span th:text="${chit.name}">Chit</span></h4>
             <div class="sub" th:text="${chit.description}"></div>
         </div>
-        <div class="user-badge" th:text="${user.fullName}">Admin</div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="ygc-conn-dot" title="Live notifications active"></span>
+            <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
+                <i class="bi bi-bell"></i>
+                <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+            </button>
+            <div class="user-badge" th:text="${user.fullName}">Admin</div>
+        </div>
     </div>
+
     <div th:if="${success}" class="alert alert-success alert-dismissible"><span th:text="${success}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <div th:if="${error}" class="alert alert-danger alert-dismissible"><span th:text="${error}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 
@@ -73,6 +84,10 @@
                         <tr><td class="text-muted">Min Bid</td><td class="fw-semibold" th:text="${chit.minBidAmount != null ? '₹' + chit.minBidAmount : 'Not set'}"></td></tr>
                         <tr><td class="text-muted">Max Bid</td><td class="fw-semibold" th:text="${chit.maxBidAmount != null ? '₹' + chit.maxBidAmount : 'Not set'}"></td></tr>
                         <tr><td class="text-muted">Status</td><td><span class="badge" th:classappend="${chit.status.name() == 'ACTIVE'} ? 'bg-success' : (${chit.status.name() == 'OPEN'} ? 'bg-primary' : 'bg-secondary')" th:text="${chit.status}"></span></td></tr>
+                        <tr th:if="${chit.closingReason != null}">
+                            <td class="text-muted">Closing Reason</td>
+                            <td class="fw-semibold text-danger" th:text="${chit.closingReason}"></td>
+                        </tr>
                     </table>
                 </div>
             </div>
@@ -100,12 +115,20 @@
         </div>
     </div>
 
+    <!-- ── Member List ─────────────────────────────────────────────────────── -->
     <div class="card panel mt-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span><i class="bi bi-people me-2 text-primary"></i>Member List</span>
-            <span class="badge bg-secondary" th:text="${memberships.size()} + ' members'"></span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-secondary" th:text="${memberships.size()} + ' members'"></span>
+                <!-- Add Member button -->
+                <button class="btn btn-sm btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                    <i class="bi bi-person-plus me-1"></i>Add Member
+                </button>
+            </div>
         </div>
         <div class="card-body p-0">
+            <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr><th>Member</th><th>Email</th><th>Status</th><th>Agreement</th><th>Agreement No.</th><th>PDF</th><th>Won</th><th>Joined</th><th>Actions</th></tr>
@@ -114,7 +137,11 @@
                 <tr th:each="m : ${memberships}">
                     <td th:text="${m.user.fullName}"></td>
                     <td><small th:text="${m.user.email}"></small></td>
-                    <td><span class="badge" th:classappend="${m.status.name() == 'ACTIVE'} ? 'bg-success' : (${m.status.name() == 'PENDING'} ? 'bg-warning text-dark' : 'bg-secondary')" th:text="${m.status}"></span></td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${m.status.name() == 'ACTIVE'} ? 'bg-success' : (${m.status.name() == 'PENDING'} ? 'bg-warning text-dark' : (${m.status.name() == 'EXITED'} ? 'bg-danger' : 'bg-secondary'))"
+                              th:text="${m.status}"></span>
+                    </td>
                     <td>
                         <div th:if="${m.agreementAccepted}">
                             <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Accepted</span>
@@ -132,51 +159,115 @@
                     </td>
                     <td><span class="badge" th:classappend="${m.hasWonAuction} ? 'bg-warning text-dark' : 'bg-light text-muted'" th:text="${m.hasWonAuction} ? 'Yes' : 'No'"></span></td>
                     <td><small th:text="${#temporals.format(m.joinedAt, 'dd MMM yyyy')}"></small></td>
+
+                    <!-- Actions column -->
                     <td>
-                        <div th:if="${m.status.name() == 'PENDING'}" class="d-flex gap-1">
-                            <form th:action="@{/admin/memberships/{id}/approve(id=${m.id})}" method="post">
-                                <button class="btn btn-sm btn-success" title="Approve &amp; generate agreement PDF">
-                                    <i class="bi bi-check"></i> Approve
+                        <div class="d-flex gap-1 flex-wrap">
+                            <!-- Approve / Reject for PENDING -->
+                            <th:block th:if="${m.status.name() == 'PENDING'}">
+                                <form th:action="@{/admin/memberships/{id}/approve(id=${m.id})}" method="post">
+                                    <button class="btn btn-sm btn-success" title="Approve &amp; generate agreement PDF">
+                                        <i class="bi bi-check"></i>
+                                    </button>
+                                </form>
+                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                                        th:data-bs-target="'#memberRejectModal' + ${m.id}"
+                                        title="Reject with reason">
+                                    <i class="bi bi-x"></i>
                                 </button>
-                            </form>
-                            <!-- FIX: Reject opens modal so admin can enter a reason -->
-                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal"
-                                    th:data-bs-target="'#memberRejectModal' + ${m.id}">
-                                <i class="bi bi-x"></i> Reject
-                            </button>
+                            </th:block>
+
+                            <!-- Remove (with reason) for ACTIVE or PENDING members -->
+                            <th:block th:if="${m.status.name() == 'ACTIVE' or m.status.name() == 'PENDING'}">
+                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal"
+                                        th:data-bs-target="'#removeMemberModal' + ${m.id}"
+                                        title="Remove member from chit">
+                                    <i class="bi bi-person-x"></i>
+                                </button>
+                            </th:block>
+
+                            <span th:if="${m.status.name() == 'EXITED' or m.status.name() == 'SETTLED'}"
+                                  class="text-muted small">—</span>
                         </div>
-                        <span th:if="${m.status.name() != 'PENDING'}" class="text-muted small">—</span>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(memberships)}"><td colspan="9" class="text-center text-muted py-4">No members yet</td></tr>
                 </tbody>
             </table>
+            </div>
         </div>
         <div class="card-footer text-muted small">
             <i class="bi bi-info-circle me-1"></i>
             Approving a member automatically generates a signed agreement PDF and emails it to both the member and admin.
+            Removing a member sends notifications to the member and a copy to admin.
         </div>
     </div>
 
-    <!-- FIX: Admin Actions — Edit Chit and Delete Chit buttons -->
-    <div class="d-flex gap-2 mt-3 mb-4">
+    <!-- ── Admin Action Buttons ───────────────────────────────────────────── -->
+    <div class="d-flex gap-2 mt-3 mb-4 flex-wrap">
         <a th:href="@{/admin/chits/{id}/edit(id=${chit.id})}" class="btn btn-outline-primary">
             <i class="bi bi-pencil me-1"></i>Edit Chit
         </a>
-        <form th:action="@{/admin/chits/{id}/delete(id=${chit.id})}" method="post"
-              th:if="${chit.status.name() != 'ACTIVE'}"
-              onsubmit="return confirm('Delete this chit? This cannot be undone.')">
-            <button class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Delete Chit</button>
-        </form>
+
+        <!-- Delete with Archive (replaces plain delete) -->
+        <th:block th:if="${chit.status.name() != 'ACTIVE'}">
+            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteArchiveModal">
+                <i class="bi bi-archive me-1"></i>Delete &amp; Archive
+            </button>
+        </th:block>
         <span th:if="${chit.status.name() == 'ACTIVE'}"
               class="btn btn-outline-danger disabled opacity-50"
               title="Cannot delete an active chit — cancel it first">
             <i class="bi bi-trash me-1"></i>Delete Chit
         </span>
+
+        <!-- View Chit History shortcut -->
+        <a th:href="@{/admin/chit-history}" class="btn btn-outline-secondary">
+            <i class="bi bi-clock-history me-1"></i>Chit History
+        </a>
+    </div>
+</div><!-- /main-content -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Add Member Modal -->
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Add Member to Chit</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/admin/chits/{chitId}/members/add(chitId=${chit.id})}" method="post">
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Enter the email of a registered user to add them to <strong th:text="${chit.name}"></strong>.
+                        Membership will be set to <em>PENDING</em> until approved.
+                    </div>
+                    <label class="form-label fw-semibold">Member Email <span class="text-danger">*</span></label>
+                    <input type="email" name="memberEmail" class="form-control" required
+                           placeholder="e.g. member@example.com" autocomplete="off">
+                    <small class="text-muted mt-1 d-block">
+                        <i class="bi bi-info-circle me-1"></i>
+                        The user must already be registered. Member receives email notification.
+                    </small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success fw-bold">
+                        <i class="bi bi-person-plus me-1"></i>Add Member
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-<!-- Member rejection modals -->
+<!-- Rejection modals (PENDING members) -->
 <div th:each="m : ${memberships}" th:if="${m.status.name() == 'PENDING'}">
   <div class="modal fade" th:id="'memberRejectModal' + ${m.id}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -205,5 +296,82 @@
   </div>
 </div>
 
+<!-- Remove Member modals (ACTIVE or PENDING members) -->
+<div th:each="m : ${memberships}"
+     th:if="${m.status.name() == 'ACTIVE' or m.status.name() == 'PENDING'}">
+  <div class="modal fade" th:id="'removeMemberModal' + ${m.id}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="bi bi-person-x me-2"></i>Remove Member from Chit</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form th:action="@{/admin/chits/{chitId}/members/{membershipId}/remove(chitId=${chit.id},membershipId=${m.id})}"
+              method="post">
+          <div class="modal-body">
+            <div class="alert alert-danger py-2 mb-3">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>
+              You are about to <strong>permanently remove</strong>
+              <strong th:text="${m.user.fullName}"></strong>
+              from <strong th:text="${chit.name}"></strong>.
+              <br>Emails will be sent to the <em>member</em> and to <em>admin</em>.
+            </div>
+            <label class="form-label fw-semibold">Reason for Removal <span class="text-danger">*</span></label>
+            <textarea name="reason" class="form-control" rows="3" required
+                      placeholder="e.g. Member requested early exit, payment default, duplicate account..."></textarea>
+            <small class="text-muted mt-1 d-block">
+              <i class="bi bi-envelope me-1"></i>
+              This reason will appear in both the member's email and the admin confirmation email.
+            </small>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-danger fw-bold">
+              <i class="bi bi-person-x me-1"></i>Confirm Removal
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete & Archive Modal -->
+<div class="modal fade" id="deleteArchiveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-warning">
+                <h5 class="modal-title"><i class="bi bi-archive me-2"></i>Delete &amp; Archive Chit</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/admin/chits/{id}/delete-with-archive(id=${chit.id})}" method="post">
+                <div class="modal-body">
+                    <div class="alert alert-warning py-2 mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        Deleting <strong th:text="${chit.name}"></strong> will:
+                        <ul class="mb-0 mt-2 small">
+                            <li>Generate a <strong>full analysis PDF</strong> (members, payments, auctions, commissions)</li>
+                            <li>Save complete data to <strong>Chit History</strong> table</li>
+                            <li>Email the PDF to admin</li>
+                            <li>Notify all active/pending members</li>
+                            <li><span class="text-danger fw-bold">Permanently delete the chit</span></li>
+                        </ul>
+                    </div>
+                    <label class="form-label fw-semibold">Closing Reason</label>
+                    <textarea name="closingReason" class="form-control" rows="2"
+                              placeholder="Optional: reason for deleting this chit..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold">
+                        <i class="bi bi-archive me-1"></i>Archive &amp; Delete
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div th:replace="~{fragments :: appScripts}"></div>
-</body></html>
+</body>
+</html>
