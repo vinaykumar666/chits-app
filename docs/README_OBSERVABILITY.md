@@ -59,13 +59,13 @@
    - SSL/TLS setup
    - Monitoring on Render
 
-7. **[Dockerfile](Dockerfile)**
+7. **[Dockerfile](../Dockerfile)**
    - Multi-stage Docker build
    - Production-optimized image
    - Alpine Linux base
    - Non-root user security
 
-8. **[render.yaml](render.yaml)**
+8. **[render.yaml](../render.yaml)**
    - Infrastructure as Code
    - Web service configuration
    - Environment variables
@@ -77,19 +77,19 @@
 
 ### Logging Configuration
 
-- **[logback-spring.xml](src/main/resources/logback-spring.xml)**
+- **[logback-spring.xml](../src/main/resources/logback-spring.xml)**
   - Console appender
   - File appender with rolling policy
   - Async appender
   - Error-only appender
   - Logger configurations
 
-- **[application.properties](src/main/resources/application.properties)**
+- **[application.properties](../src/main/resources/application.properties)**
   - Development logging config
   - H2 database setup
   - Application settings
 
-- **[application-prod.properties](src/main/resources/application-prod.properties)**
+- **[application-prod.properties](../src/main/resources/application-prod.properties)**
   - Production logging config
   - Performance tuning
   - Production database setup
@@ -100,28 +100,28 @@
 
 ### Logging Components
 
-- **[LoggingUtil.java](src/main/java/com/ygc/util/LoggingUtil.java)** - Logging utility with 20+ methods
-- **[RequestResponseLoggingFilter.java](src/main/java/com/ygc/security/RequestResponseLoggingFilter.java)** - HTTP request/response logging
+- **[LoggingUtil.java](../src/main/java/com/ygc/util/LoggingUtil.java)** - Logging utility with 20+ methods
+- **[RequestResponseLoggingFilter.java](../src/main/java/com/ygc/security/RequestResponseLoggingFilter.java)** - HTTP request/response logging
 
 ### Exception Handling
 
-- **[GlobalExceptionHandler.java](src/main/java/com/ygc/exception/GlobalExceptionHandler.java)** - Central exception handler
-- **[EntityNotFoundException.java](src/main/java/com/ygc/exception/EntityNotFoundException.java)** - 404 exceptions
-- **[AccessDeniedException.java](src/main/java/com/ygc/exception/AccessDeniedException.java)** - 403 exceptions
-- **[DuplicateResourceException.java](src/main/java/com/ygc/exception/DuplicateResourceException.java)** - 409 exceptions
-- **[ValidationException.java](src/main/java/com/ygc/exception/ValidationException.java)** - 400 exceptions
+- **[GlobalExceptionHandler.java](../src/main/java/com/ygc/exception/GlobalExceptionHandler.java)** - Central exception handler
+- **[EntityNotFoundException.java](../src/main/java/com/ygc/exception/EntityNotFoundException.java)** - 404 exceptions
+- **[AccessDeniedException.java](../src/main/java/com/ygc/exception/AccessDeniedException.java)** - 403 exceptions
+- **[DuplicateResourceException.java](../src/main/java/com/ygc/exception/DuplicateResourceException.java)** - 409 exceptions
+- **[ValidationException.java](../src/main/java/com/ygc/exception/ValidationException.java)** - 400 exceptions
 
 ### Enhanced Services
 
-- **[UserService.java](src/main/java/com/ygc/service/UserService.java)** - User management with logging
-- **[ChitService.java](src/main/java/com/ygc/service/ChitService.java)** - Chit management with logging
-- **[PaymentService.java](src/main/java/com/ygc/service/PaymentService.java)** - Payment processing with logging
-- **[AuctionService.java](src/main/java/com/ygc/service/AuctionService.java)** - Auction management with logging
-- **[EmailService.java](src/main/java/com/ygc/service/EmailService.java)** - Email delivery with logging
+- **[UserService.java](../src/main/java/com/ygc/service/UserService.java)** - User management with logging
+- **[ChitService.java](../src/main/java/com/ygc/service/ChitService.java)** - Chit management with logging
+- **[PaymentService.java](../src/main/java/com/ygc/service/PaymentService.java)** - Payment processing with logging
+- **[AuctionService.java](../src/main/java/com/ygc/service/AuctionService.java)** - Auction management with logging
+- **[EmailService.java](../src/main/java/com/ygc/service/EmailService.java)** - Email delivery with logging
 
 ### Enhanced Controllers
 
-- **[AuthController.java](src/main/java/com/ygc/controller/AuthController.java)** - Authentication with logging
+- **[AuthController.java](../src/main/java/com/ygc/controller/AuthController.java)** - Authentication with logging
 
 ---
 
@@ -298,7 +298,7 @@ Before deploying to production:
 
 ### For DevOps/DevSecOps
 1. Start with [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)
-2. Review [Dockerfile](Dockerfile) and [render.yaml](render.yaml)
+2. Review [Dockerfile](../Dockerfile) and [render.yaml](../render.yaml)
 3. Check [OBSERVABILITY.md](OBSERVABILITY.md) - Monitoring section
 4. Set up log aggregation tools
 
