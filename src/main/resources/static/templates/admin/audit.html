@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="YGC Chits">
+    <link rel="manifest" th:href="@{/manifest.json}">
+    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}"><title>Audit Log - YGC Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="sidebar">
+    <div class="brand"><div class="brand-icon">Y</div><div><div class="brand-name">YGC Internal</div><div class="brand-tag">Save Rupee, Save Future</div></div></div>
+    <nav class="sidebar-nav">
+        <a th:href="@{/admin/dashboard}" class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a th:href="@{/admin/chits}" class="nav-link"><i class="bi bi-collection"></i> Chit Groups</a>
+        <a th:href="@{/admin/members}" class="nav-link"><i class="bi bi-people"></i> Members</a>
+        <a th:href="@{/admin/payments}" class="nav-link"><i class="bi bi-cash-coin"></i> Payments</a>
+        <a th:href="@{/admin/auctions}" class="nav-link"><i class="bi bi-hammer"></i> Auctions</a>
+        <a th:href="@{/admin/settlements}" class="nav-link"><i class="bi bi-bank"></i> Settlements</a>
+        <a th:href="@{/admin/reports/commission}" class="nav-link"><i class="bi bi-graph-up"></i> Commission</a>
+        <a th:href="@{/admin/audit}" class="nav-link active"><i class="bi bi-shield-check"></i> Audit Log</a>
+        <a th:href="@{/help}" class="nav-link"><i class="bi bi-question-circle"></i> Help & Rules</a>
+        <a th:href="@{/logout}" class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    </nav>
+</div>
+<div class="main-content">
+    <div class="topbar">
+        <div><h4><i class="bi bi-shield-check text-warning me-2"></i>Audit Log</h4><div class="sub">Complete immutable activity trail for all operations</div></div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="ygc-conn-dot" title="Live notifications active"></span>
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
+          <div class="user-badge" th:text="${user.fullName}">Admin</div>
+        </div>
+    </div>
+    <div class="card panel">
+        <div class="card-header d-flex justify-content-between">
+            <span><i class="bi bi-list-ul me-2"></i>All Activity</span>
+            <span class="badge bg-secondary" th:text="${auditLogs.size()} + ' records'"></span>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Description</th></tr></thead>
+                <tbody>
+                <tr th:each="log : ${auditLogs}">
+                    <td><small th:text="${#temporals.format(log.timestamp, 'dd MMM yyyy HH:mm')}"></small></td>
+                    <td>
+                        <div th:if="${log.user != null}">
+                            <div class="fw-semibold small" th:text="${log.user.fullName}"></div>
+                            <small class="text-muted" th:text="${log.user.email}"></small>
+                        </div>
+                        <span th:if="${log.user == null}" class="text-muted">System</span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${log.action.contains('APPROVE')} ? 'bg-success' : (${log.action.contains('REJECT')} ? 'bg-danger' : (${log.action.contains('CREATE')} ? 'bg-primary' : 'bg-secondary'))"
+                              th:text="${log.action}"></span>
+                    </td>
+                    <td th:text="${log.entityType}"></td>
+                    <td th:text="${log.description}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(auditLogs)}"><td colspan="5" class="text-center text-muted py-4">No audit records yet</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

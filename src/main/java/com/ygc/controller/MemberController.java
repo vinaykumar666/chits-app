@@ -23,6 +23,7 @@ public class MemberController {
     private final PaymentService paymentService;
     private final AuctionService auctionService;
     private final SettlementService settlementService;
+    private final SettlementRepository settlementRepository;
     private final ChitMembershipRepository membershipRepository;
     private final AuctionRepository auctionRepository;
     private final PdfCertificateService pdfCertificateService;
@@ -38,11 +39,16 @@ public class MemberController {
         List<ChitMembership> memberships = chitService.getMembershipsForUser(user);
         long activeCount = memberships.stream()
                 .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count();
+        // Fetch early exit / maturity settlements for this user
+        List<Settlement> mySettlements = settlementRepository.findAll().stream()
+                .filter(s -> s.getMembership().getUser().getId().equals(user.getId()))
+                .toList();
         model.addAttribute("user", user);
         model.addAttribute("memberships", memberships);
         model.addAttribute("activeCount", activeCount);
         model.addAttribute("availableChits", chitService.getAvailableChits());
         model.addAttribute("openAuctions", auctionService.getOpenAuctions());
+        model.addAttribute("mySettlements", mySettlements);
         return "member/dashboard";
     }
 

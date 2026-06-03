@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Edit Chit')}"></head>
+<body>
+<div th:replace="~{fragments :: adminSidebar('chits')}"></div>
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <a th:href="@{/admin/chits}" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left"></i> Back to Chits</a>
+      <h4 class="mt-1"><i class="bi bi-pencil text-warning me-2"></i>Edit Chit — <span th:text="${chit.name}"></span></h4>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="ygc-conn-dot"></span>
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
+      <span class="user-badge" th:text="${user.fullName}">Admin</span>
+    </div>
+  </div>
+  <div th:replace="~{fragments :: alerts}"></div>
+
+  <div class="card panel">
+    <div class="card-header"><i class="bi bi-collection me-2 text-primary"></i>Chit Configuration</div>
+    <div class="card-body">
+      <form th:action="@{/admin/chits/{id}/edit(id=${chit.id})}" method="post">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Chit Name *</label>
+            <input type="text" name="name" class="form-control" th:value="${chit.name}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Status</label>
+            <select name="status" class="form-select">
+              <option th:each="s : ${T(com.ygc.model.Chit.ChitStatus).values()}"
+                      th:value="${s}" th:text="${s}"
+                      th:selected="${s == chit.status}"></option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea name="description" class="form-control" rows="2" th:text="${chit.description}"></textarea>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Monthly Amount (₹) *</label>
+            <input type="number" name="monthlyAmount" class="form-control" step="0.01" th:value="${chit.monthlyAmount}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Total Members *</label>
+            <input type="number" name="totalMembers" class="form-control" th:value="${chit.totalMembers}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Duration (months) *</label>
+            <input type="number" name="durationMonths" class="form-control" th:value="${chit.durationMonths}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Admin Commission % *</label>
+            <input type="number" name="adminCommissionPercentage" class="form-control" step="0.01" th:value="${chit.adminCommissionPercentage}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Min Bid Amount (₹)</label>
+            <input type="number" name="minBidAmount" class="form-control" step="0.01" th:value="${chit.minBidAmount}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Max Bid Amount (₹)</label>
+            <input type="number" name="maxBidAmount" class="form-control" step="0.01" th:value="${chit.maxBidAmount}">
+          </div>
+          <div class="col-12">
+            <div class="alert alert-info py-2">
+              <i class="bi bi-info-circle me-2"></i>Saving will notify all <strong>active members</strong> of this chit via push notification + email.
+            </div>
+          </div>
+          <div class="col-12 d-flex gap-2">
+            <button type="submit" class="btn btn-warning fw-bold"><i class="bi bi-save me-1"></i>Save Changes &amp; Notify Members</button>
+            <a th:href="@{/admin/chits/{id}(id=${chit.id})}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

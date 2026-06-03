@@ -1,0 +1,29 @@
+/* responsive.css — additional overrides loaded after app.css */
+/* Mobile-specific component tweaks */
+
+/* Smooth tap feedback for touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .btn:active { opacity: 0.85; transform: scale(0.98); }
+  .nav-link:active { opacity: 0.85; }
+  .card:active { transform: scale(0.99); }
+}
+
+/* Prevent iOS input zoom (font-size must be >= 16px — enforced in app.css) */
+@supports (-webkit-touch-callout: none) {
+  select { font-size: 16px !important; }
+}
+
+/* Samsung Internet: fix flex gap */
+@supports not (gap: 1rem) {
+  .d-flex > * + * { margin-left: 0.5rem; }
+  .flex-column > * + * { margin-top: 0.5rem; }
+}
+
+/* Fix Bootstrap modals on mobile */
+@media (max-width: 767px) {
+  .modal-backdrop { z-index: 400; }
+  .modal { z-index: 500; }
+  #ygc-bottom-nav { z-index: 300; }
+  .sidebar, .member-sidebar { z-index: 210; }
+  #ygc-sidebar-overlay { z-index: 200; }
+}

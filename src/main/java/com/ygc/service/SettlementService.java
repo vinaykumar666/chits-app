@@ -49,6 +49,18 @@ public class SettlementService {
         Settlement saved = settlementRepository.save(settlement);
         auditService.log(member, "REQUEST_EARLY_EXIT", "Settlement", saved.getId(),
                 "Early exit request. Final amount: \u20b9" + finalAmount);
+
+        // Notify all admin users about early exit request
+        try {
+            membershipRepository.findAll().stream()
+                .map(m -> m.getUser())
+                .filter(u -> u.getRole() == User.Role.ADMIN)
+                .map(User::getEmail)
+                .distinct()
+                .forEach(adminEmail -> notificationService.notifyEarlyExitSubmitted(
+                    adminEmail, member.getFullName(), membership.getChit().getName()));
+        } catch (Exception ignored) {}
+
         return saved;
     }
 
@@ -79,23 +91,24 @@ public class SettlementService {
         settlement.setProcessedAt(LocalDateTime.now());
         settlementRepository.save(settlement);
 
+        User member = settlement.getMembership().getUser();
+        String chitName = settlement.getMembership().getChit().getName();
+
         if (approved) {
             ChitMembership membership = settlement.getMembership();
             membership.setStatus(ChitMembership.MembershipStatus.SETTLED);
             membershipRepository.save(membership);
-            User member = membership.getUser();
-            String chitName = membership.getChit().getName();
             emailService.sendSettlementConfirmation(member.getEmail(), member.getFullName(),
                     chitName, settlement.getFinalSettlementAmount().toString());
-
-            // Push chit maturity notification for MATURITY type, payment reminder for others
+            notificationService.notifySettlementApproved(member.getEmail(), chitName,
+                    settlement.getFinalSettlementAmount().toPlainString());
             if (settlement.getType() == Settlement.SettlementType.MATURITY) {
                 notificationService.notifyChitMaturity(member.getEmail(), chitName);
-            } else {
-                notificationService.notifyPaymentReminder(
-                        member.getEmail(), chitName, "settlement processed",
-                        settlement.getFinalSettlementAmount().toPlainString());
             }
+        } else {
+            String reason = remarks != null ? remarks : "No reason provided";
+            emailService.sendSettlementRejected(member.getEmail(), member.getFullName(), chitName, reason);
+            notificationService.notifySettlementRejected(member.getEmail(), chitName, reason);
         }
         auditService.log(admin, approved ? "APPROVE_SETTLEMENT" : "REJECT_SETTLEMENT",
                 "Settlement", settlementId, remarks);

@@ -109,21 +109,16 @@ public class PaymentService {
 
     @Transactional
     public void verifyPayment(Long paymentId, boolean approved, String remarks, User admin) {
-
-        // event=verifyPayment() {"status":"START","paymentId":5,"approved":true,"admin":"admin@ygc.com"}
-        loggingUtil.entry("verifyPayment",
-                "paymentId", paymentId,
-                "approved", approved,
-                "admin", admin.getEmail());
+        loggingUtil.entry("verifyPayment", "paymentId", paymentId, "approved", approved, "admin", admin.getEmail());
         try {
             Payment payment = paymentRepository.findById(paymentId)
                     .orElseThrow(() -> new EntityNotFoundException("Payment not found"));
 
             payment.setStatus(approved ? Payment.PaymentStatus.APPROVED : Payment.PaymentStatus.REJECTED);
             payment.setAdminRemarks(remarks);
+            if (!approved) payment.setRejectionReason(remarks);
             payment.setVerifiedBy(admin);
             payment.setVerifiedAt(java.time.LocalDateTime.now());
-
             loggingUtil.db("verifyPayment", "UPDATE", "Payment");
             paymentRepository.save(payment);
 
@@ -133,55 +128,46 @@ public class PaymentService {
                     BigDecimal commissionAmt = payment.getTotalAmount()
                             .multiply(chit.getAdminCommissionPercentage())
                             .divide(BigDecimal.valueOf(100));
-
                     CommissionLedger commission = new CommissionLedger();
                     commission.setChit(chit);
                     commission.setCommissionPercentage(chit.getAdminCommissionPercentage());
                     commission.setCommissionAmount(commissionAmt);
                     commission.setSource("MONTHLY_COLLECTION");
                     commission.setMonth(LocalDate.now());
-
                     loggingUtil.db("verifyPayment", "INSERT", "CommissionLedger");
                     commissionLedgerRepository.save(commission);
-
-                    // event=verifyPayment() {"status":"COMMISSION_RECORDED","commissionAmount":51}
-                    loggingUtil.event("verifyPayment", "COMMISSION_RECORDED",
-                            "commissionAmount", commissionAmt);
                 } catch (Exception e) {
                     loggingUtil.error("Failed to create commission ledger", "verifyPayment", e);
                 }
             }
 
             User member = payment.getMembership().getUser();
-            try {
-                loggingUtil.externalCall("verifyPayment", "EmailService", "sendPaymentApproval");
-                emailService.sendPaymentApproval(member.getEmail(), member.getFullName(),
-                        payment.getMembership().getChit().getName(),
-                        payment.getTotalAmount().toString(), approved);
-            } catch (Exception e) {
-                loggingUtil.error("Failed to send payment approval email", "verifyPayment", e);
-            }
-
-            auditService.log(admin, approved ? "APPROVE_PAYMENT" : "REJECT_PAYMENT",
-                    "Payment", paymentId, remarks);
-            loggingUtil.audit("verifyPayment", admin.getEmail(),
-                    approved ? "APPROVE_PAYMENT" : "REJECT_PAYMENT");
-
-            // Push real-time notification to the member
             String chitName = payment.getMembership().getChit().getName();
-            if (approved) {
-                notificationService.notifyPaymentReminder(
-                        member.getEmail(), chitName,
-                        "confirmed", payment.getTotalAmount().toPlainString());
-            } else {
-                notificationService.notifyPaymentDueAlert(member.getEmail(), chitName, 0);
+            String amount = payment.getTotalAmount().toPlainString();
+
+            // Send email with reason if rejected
+            try {
+                if (approved) {
+                    emailService.sendPaymentApproval(member.getEmail(), member.getFullName(), chitName, amount, true);
+                } else {
+                    emailService.sendPaymentRejected(member.getEmail(), member.getFullName(), chitName, amount,
+                            remarks != null ? remarks : "No reason provided");
+                }
+            } catch (Exception e) {
+                loggingUtil.error("Failed to send payment email", "verifyPayment", e);
             }
 
-            // event=verifyPayment() {"status":"SUCCESS","paymentId":5,"decision":"APPROVED"}
-            loggingUtil.success("verifyPayment",
-                    "paymentId", paymentId,
-                    "decision", approved ? "APPROVED" : "REJECTED");
+            auditService.log(admin, approved ? "APPROVE_PAYMENT" : "REJECT_PAYMENT", "Payment", paymentId, remarks);
 
+            // Push notification with reason
+            if (approved) {
+                notificationService.notifyPaymentApproved(member.getEmail(), chitName, amount);
+            } else {
+                notificationService.notifyPaymentRejected(member.getEmail(), chitName, amount,
+                        remarks != null ? remarks : "No reason provided");
+            }
+
+            loggingUtil.success("verifyPayment", "paymentId", paymentId, "decision", approved ? "APPROVED" : "REJECTED");
         } catch (Exception e) {
             loggingUtil.failure("verifyPayment", e, "paymentId", paymentId);
             throw e;

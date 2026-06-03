@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('My Dashboard')}"></head>
+<body>
+
+<div th:replace="~{fragments :: memberSidebar('dashboard')}"></div>
+
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <h4><i class="bi bi-house text-warning me-2"></i>My Dashboard</h4>
+      <div class="sub" th:text="'Welcome back, ' + ${user.fullName}"></div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="ygc-conn-dot" title="Live notifications active"></span>
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
+      <span class="user-badge" th:text="${user.email}">user@email.com</span>
+    </div>
+  </div>
+  <div th:replace="~{fragments :: alerts}"></div>
+
+  <!-- Quick Stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4 col-6">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-collection"></i></div>
+        <div><div class="fw-bold fs-4" th:text="${memberships.size()}">0</div><small class="text-muted">My Memberships</small></div>
+      </div></div>
+    </div>
+    <div class="col-md-4 col-6">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle"></i></div>
+        <div><div class="fw-bold fs-4" th:text="${activeCount}">0</div><small class="text-muted">Active</small></div>
+      </div></div>
+    </div>
+    <div class="col-md-4 col-6">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+        <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-stars"></i></div>
+        <div><div class="fw-bold fs-4" th:text="${availableChits.size()}">0</div><small class="text-muted">Open to Join</small></div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- My Memberships -->
+  <div class="card panel mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-collection text-primary me-2"></i>My Chit Memberships</span>
+      <a th:href="@{/member/chits}" class="btn btn-sm btn-warning fw-bold"><i class="bi bi-plus"></i> Join New</a>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Chit</th>
+              <th>Monthly</th>
+              <th class="hide-mobile">Duration</th>
+              <th>Status</th>
+              <th class="hide-mobile">Terms</th>
+              <th class="hide-mobile">Won</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr th:each="m : ${memberships}">
+            <td>
+              <div class="fw-semibold" th:text="${m.chit.name}"></div>
+              <small class="text-muted d-none d-sm-block" th:text="${m.chit.description}"></small>
+            </td>
+            <td class="fw-bold" th:text="${'₹' + m.chit.monthlyAmount}"></td>
+            <td class="hide-mobile" th:text="${m.chit.durationMonths + ' months'}"></td>
+            <td>
+              <span class="badge"
+                th:classappend="${m.status.name() == 'ACTIVE'} ? 'bg-success' : (${m.status.name() == 'PENDING'} ? 'bg-warning text-dark' : 'bg-secondary')"
+                th:text="${m.status}"></span>
+            </td>
+            <td class="hide-mobile">
+              <span class="badge" th:classappend="${m.termsAccepted} ? 'bg-success' : 'bg-danger'"
+                th:text="${m.termsAccepted} ? 'Accepted' : 'Required'"></span>
+            </td>
+            <td class="hide-mobile">
+              <span class="badge" th:classappend="${m.hasWonAuction} ? 'bg-warning text-dark' : 'bg-light text-muted border'"
+                th:text="${m.hasWonAuction} ? 'Yes' : 'No'"></span>
+            </td>
+            <td>
+              <a th:href="@{/member/memberships/{id}(id=${m.id})}" class="btn btn-sm btn-outline-primary">
+                <span class="btn-action-text">View Details</span>
+                <i class="bi bi-eye d-none d-md-none" style="display:none"></i>
+                Details
+              </a>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(memberships)}">
+            <td colspan="7" class="text-center py-5">
+              <i class="bi bi-collection fs-2 text-muted d-block mb-2"></i>
+              <div class="text-muted mb-2">You haven't joined any chit yet.</div>
+              <a th:href="@{/member/chits}" class="btn btn-sm btn-warning fw-bold">Browse Available Chits</a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Early Exit / Settlements -->
+  <div th:if="${!#lists.isEmpty(mySettlements)}" class="card panel mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-bank text-warning me-2"></i>My Settlement Requests</span>
+      <span class="badge bg-secondary" th:text="${mySettlements.size()} + ' record(s)'"></span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Chit</th><th>Type</th><th>Total Paid</th><th>Final Amount</th><th>Status</th><th>Reason</th><th>Requested</th></tr>
+          </thead>
+          <tbody>
+          <tr th:each="s : ${mySettlements}">
+            <td class="fw-semibold" th:text="${s.membership.chit.name}"></td>
+            <td><span class="badge" th:classappend="${s.type.name()=='EARLY_EXIT'} ? 'bg-warning text-dark' : 'bg-success'" th:text="${s.type}"></span></td>
+            <td th:text="'₹' + ${s.totalPaidAmount}"></td>
+            <td class="fw-bold" th:text="'₹' + ${s.finalSettlementAmount}"></td>
+            <td>
+              <span class="badge"
+                th:classappend="${s.status.name()=='APPROVED'} ? 'bg-success' : (${s.status.name()=='REJECTED'} ? 'bg-danger' : (${s.status.name()=='COMPLETED'} ? 'bg-primary' : 'bg-warning text-dark'))"
+                th:text="${s.status}"></span>
+            </td>
+            <td>
+              <span th:if="${s.adminRemarks != null and s.status.name()=='REJECTED'}" class="text-danger small">
+                <i class="bi bi-exclamation-circle me-1"></i><span th:text="${s.adminRemarks}"></span>
+              </span>
+              <span th:if="${s.adminRemarks == null or s.status.name() != 'REJECTED'}" class="text-muted small">—</span>
+            </td>
+            <td th:text="${#temporals.format(s.requestedAt, 'dd MMM yyyy')}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Available Chits Preview -->
+  <div th:if="${!#lists.isEmpty(availableChits)}" class="card panel">
+    <div class="card-header"><i class="bi bi-stars text-warning me-2"></i>Available Chits to Join</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4 col-12" th:each="chit : ${availableChits}">
+          <div class="card border h-100" style="border-radius:12px;overflow:hidden">
+            <div style="height:4px;background:linear-gradient(90deg,#f0a500,#c8870a)"></div>
+            <div class="card-body">
+              <h6 class="fw-bold" th:text="${chit.name}">Chit Name</h6>
+              <p class="text-muted small mb-3" th:text="${chit.description}"></p>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <div class="bg-light rounded p-2 text-center">
+                    <div class="fw-bold text-success" th:text="${'₹' + chit.monthlyAmount}"></div>
+                    <small class="text-muted">Monthly</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="bg-light rounded p-2 text-center">
+                    <div class="fw-bold" th:text="${chit.durationMonths + ' mo'}"></div>
+                    <small class="text-muted">Duration</small>
+                  </div>
+                </div>
+              </div>
+              <form th:action="@{/member/chits/{id}/join(id=${chit.id})}" method="post">
+                <button type="submit" class="btn btn-warning w-100 fw-bold btn-sm">
+                  <i class="bi bi-person-plus me-1"></i>Request to Join
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div th:replace="~{fragments :: appScripts}"></div>
+</body>
+</html>

@@ -6,12 +6,15 @@ import com.ygc.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin")
@@ -28,11 +31,16 @@ public class AdminController {
     private final CommissionLedgerRepository commissionLedgerRepository;
     private final ChitMembershipRepository membershipRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
+    private final SettlementRepository settlementRepository;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
     }
 
+    // ── Dashboard ─────────────────────────────────────────────────────────
     @GetMapping("/dashboard")
     public String dashboard(Authentication auth, Model model) {
         model.addAttribute("user", getCurrentUser(auth));
@@ -47,7 +55,7 @@ public class AdminController {
         return "admin/dashboard";
     }
 
-    // --- Chit Management ---
+    // ── Chit Management ───────────────────────────────────────────────────
     @GetMapping("/chits")
     public String listChits(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
@@ -62,33 +70,23 @@ public class AdminController {
     }
 
     @PostMapping("/chits/create")
-    public String createChit(@RequestParam String name,
-                             @RequestParam String description,
-                             @RequestParam BigDecimal monthlyAmount,
-                             @RequestParam Integer totalMembers,
-                             @RequestParam Integer durationMonths,
-                             @RequestParam BigDecimal adminCommissionPercentage,
+    public String createChit(@RequestParam String name, @RequestParam String description,
+                             @RequestParam BigDecimal monthlyAmount, @RequestParam Integer totalMembers,
+                             @RequestParam Integer durationMonths, @RequestParam BigDecimal adminCommissionPercentage,
                              @RequestParam(required = false) BigDecimal minBidAmount,
                              @RequestParam(required = false) BigDecimal maxBidAmount,
                              @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-                             Authentication auth,
-                             RedirectAttributes ra) {
+                             Authentication auth, RedirectAttributes ra) {
         try {
             Chit chit = new Chit();
-            chit.setName(name);
-            chit.setDescription(description);
-            chit.setMonthlyAmount(monthlyAmount);
-            chit.setTotalMembers(totalMembers);
-            chit.setDurationMonths(durationMonths);
-            chit.setAdminCommissionPercentage(adminCommissionPercentage);
-            chit.setMinBidAmount(minBidAmount);
-            chit.setMaxBidAmount(maxBidAmount);
+            chit.setName(name); chit.setDescription(description);
+            chit.setMonthlyAmount(monthlyAmount); chit.setTotalMembers(totalMembers);
+            chit.setDurationMonths(durationMonths); chit.setAdminCommissionPercentage(adminCommissionPercentage);
+            chit.setMinBidAmount(minBidAmount); chit.setMaxBidAmount(maxBidAmount);
             chit.setStartDate(startDate);
             chitService.createChit(chit, getCurrentUser(auth));
             ra.addFlashAttribute("success", "Chit created successfully!");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
         return "redirect:/admin/chits";
     }
 
@@ -102,42 +100,97 @@ public class AdminController {
         return "admin/chit-detail";
     }
 
+    // ── Edit Chit ──────────────────────────────────────────────────────────
+    @GetMapping("/chits/{id}/edit")
+    public String editChitForm(@PathVariable Long id, Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("chit", chitService.findById(id));
+        return "admin/chit-edit";
+    }
+
+    @PostMapping("/chits/{id}/edit")
+    public String editChit(@PathVariable Long id,
+                           @RequestParam String name, @RequestParam String description,
+                           @RequestParam BigDecimal monthlyAmount, @RequestParam Integer totalMembers,
+                           @RequestParam Integer durationMonths, @RequestParam BigDecimal adminCommissionPercentage,
+                           @RequestParam(required = false) BigDecimal minBidAmount,
+                           @RequestParam(required = false) BigDecimal maxBidAmount,
+                           @RequestParam String status,
+                           Authentication auth, RedirectAttributes ra) {
+        try {
+            Chit chit = chitService.findById(id);
+            chit.setName(name); chit.setDescription(description);
+            chit.setMonthlyAmount(monthlyAmount); chit.setTotalMembers(totalMembers);
+            chit.setDurationMonths(durationMonths); chit.setAdminCommissionPercentage(adminCommissionPercentage);
+            chit.setMinBidAmount(minBidAmount); chit.setMaxBidAmount(maxBidAmount);
+            chit.setStatus(Chit.ChitStatus.valueOf(status));
+            chitRepository.save(chit);
+
+            // Notify all active members of this chit
+            String detail = "Name: " + name + ", Status: " + status;
+            chitService.getMembershipsForChit(chit).stream()
+                .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE)
+                .forEach(m -> {
+                    notificationService.notifyChitUpdated(m.getUser().getEmail(), name, detail);
+                    emailService.sendChitUpdated(m.getUser().getEmail(), m.getUser().getFullName(), name, detail);
+                });
+            ra.addFlashAttribute("success", "Chit updated and members notified!");
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/chits/" + id;
+    }
+
+    @PostMapping("/chits/{id}/delete")
+    public String deleteChit(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try {
+            Chit chit = chitService.findById(id);
+            if (chit.getStatus() == Chit.ChitStatus.ACTIVE) {
+                ra.addFlashAttribute("error", "Cannot delete an active chit. Cancel it first.");
+                return "redirect:/admin/chits/" + id;
+            }
+            chitRepository.deleteById(id);
+            ra.addFlashAttribute("success", "Chit deleted successfully.");
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/chits";
+    }
+
+    // ── Membership Approve/Reject (with reason) ───────────────────────────
     @PostMapping("/memberships/{id}/approve")
     public String approveMembership(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
         try {
             ChitMembership membership = membershipRepository.findById(id).orElseThrow();
             Long chitId = membership.getChit().getId();
             chitService.approveMembership(id, getCurrentUser(auth));
-            ra.addFlashAttribute("success",
-                "Membership approved! Signed agreement PDF generated and emailed to member and admin.");
+            ra.addFlashAttribute("success", "Membership approved! Agreement PDF sent.");
             return "redirect:/admin/chits/" + chitId;
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
         return "redirect:/admin/chits";
     }
 
     @PostMapping("/memberships/{id}/reject")
-    public String rejectMembership(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+    public String rejectMembership(@PathVariable Long id,
+                                   @RequestParam(required = false, defaultValue = "Your request did not meet our criteria.") String reason,
+                                   Authentication auth, RedirectAttributes ra) {
         try {
             ChitMembership membership = membershipRepository.findById(id).orElseThrow();
             Long chitId = membership.getChit().getId();
-            String userEmail = membership.getUser().getEmail();
-            String userName  = membership.getUser().getFullName();
-            String chitName  = membership.getChit().getName();
             membership.setStatus(ChitMembership.MembershipStatus.EXITED);
+            membership.setRejectionReason(reason);
             membershipRepository.save(membership);
-            // Push rejection notification to the member
-            notificationService.notifyChitRegistrationRejected(userEmail, userName, chitName);
-            ra.addFlashAttribute("success", "Membership rejected");
+
+            notificationService.notifyChitRegistrationRejected(
+                membership.getUser().getEmail(), membership.getUser().getFullName(),
+                membership.getChit().getName(), reason);
+            emailService.sendMembershipRejected(
+                membership.getUser().getEmail(), membership.getUser().getFullName(),
+                membership.getChit().getName(), reason);
+
+            ra.addFlashAttribute("success", "Membership rejected. Member has been notified with reason.");
             return "redirect:/admin/chits/" + chitId;
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
         return "redirect:/admin/chits";
     }
 
-    // --- Payment Verification ---
+    // ── Payment Verification (with reason) ────────────────────────────────
     @GetMapping("/payments")
     public String pendingPayments(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
@@ -152,104 +205,13 @@ public class AdminController {
                                 @RequestParam(required = false) String remarks,
                                 Authentication auth, RedirectAttributes ra) {
         try {
-            paymentService.verifyPayment(id, approved, remarks != null ? remarks : (approved ? "Approved" : "Rejected"), getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Payment " + (approved ? "approved" : "rejected"));
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
+            String reason = (remarks != null && !remarks.isBlank()) ? remarks : (approved ? "Approved by admin" : "Rejected by admin — contact admin for details");
+            paymentService.verifyPayment(id, approved, reason, getCurrentUser(auth));
+            ra.addFlashAttribute("success", "Payment " + (approved ? "approved" : "rejected") + ". Member notified via push & email.");
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
         return "redirect:/admin/payments";
     }
 
-    // --- Auction Management ---
-    @GetMapping("/auctions")
-    public String auctions(Model model, Authentication auth) {
-        model.addAttribute("user", getCurrentUser(auth));
-        model.addAttribute("chits", chitService.getAllChits());
-        model.addAttribute("openAuctions", auctionService.getOpenAuctions());
-        model.addAttribute("allAuctions", auctionService.getAllAuctions());
-
-        // Pre-compute bid recommendations for each open auction's chit
-        java.util.Map<Long, java.util.Map<String, Object>> bidRecs = new java.util.HashMap<>();
-        for (Auction auction : auctionService.getOpenAuctions()) {
-            Chit chit = auction.getChit();
-            int month = auction.getMonthNumber() != null ? auction.getMonthNumber() : 1;
-            bidRecs.put(auction.getId(), bidCalculationService.calculateBidRecommendations(chit, month));
-        }
-        model.addAttribute("bidRecommendations", bidRecs);
-        return "admin/auctions";
-    }
-
-    @PostMapping("/auctions/create")
-    public String createAuction(@RequestParam Long chitId,
-                                @RequestParam Integer monthNumber,
-                                @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate auctionDate,
-                                Authentication auth, RedirectAttributes ra) {
-        try {
-            auctionService.createAuction(chitId, monthNumber, auctionDate, chitRepository, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Auction announced! Members have been notified.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
-        return "redirect:/admin/auctions";
-    }
-
-    @PostMapping("/auctions/{id}/open")
-    public String openAuction(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
-        try {
-            auctionService.openAuction(id, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Auction is now open for bidding");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
-        return "redirect:/admin/auctions";
-    }
-
-    @PostMapping("/auctions/{id}/close")
-    public String closeAuction(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
-        try {
-            auctionService.closeAuction(id, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Auction closed. Winner selected!");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
-        return "redirect:/admin/auctions";
-    }
-
-    @PostMapping("/auctions/{id}/release-payout")
-    public String releasePayout(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
-        try {
-            auctionService.releasePayout(id, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Payout released successfully!");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
-        return "redirect:/admin/auctions";
-    }
-
-    // --- Settlement Management ---
-    @GetMapping("/settlements")
-    public String settlements(Model model, Authentication auth) {
-        model.addAttribute("user", getCurrentUser(auth));
-        model.addAttribute("settlements", settlementService.getPendingSettlements());
-        model.addAttribute("allSettlements", settlementService.getAllSettlements());
-        return "admin/settlements";
-    }
-
-    @PostMapping("/settlements/{id}/process")
-    public String processSettlement(@PathVariable Long id,
-                                    @RequestParam boolean approved,
-                                    @RequestParam(required = false) String remarks,
-                                    Authentication auth, RedirectAttributes ra) {
-        try {
-            settlementService.approveSettlement(id, approved, remarks != null ? remarks : (approved ? "Approved" : "Rejected"), getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Settlement " + (approved ? "approved" : "rejected"));
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
-        return "redirect:/admin/settlements";
-    }
-
-    // --- Payment Approve Page (separate from verify flow) ---
     @GetMapping("/payments/{id}/approve")
     public String approvePaymentPage(@PathVariable Long id, Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
@@ -265,27 +227,94 @@ public class AdminController {
         try {
             paymentService.verifyPayment(id, true, remarks, getCurrentUser(auth));
             ra.addFlashAttribute("success", "Payment approved");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-        }
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
         return "redirect:/admin/payments";
     }
 
+    // ── Auction Management ────────────────────────────────────────────────
+    @GetMapping("/auctions")
+    public String auctions(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("chits", chitService.getAllChits());
+        model.addAttribute("openAuctions", auctionService.getOpenAuctions());
+        model.addAttribute("allAuctions", auctionService.getAllAuctions());
+        java.util.Map<Long, java.util.Map<String, Object>> bidRecs = new java.util.HashMap<>();
+        for (Auction auction : auctionService.getOpenAuctions()) {
+            Chit chit = auction.getChit();
+            int month = auction.getMonthNumber() != null ? auction.getMonthNumber() : 1;
+            bidRecs.put(auction.getId(), bidCalculationService.calculateBidRecommendations(chit, month));
+        }
+        model.addAttribute("bidRecommendations", bidRecs);
+        return "admin/auctions";
+    }
 
-    // --- Commission Reports ---
+    @PostMapping("/auctions/create")
+    public String createAuction(@RequestParam Long chitId, @RequestParam Integer monthNumber,
+                                @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate auctionDate,
+                                Authentication auth, RedirectAttributes ra) {
+        try {
+            auctionService.createAuction(chitId, monthNumber, auctionDate, chitRepository, getCurrentUser(auth));
+            ra.addFlashAttribute("success", "Auction announced! Members notified.");
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/auctions";
+    }
+
+    @PostMapping("/auctions/{id}/open")
+    public String openAuction(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try { auctionService.openAuction(id, getCurrentUser(auth)); ra.addFlashAttribute("success", "Auction open for bidding"); }
+        catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/auctions";
+    }
+
+    @PostMapping("/auctions/{id}/close")
+    public String closeAuction(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try { auctionService.closeAuction(id, getCurrentUser(auth)); ra.addFlashAttribute("success", "Auction closed. Winner selected!"); }
+        catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/auctions";
+    }
+
+    @PostMapping("/auctions/{id}/release-payout")
+    public String releasePayout(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try { auctionService.releasePayout(id, getCurrentUser(auth)); ra.addFlashAttribute("success", "Payout released!"); }
+        catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/auctions";
+    }
+
+    // ── Settlement Management (with reason) ──────────────────────────────
+    @GetMapping("/settlements")
+    public String settlements(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("settlements", settlementService.getPendingSettlements());
+        model.addAttribute("allSettlements", settlementService.getAllSettlements());
+        return "admin/settlements";
+    }
+
+    @PostMapping("/settlements/{id}/process")
+    public String processSettlement(@PathVariable Long id,
+                                    @RequestParam boolean approved,
+                                    @RequestParam(required = false) String remarks,
+                                    Authentication auth, RedirectAttributes ra) {
+        try {
+            String reason = (remarks != null && !remarks.isBlank()) ? remarks : (approved ? "Approved by admin" : "Rejected by admin");
+            settlementService.approveSettlement(id, approved, reason, getCurrentUser(auth));
+            ra.addFlashAttribute("success", "Settlement " + (approved ? "approved" : "rejected") + ". Member notified.");
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/settlements";
+    }
+
+    // ── Commission Reports ────────────────────────────────────────────────
     @GetMapping("/reports/commission")
     public String commissionReport(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
         model.addAttribute("ledger", commissionLedgerRepository.findAll());
         model.addAttribute("chits", chitService.getAllChits());
         BigDecimal totalCommission = commissionLedgerRepository.findAll().stream()
-                .map(CommissionLedger::getCommissionAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(CommissionLedger::getCommissionAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         model.addAttribute("totalCommission", totalCommission);
         return "admin/commission-report";
     }
 
-    // --- Members ---
+    // ── Member Management ─────────────────────────────────────────────────
     @GetMapping("/members")
     public String members(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
@@ -293,7 +322,115 @@ public class AdminController {
         return "admin/members";
     }
 
-    // --- Audit ---
+    @GetMapping("/members/{id}/edit")
+    public String editMemberForm(@PathVariable Long id, Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("member", userService.findById(id));
+        return "admin/member-edit";
+    }
+
+    @PostMapping("/members/{id}/edit")
+    public String editMember(@PathVariable Long id,
+                             @RequestParam String fullName,
+                             @RequestParam String phone,
+                             @RequestParam String address,
+                             @RequestParam(required = false) String role,
+                             @RequestParam(required = false) Boolean active,
+                             Authentication auth, RedirectAttributes ra) {
+        try {
+            User member = userService.findById(id);
+            String changes = "";
+            if (!member.getFullName().equals(fullName)) changes += "Name updated. ";
+            if (phone != null && !phone.equals(member.getPhone())) changes += "Phone updated. ";
+
+            member.setFullName(fullName);
+            if (phone != null) member.setPhone(phone);
+            if (address != null) member.setAddress(address);
+            if (role != null && getCurrentUser(auth).getRole() == User.Role.ADMIN) {
+                member.setRole(User.Role.valueOf(role));
+                changes += "Role changed to " + role + ". ";
+            }
+            if (active != null) {
+                member.setActive(active);
+                changes += "Status: " + (active ? "Active" : "Inactive") + ". ";
+            }
+            userRepository.save(member);
+
+            // Notify user of profile update
+            if (!changes.isEmpty()) {
+                notificationService.notifyUserUpdated(member.getEmail(), changes);
+                emailService.sendUserUpdated(member.getEmail(), member.getFullName(), changes);
+            }
+            ra.addFlashAttribute("success", "Member updated and notified!");
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/members";
+    }
+
+    @PostMapping("/members/{id}/reset-password")
+    public String resetMemberPassword(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try {
+            User member = userService.findById(id);
+            String tempPass = java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            member.setPassword(passwordEncoder.encode(tempPass));
+            member.setFirstLogin(true);
+            userRepository.save(member);
+            emailService.sendRegistrationConfirmation(member.getEmail(), member.getFullName(), tempPass);
+            notificationService.notifyUserUpdated(member.getEmail(), "Your password has been reset by admin. Check email for new temp password.");
+            ra.addFlashAttribute("success", "Password reset. New temp password sent to member's email.");
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/members";
+    }
+
+    @PostMapping("/members/{id}/toggle-status")
+    public String toggleMemberStatus(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try {
+            User member = userService.findById(id);
+            member.setActive(!member.isActive());
+            userRepository.save(member);
+            String status = member.isActive() ? "activated" : "deactivated";
+            notificationService.notifyUserUpdated(member.getEmail(), "Your account has been " + status + " by admin.");
+            ra.addFlashAttribute("success", "Member " + status + " successfully.");
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/members";
+    }
+
+    // ── Announcements ─────────────────────────────────────────────────────
+    @GetMapping("/announcements")
+    public String announcementsPage(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("members", userRepository.findAll().stream()
+                .filter(u -> u.getRole() == User.Role.MEMBER).toList());
+        return "admin/announcements";
+    }
+
+    @PostMapping("/announcements/send")
+    public String sendAnnouncement(@RequestParam String title,
+                                   @RequestParam String message,
+                                   @RequestParam(defaultValue = "all") String target,
+                                   Authentication auth, RedirectAttributes ra) {
+        try {
+            List<User> recipients = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == User.Role.MEMBER && u.isActive())
+                    .toList();
+
+            if ("all".equals(target)) {
+                // Broadcast SSE notification
+                notificationService.notifyAnnouncement(title, message);
+                // Email all members
+                recipients.forEach(u -> emailService.sendAnnouncement(u.getEmail(), u.getFullName(), title, message));
+                ra.addFlashAttribute("success", "Announcement sent to " + recipients.size() + " members via push notification + email!");
+            } else {
+                // Target specific user by email
+                User targetUser = userRepository.findByEmail(target).orElseThrow();
+                notificationService.notifyAnnouncement(title, message);
+                emailService.sendAnnouncement(targetUser.getEmail(), targetUser.getFullName(), title, message);
+                ra.addFlashAttribute("success", "Announcement sent to " + targetUser.getFullName() + ".");
+            }
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/announcements";
+    }
+
+    // ── Audit ──────────────────────────────────────────────────────────────
     @GetMapping("/audit")
     public String audit(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
@@ -302,4 +439,3 @@ public class AdminController {
         return "admin/audit";
     }
 }
-// This will be appended - but let's check the existing class structure first

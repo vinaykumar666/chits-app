@@ -28,6 +28,7 @@ public class Payment {
 
     private String screenshotPath;
     private String adminRemarks;
+    private String rejectionReason;
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status = PaymentStatus.PENDING;

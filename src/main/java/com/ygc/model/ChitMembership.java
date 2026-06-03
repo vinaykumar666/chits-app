@@ -29,6 +29,9 @@ public class ChitMembership {
     private boolean termsAccepted = false;
     private String certificatePath;
 
+    // Rejection reason (set by admin on any rejection)
+    private String rejectionReason;
+
     // Agreement workflow fields
     private boolean agreementRead = false;
     private boolean agreementAccepted = false;

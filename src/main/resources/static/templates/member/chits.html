@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Browse Chits')}"></head>
+<body>
+
+<div th:replace="~{fragments :: memberSidebar('chits')}"></div>
+
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <h4><i class="bi bi-collection text-warning me-2"></i>Browse Chits</h4>
+      <div class="sub">Find and join open chit groups</div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="ygc-conn-dot" title="Live notifications active"></span>
+      <span id="ygc-notif-badge" class="badge bg-danger rounded-pill" style="display:none"></span>
+      <span class="user-badge" th:text="${user.fullName}">User</span>
+    </div>
+  </div>
+  <div th:replace="~{fragments :: alerts}"></div>
+
+  <div class="alert alert-info d-flex align-items-start gap-2 mb-4">
+    <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
+    <div><strong>Note:</strong> Once a chit's start date passes, no new members can join. Submit your request early!</div>
+  </div>
+
+  <div class="row g-4" th:if="${!#lists.isEmpty(chits)}">
+    <div class="col-md-6 col-lg-4" th:each="chit : ${chits}">
+      <div class="card h-100 shadow-sm border-0" style="border-radius:12px;overflow:hidden">
+        <div style="height:4px;background:linear-gradient(90deg,#f0a500,#c8870a)"></div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <h5 class="fw-bold mb-0" th:text="${chit.name}">Chit</h5>
+            <span class="badge bg-success">OPEN</span>
+          </div>
+          <p class="text-muted small mb-3" th:text="${chit.description != null ? chit.description : 'Join this chit group to start saving regularly.'}">Description</p>
+          <hr class="my-2">
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <div class="bg-light rounded p-2 text-center">
+                <div class="fw-bold text-success" th:text="${'₹' + chit.monthlyAmount}"></div>
+                <small class="text-muted">Monthly</small>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2 text-center">
+                <div class="fw-bold" th:text="${chit.durationMonths + ' mo'}"></div>
+                <small class="text-muted">Duration</small>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2 text-center">
+                <div class="fw-bold" th:text="${chit.totalMembers}"></div>
+                <small class="text-muted">Max Members</small>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2 text-center">
+                <div class="fw-bold text-warning" th:text="${'₹' + chit.totalChitValue}"></div>
+                <small class="text-muted">Total Value</small>
+              </div>
+            </div>
+          </div>
+          <div class="text-muted small mb-3">
+            <i class="bi bi-calendar3 me-1"></i>Starts: <strong th:text="${chit.startDate}"></strong>
+          </div>
+          <form th:action="@{/member/chits/{id}/join(id=${chit.id})}" method="post">
+            <button type="submit" class="btn btn-warning w-100 fw-bold">
+              <i class="bi bi-person-plus me-1"></i>Request to Join
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div th:if="${#lists.isEmpty(chits)}" class="text-center py-5">
+    <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
+    <h5 class="text-muted">No chits available right now</h5>
+    <p class="text-muted">Check back later or contact admin at <a href="tel:+918919508889" class="text-warning">+91 8919508889</a></p>
+  </div>
+</div>
+
+<div th:replace="~{fragments :: appScripts}"></div>
+</body>
+</html>

@@ -17,8 +17,16 @@ public class Notification {
         BID_WINNER_ANNOUNCED,
         PAYMENT_REMINDER,
         PAYMENT_DUE_ALERT,
+        PAYMENT_APPROVED,
+        PAYMENT_REJECTED,
         CHIT_MATURITY,
-        AGREEMENT_APPROVED
+        AGREEMENT_APPROVED,
+        SETTLEMENT_APPROVED,
+        SETTLEMENT_REJECTED,
+        EARLY_EXIT_SUBMITTED,
+        ANNOUNCEMENT,
+        USER_UPDATED,
+        CHIT_UPDATED
     }
 
     private final String id;

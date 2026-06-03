@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Edit Member')}"></head>
+<body>
+<div th:replace="~{fragments :: adminSidebar('members')}"></div>
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <a th:href="@{/admin/members}" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left"></i> Back to Members</a>
+      <h4 class="mt-1"><i class="bi bi-person-gear text-warning me-2"></i>Edit Member — <span th:text="${member.fullName}"></span></h4>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="ygc-conn-dot"></span>
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
+      <span class="user-badge" th:text="${user.fullName}">Admin</span>
+    </div>
+  </div>
+  <div th:replace="~{fragments :: alerts}"></div>
+
+  <div class="row g-4">
+    <div class="col-md-8">
+      <div class="card panel">
+        <div class="card-header"><i class="bi bi-person-lines-fill me-2 text-primary"></i>Member Details</div>
+        <div class="card-body">
+          <form th:action="@{/admin/members/{id}/edit(id=${member.id})}" method="post">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Full Name *</label>
+                <input type="text" name="fullName" class="form-control" th:value="${member.fullName}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Email</label>
+                <input type="text" class="form-control bg-light" th:value="${member.email}" disabled>
+                <small class="text-muted">Email cannot be changed</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Phone</label>
+                <input type="text" name="phone" class="form-control" th:value="${member.phone}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Role</label>
+                <select name="role" class="form-select">
+                  <option value="MEMBER" th:selected="${member.role.name() == 'MEMBER'}">Member</option>
+                  <option value="ADMIN" th:selected="${member.role.name() == 'ADMIN'}">Admin</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Address</label>
+                <textarea name="address" class="form-control" rows="2" th:text="${member.address}"></textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Account Status</label>
+                <select name="active" class="form-select">
+                  <option value="true" th:selected="${member.active}">Active</option>
+                  <option value="false" th:selected="${!member.active}">Inactive</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <div class="alert alert-info py-2">
+                  <i class="bi bi-bell me-2"></i>Member will receive a push notification + email about any changes saved.
+                </div>
+              </div>
+              <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-warning fw-bold"><i class="bi bi-save me-1"></i>Save &amp; Notify</button>
+                <a th:href="@{/admin/members}" class="btn btn-outline-secondary">Cancel</a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card panel mb-3">
+        <div class="card-header text-danger"><i class="bi bi-key me-2"></i>Reset Password</div>
+        <div class="card-body">
+          <p class="text-muted small">Generates a new temp password and emails it to the member. They'll be forced to change it on next login.</p>
+          <form th:action="@{/admin/members/{id}/reset-password(id=${member.id})}" method="post"
+                onsubmit="return confirm('Reset password for ' + '[[${member.fullName}]]' + '?')">
+            <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-key me-1"></i>Reset Password</button>
+          </form>
+        </div>
+      </div>
+      <div class="card panel">
+        <div class="card-header"><i class="bi bi-toggle-on me-2"></i>Toggle Status</div>
+        <div class="card-body">
+          <p class="text-muted small">Current status: <strong th:text="${member.active ? 'Active' : 'Inactive'}"></strong></p>
+          <form th:action="@{/admin/members/{id}/toggle-status(id=${member.id})}" method="post">
+            <button type="submit" class="btn w-100"
+                    th:classappend="${member.active} ? 'btn-outline-danger' : 'btn-outline-success'"
+                    th:text="${member.active} ? 'Deactivate Member' : 'Activate Member'">Toggle</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

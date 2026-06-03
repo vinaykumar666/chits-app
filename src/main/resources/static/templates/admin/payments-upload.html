@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Upload Manual Payment')}"></head>
+<body>
+<div th:replace="~{fragments :: adminSidebar('payments')}"></div>
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <a th:href="@{/admin/payments}" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left"></i> Back</a>
+      <h4 class="mt-1"><i class="bi bi-upload text-warning me-2"></i>Upload Manual Payment</h4>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="ygc-conn-dot"></span>
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
+      <span class="user-badge" th:text="${user != null ? user.fullName : 'Admin'}">Admin</span>
+    </div>
+  </div>
+  <div th:replace="~{fragments :: alerts}"></div>
+  <div class="card panel">
+    <div class="card-header"><i class="bi bi-cash-coin me-2"></i>Manual Payment Entry</div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" th:action="@{/admin/payments/upload}">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Member &amp; Chit *</label>
+            <select name="membershipId" class="form-select" required>
+              <option value="">-- Choose Member --</option>
+              <option th:each="m : ${memberships}" th:value="${m.id}"
+                      th:text="${m.user.fullName} + ' — ' + ${m.chit.name}"></option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Month Number *</label>
+            <input type="number" name="monthNumber" class="form-control" min="1" max="50" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Amount (₹) *</label>
+            <input type="number" name="amount" class="form-control" step="0.01" min="0" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Payment Screenshot</label>
+            <input type="file" name="screenshot" class="form-control" accept="image/*">
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-warning fw-bold"><i class="bi bi-save me-1"></i>Upload Payment</button>
+            <a th:href="@{/admin/payments}" class="btn btn-outline-secondary ms-2">Cancel</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

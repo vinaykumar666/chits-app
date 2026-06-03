@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments :: head('Admin Dashboard')}"></head>
+<body>
+
+<div th:replace="~{fragments :: adminSidebar('dashboard')}"></div>
+
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <h4><i class="bi bi-speedometer2 text-warning me-2"></i>Admin Dashboard</h4>
+      <div class="sub">YGC Internal Chit Management</div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="ygc-conn-dot" title="Live notifications active"></span>
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
+      <span class="user-badge" th:text="${user.fullName}">Admin</span>
+    </div>
+  </div>
+  <div th:replace="~{fragments :: alerts}"></div>
+
+  <!-- Stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-2 col-6">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+        <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-collection"></i></div>
+        <div><div class="fw-bold fs-4" th:text="${totalChits}">0</div><small class="text-muted">Chits</small></div>
+      </div></div>
+    </div>
+    <div class="col-md-2 col-6">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+        <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-people"></i></div>
+        <div><div class="fw-bold fs-4" th:text="${totalMembers}">0</div><small class="text-muted">Members</small></div>
+      </div></div>
+    </div>
+    <div class="col-md-2 col-6">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+        <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-clock-history"></i></div>
+        <div><div class="fw-bold fs-4" th:text="${pendingPayments}">0</div><small class="text-muted">Pending Pay</small></div>
+      </div></div>
+    </div>
+    <div class="col-md-2 col-6">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+        <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-hammer"></i></div>
+        <div><div class="fw-bold fs-4" th:text="${openAuctions}">0</div><small class="text-muted">Auctions</small></div>
+      </div></div>
+    </div>
+    <div class="col-md-2 col-6">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+        <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-bank"></i></div>
+        <div><div class="fw-bold fs-4" th:text="${pendingSettlements}">0</div><small class="text-muted">Settlements</small></div>
+      </div></div>
+    </div>
+    <div class="col-md-2 col-6">
+      <div class="card stat-card h-100 border-warning">
+        <div class="card-body d-flex align-items-center gap-2">
+          <div class="stat-icon bg-warning bg-opacity-25 text-warning"><i class="bi bi-telephone"></i></div>
+          <div><div class="fw-semibold small">Support</div><a href="tel:+918919508889" class="text-warning fw-bold small text-decoration-none">+91 8919508889</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row g-3 mb-4">
+    <div class="col-12"><h6 class="text-muted fw-semibold">QUICK ACTIONS</h6></div>
+    <div class="col-md-3 col-6">
+      <a th:href="@{/admin/chits/create}" class="card text-decoration-none h-100" style="border:2px dashed #f0a500;border-radius:12px">
+        <div class="card-body text-center py-3">
+          <i class="bi bi-plus-circle text-warning fs-3 d-block mb-1"></i>
+          <div class="fw-semibold small">Create Chit Group</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6">
+      <a th:href="@{/admin/payments}" class="card text-decoration-none h-100" style="border:2px dashed #20c997;border-radius:12px">
+        <div class="card-body text-center py-3">
+          <i class="bi bi-cash-coin text-success fs-3 d-block mb-1"></i>
+          <div class="fw-semibold small">Verify Payments</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6">
+      <a th:href="@{/admin/auctions}" class="card text-decoration-none h-100" style="border:2px dashed #0dcaf0;border-radius:12px">
+        <div class="card-body text-center py-3">
+          <i class="bi bi-hammer text-info fs-3 d-block mb-1"></i>
+          <div class="fw-semibold small">Manage Auctions</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6">
+      <a th:href="@{/admin/reports/commission}" class="card text-decoration-none h-100" style="border:2px dashed #6f42c1;border-radius:12px">
+        <div class="card-body text-center py-3">
+          <i class="bi bi-graph-up d-block mb-1" style="color:#6f42c1;font-size:1.8rem"></i>
+          <div class="fw-semibold small">Commission Report</div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="card panel">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-activity text-primary me-2"></i>Recent Activity</span>
+      <a th:href="@{/admin/audit}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Time</th>
+              <th>Action</th>
+              <th class="hide-mobile">Entity</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr th:each="log : ${recentAudits}">
+            <td><small class="text-muted" th:text="${#temporals.format(log.timestamp, 'dd MMM HH:mm')}"></small></td>
+            <td>
+              <span class="badge"
+                th:classappend="${log.action.contains('APPROVE')} ? 'bg-success' : (${log.action.contains('REJECT')} ? 'bg-danger' : (${log.action.contains('CREATE')} ? 'bg-primary' : 'bg-secondary'))"
+                th:text="${log.action}"></span>
+            </td>
+            <td class="hide-mobile" th:text="${log.entityType}"></td>
+            <td th:text="${log.description}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(recentAudits)}">
+            <td colspan="4" class="text-center text-muted py-3">No activity yet</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div th:replace="~{fragments :: appScripts}"></div>
+</body>
+</html>

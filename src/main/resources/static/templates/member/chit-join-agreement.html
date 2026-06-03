@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="YGC Chits">
+    <link rel="manifest" th:href="@{/manifest.json}">
+    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Chit Agreement - YGC Internal</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .agreement-box {
+            background: #f8f9fa;
+            padding: 24px;
+            border-radius: 8px;
+            max-height: 420px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            font-size: 0.92rem;
+            line-height: 1.7;
+        }
+        .agreement-header-banner {
+            background: linear-gradient(135deg, #3366cc 0%, #1a4d99 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        .checkbox-required-section {
+            background: #fff8e1;
+            border: 1px solid #ffcc02;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #ffeaa0;
+        }
+        .checkbox-item:last-child { border-bottom: none; }
+        .checkbox-item input[type="checkbox"] {
+            width: 20px; height: 20px;
+            margin-top: 2px; flex-shrink: 0; cursor: pointer;
+        }
+        .checkbox-item label { cursor: pointer; margin: 0; font-weight: 500; }
+        .status-badge { display: inline-block; width: 22px; height: 22px;
+            border-radius: 50%; line-height: 22px; text-align: center; font-size: 13px; }
+        .scroll-hint { font-size: 0.8rem; color: #6c757d; text-align: right; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+<div class="container mt-4" style="max-width: 820px;">
+    <!-- Flash messages -->
+    <div th:if="${error}" class="alert alert-danger alert-dismissible mb-3">
+        <i class="bi bi-exclamation-circle me-2"></i><span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Header -->
+    <div class="agreement-header-banner">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h3 class="mb-1" th:text="${chit.name}">Chit Name</h3>
+                <div class="opacity-75">Monthly Contribution: ₹<span th:text="${chit.monthlyAmount}"></span>
+                    &nbsp;|&nbsp; Duration: <span th:text="${chit.durationMonths}"></span> months
+                    &nbsp;|&nbsp; Total Value: ₹<span th:text="${chit.totalChitValue}"></span>
+                </div>
+            </div>
+            <div class="text-end">
+                <div class="opacity-75 small">Commission</div>
+                <div class="fs-5 fw-bold"><span th:text="${chit.adminCommissionPercentage}"></span>%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-text text-primary"></i>
+            <strong>Chit Fund Participation Agreement</strong>
+            <span class="badge bg-danger ms-auto">Action Required</span>
+        </div>
+        <div class="card-body p-4">
+
+            <!-- Agreement Text -->
+            <div class="scroll-hint"><i class="bi bi-arrow-down-circle"></i> Scroll to read full agreement</div>
+            <div class="agreement-box" id="agreementBox">
+                <h5 class="text-primary mb-3">CHIT FUND PARTICIPATION AGREEMENT</h5>
+                <p>This agreement is entered into between <strong>YGC Internal</strong> (the "Company") and
+                    the subscriber (the "Member") for participation in the chit fund scheme
+                    "<strong th:text="${chit.name}">Chit Name</strong>".</p>
+
+                <h6 class="mt-4 mb-2">1. CONTRIBUTIONS</h6>
+                <p>The Member agrees to pay a monthly contribution of
+                    <strong>₹<span th:text="${chit.monthlyAmount}"></span></strong> on or before the due date
+                    each month for a period of <span th:text="${chit.durationMonths}"></span> months.
+                    A late payment fine of <strong>₹20 per day</strong> will be levied for delayed payments.</p>
+
+                <h6 class="mt-4 mb-2">2. AUCTION &amp; BIDDING</h6>
+                <p>Monthly auctions are conducted among all active members. The member who bids the
+                    <strong>lowest amount</strong> wins the prize for that month.
+                    Once a member wins an auction, they cannot bid again in the same chit.
+                    The Company will deduct a commission of
+                    <strong><span th:text="${chit.adminCommissionPercentage}"></span>%</strong>
+                    from the winning bid amount as administrative fees.</p>
+
+                <h6 class="mt-4 mb-2">3. BID CALCULATION &amp; PAYOUT</h6>
+                <p>The payout to the winner is calculated as:
+                    <em>Winner's Bid Amount – Company Commission</em>.
+                    The remaining members continue to pay their monthly contributions until chit completion.</p>
+
+                <h6 class="mt-4 mb-2">4. REGULATORY COMPLIANCE</h6>
+                <p>This chit fund is operated in compliance with the <strong>Chit Funds Act, 1982</strong>
+                    and applicable RBI guidelines. Minimum bid is not less than 70% of the total chit value.
+                    All transactions are audited.</p>
+
+                <h6 class="mt-4 mb-2">5. DATA &amp; PRIVACY</h6>
+                <p>The Member authorises YGC Internal to collect and process their personal information
+                    (name, contact details, payment history) <strong>solely for the purpose of chit fund
+                    operations</strong>. Data will not be shared with third parties without consent.</p>
+
+                <h6 class="mt-4 mb-2">6. EARLY EXIT</h6>
+                <p>Early exit from the chit is permitted only under exceptional circumstances and subject to
+                    approval by the administrator. Forfeiture or penalty may apply as per the Company's policy.</p>
+
+                <h6 class="mt-4 mb-2">7. DISPUTE RESOLUTION</h6>
+                <p>All disputes arising from this agreement shall be resolved mutually. If unresolved, the matter
+                    shall be referred to arbitration under the Arbitration and Conciliation Act, 1996.</p>
+
+                <h6 class="mt-4 mb-2">8. DIGITAL ACCEPTANCE</h6>
+                <p>By submitting this form with all checkboxes ticked, the Member confirms digital acceptance
+                    of this agreement. A signed PDF copy will be emailed to the Member upon admin approval.</p>
+
+                <div class="text-center mt-4 text-muted small">
+                    <em>YGC Internal | Contact: +91 8919508889 | Save Rupee, Rupee Will Save You In Future</em>
+                </div>
+            </div>
+
+            <!-- Mandatory Agreement Checkboxes -->
+            <form method="post" th:action="@{/member/chits/{id}/join(id=${chit.id})}" id="agreementForm">
+                <div class="checkbox-required-section mt-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-shield-check text-warning fs-5"></i>
+                        <strong>Mandatory Agreement Acceptance</strong>
+                        <span class="text-danger small">(All checkboxes are required)</span>
+                    </div>
+
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="agreementRead" id="agreementRead" required>
+                        <label for="agreementRead">
+                            <span class="text-danger">*</span>
+                            I have read and fully understood the Chit Fund Participation Agreement above.
+                        </label>
+                    </div>
+
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="termsAccepted" id="termsAccepted" required>
+                        <label for="termsAccepted">
+                            <span class="text-danger">*</span>
+                            I agree to all terms and conditions set forth in this agreement, including contribution
+                            obligations, auction rules, and the commission structure.
+                        </label>
+                    </div>
+
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="infoProcessingAuthorized" id="infoProcessingAuthorized" required>
+                        <label for="infoProcessingAuthorized">
+                            <span class="text-danger">*</span>
+                            I authorize YGC Internal to collect and process my personal information for chit fund
+                            operations as described in Section 5 of this agreement.
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Info Panel -->
+                <div class="alert alert-info mt-4 mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    After submission, your request will remain in <strong>Pending</strong> status until approved
+                    by the admin. Upon approval, a <strong>signed agreement PDF</strong> will be emailed to you
+                    and stored in the document repository.
+                </div>
+
+                <div class="d-flex gap-3 mt-4">
+                    <button type="submit" class="btn btn-primary flex-grow-1" id="submitBtn">
+                        <i class="bi bi-check-circle me-2"></i>Accept Agreement &amp; Submit Join Request
+                    </button>
+                    <a href="/member/chits" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Validate all 3 checkboxes before submit
+    document.getElementById('agreementForm').addEventListener('submit', function(e) {
+        const boxes = ['agreementRead', 'termsAccepted', 'infoProcessingAuthorized'];
+        const unchecked = boxes.filter(id => !document.getElementById(id).checked);
+        if (unchecked.length > 0) {
+            e.preventDefault();
+            alert('Please tick all three mandatory checkboxes before proceeding.');
+        }
+    });
+</script>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body>
+</html>

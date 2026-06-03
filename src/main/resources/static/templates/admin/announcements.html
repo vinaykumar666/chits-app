@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Announcements')}"></head>
+<body>
+<div th:replace="~{fragments :: adminSidebar('announcements')}"></div>
+<div class="main-content">
+  <div class="topbar">
+    <div><h4><i class="bi bi-megaphone text-warning me-2"></i>Announcements</h4>
+      <div class="sub">Broadcast messages to members via push notification + email</div></div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="ygc-conn-dot"></span>
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
+      <span class="user-badge" th:text="${user.fullName}">Admin</span>
+    </div>
+  </div>
+  <div th:replace="~{fragments :: alerts}"></div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card panel">
+        <div class="card-header"><i class="bi bi-send me-2 text-primary"></i>Send Announcement</div>
+        <div class="card-body">
+          <form th:action="@{/admin/announcements/send}" method="post">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Title *</label>
+              <input type="text" name="title" class="form-control" required placeholder="e.g. Festival Offer, Important Notice, System Maintenance...">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Message *</label>
+              <textarea name="message" class="form-control" rows="5" required
+                        placeholder="Write your announcement message here..."></textarea>
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Send To</label>
+              <select name="target" class="form-select">
+                <option value="all">📢 All Active Members</option>
+                <option th:each="m : ${members}" th:value="${m.email}"
+                        th:text="${m.fullName + ' (' + m.email + ')'}"></option>
+              </select>
+            </div>
+            <div class="alert alert-info py-2 mb-3">
+              <i class="bi bi-info-circle me-2"></i>Announcement is delivered as <strong>real-time push notification</strong> (instant bell ring) AND as a <strong>branded email</strong>.
+            </div>
+            <button type="submit" class="btn btn-warning fw-bold w-100">
+              <i class="bi bi-send-fill me-2"></i>Send Announcement
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card panel">
+        <div class="card-header"><i class="bi bi-lightbulb me-2 text-warning"></i>Tips</div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">
+            <li class="mb-3 d-flex gap-2"><span class="text-warning fs-5">🔔</span>
+              <div><strong>Instant push</strong> — Connected members see the bell ring and a toast popup in real-time.</div></li>
+            <li class="mb-3 d-flex gap-2"><span class="text-warning fs-5">📧</span>
+              <div><strong>Email backup</strong> — All members get a branded email even if they're offline.</div></li>
+            <li class="mb-3 d-flex gap-2"><span class="text-warning fs-5">🎯</span>
+              <div><strong>Targeted</strong> — You can send to a single member by selecting their name from the dropdown.</div></li>
+            <li class="d-flex gap-2"><span class="text-warning fs-5">📱</span>
+              <div><strong>PWA</strong> — Members with the app installed receive a device notification even when the browser is closed.</div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

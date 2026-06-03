@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="YGC Chits">
+    <link rel="manifest" th:href="@{/manifest.json}">
+    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}"><title>Membership Details - YGC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .bid-card { background: linear-gradient(135deg, #e8f5e9, #f1f8e9); border: 1px solid #c8e6c9; border-radius: 10px; }
+        .bid-range-bar { height: 10px; border-radius: 5px; background: linear-gradient(to right, #ef5350, #ffee58, #66bb6a); position: relative; }
+        .bid-range-marker { position: absolute; top: -4px; width: 18px; height: 18px;
+            border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,.3); }
+        .bid-live-preview { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 14px; }
+        .agreement-badge { padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; }
+    </style>
+</head>
+<body>
+<div class="sidebar member-sidebar">
+    <div class="brand"><div class="brand-icon">Y</div><div><div class="brand-name">YGC Internal</div><div class="brand-tag">Save Rupee, Save Future</div></div></div>
+    <nav class="sidebar-nav">
+        <a th:href="@{/member/dashboard}" class="nav-link"><i class="bi bi-house"></i> My Dashboard</a>
+        <a th:href="@{/member/chits}" class="nav-link"><i class="bi bi-search"></i> Browse Chits</a>
+        <a th:href="@{/member/help}" class="nav-link"><i class="bi bi-question-circle"></i> Help &amp; Rules</a>
+        <a th:href="@{/terms}" class="nav-link"><i class="bi bi-file-text"></i> Terms &amp; Agreement</a>
+        <a th:href="@{/logout}" class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    </nav>
+    <div style="padding:16px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
+        <small class="text-muted d-block">Support</small>
+        <a href="tel:+918919508889" class="text-warning text-decoration-none small fw-bold"><i class="bi bi-telephone me-1"></i>+91 8919508889</a>
+    </div>
+</div>
+<div class="main-content">
+    <div class="topbar">
+        <div>
+            <a th:href="@{/member/dashboard}" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+            <h4 class="mt-1"><i class="bi bi-collection text-warning me-2"></i><span th:text="${membership.chit.name}">Chit</span></h4>
+            <div class="sub">Membership details, payments &amp; auction bidding</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="ygc-conn-dot" title="Live notifications active"></span>
+            <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
+              <i class="bi bi-bell"></i>
+              <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+            </button>
+            <div class="user-badge" th:text="${user.fullName}">User</div>
+        </div>
+    </div>
+    <div th:if="${success}" class="alert alert-success alert-dismissible"><i class="bi bi-check-circle me-2"></i><span th:text="${success}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible"><i class="bi bi-exclamation-circle me-2"></i><span th:text="${error}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+
+    <!-- Agreement Status Banner -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body d-flex align-items-center gap-3 flex-wrap">
+            <div class="me-auto">
+                <div class="fw-semibold mb-1"><i class="bi bi-file-earmark-check me-2 text-primary"></i>Agreement Status</div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="agreement-badge" th:classappend="${membership.agreementAccepted} ? 'bg-success text-white' : 'bg-warning text-dark'">
+                        <i class="bi" th:classappend="${membership.agreementAccepted} ? 'bi-check-circle-fill' : 'bi-clock'"></i>
+                        Agreement <span th:text="${membership.agreementAccepted} ? 'Accepted' : 'Pending'"></span>
+                    </span>
+                    <span class="agreement-badge" th:classappend="${membership.agreementApprovedAt != null} ? 'bg-success text-white' : 'bg-light text-muted'">
+                        <i class="bi" th:classappend="${membership.agreementApprovedAt != null} ? 'bi-patch-check-fill' : 'bi-hourglass'"></i>
+                        PDF <span th:text="${membership.agreementApprovedAt != null} ? 'Generated' : 'Awaiting Approval'"></span>
+                    </span>
+                    <span th:if="${membership.agreementNumber}" class="agreement-badge bg-light text-muted">
+                        <i class="bi bi-hash"></i> <span th:text="${membership.agreementNumber}"></span>
+                    </span>
+                </div>
+            </div>
+            <div class="text-end text-muted small" th:if="${membership.agreementAcceptedAt != null}">
+                <div>Accepted: <span th:text="${membership.agreementAcceptedAt}"></span></div>
+                <div th:if="${membership.agreementApprovedAt != null}">Approved: <span th:text="${membership.agreementApprovedAt}"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Intelligent Bid Recommendation Panel -->
+    <div th:if="${hasOpenAuction and !membership.hasWonAuction and bidRecommendations != null}"
+         class="card panel mb-4 border-0 shadow-sm">
+        <div class="card-header bg-success bg-opacity-10 border-0 d-flex align-items-center gap-2">
+            <i class="bi bi-calculator-fill text-success fs-5"></i>
+            <strong>Intelligent Bid Calculator</strong>
+            <span class="badge bg-success ms-auto"><i class="bi bi-activity"></i> Auction Open</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <!-- Recommended Range -->
+                <div class="col-md-6">
+                    <div class="bid-card p-3">
+                        <div class="text-muted small mb-2 fw-semibold"><i class="bi bi-bullseye me-1"></i>Recommended Bid Range</div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <div class="text-success fs-5 fw-bold">₹<span th:text="${bidRecommendations.recommendedMinBid}"></span></div>
+                                <small class="text-muted">Min Recommended</small>
+                            </div>
+                            <div class="text-center text-muted">↔</div>
+                            <div class="text-end">
+                                <div class="text-warning fs-5 fw-bold">₹<span th:text="${bidRecommendations.recommendedMaxBid}"></span></div>
+                                <small class="text-muted">Max Recommended</small>
+                            </div>
+                        </div>
+                        <div class="bid-range-bar mt-2">
+                            <div class="bid-range-marker bg-success" style="left: 5%;" title="Min recommended"></div>
+                            <div class="bid-range-marker bg-warning" style="right: 5%;" title="Max recommended"></div>
+                        </div>
+                        <div class="mt-3 text-muted small">
+                            <span th:if="${bidRecommendations.historicalAvgBid != null}">
+                                <i class="bi bi-graph-up me-1"></i>Historical avg winning bid:
+                                <strong>₹<span th:text="${bidRecommendations.historicalAvgBid}"></span></strong>
+                            </span>
+                            <span th:if="${bidRecommendations.historicalAvgBid == null}">
+                                <i class="bi bi-info-circle me-1"></i>First auction — no historical data yet
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payout Estimator -->
+                <div class="col-md-6">
+                    <div class="fw-semibold mb-2 small text-muted"><i class="bi bi-calculator me-1"></i>Live Payout Estimator</div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Enter your bid amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" id="liveBidInput" class="form-control form-control-lg fw-bold"
+                                   th:min="${bidRecommendations.absoluteMinBid}"
+                                   th:max="${bidRecommendations.absoluteMaxBid}"
+                                   th:placeholder="${bidRecommendations.recommendedMinBid}"
+                                   step="100">
+                        </div>
+                        <small class="text-muted">
+                            Limits: ₹<span th:text="${bidRecommendations.absoluteMinBid}"></span>
+                            – ₹<span th:text="${bidRecommendations.absoluteMaxBid}"></span>
+                        </small>
+                    </div>
+                    <div class="bid-live-preview" id="livePreview">
+                        <div class="row text-center g-2">
+                            <div class="col-4">
+                                <div class="text-muted small">Your Bid</div>
+                                <div class="fw-bold text-primary" id="previewBid">—</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted small">Commission (<span th:text="${bidRecommendations.commissionPercentage}"></span>%)</div>
+                                <div class="fw-bold text-danger" id="previewCommission">—</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted small">Your Payout</div>
+                                <div class="fw-bold text-success fs-6" id="previewPayout">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Row -->
+                <div class="col-12">
+                    <div class="row g-3">
+                        <div class="col-md-3 text-center">
+                            <div class="text-muted small">Total Chit Value</div>
+                            <div class="fw-semibold">₹<span th:text="${bidRecommendations.totalChitValue}"></span></div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="text-muted small">Commission Rate</div>
+                            <div class="fw-semibold"><span th:text="${bidRecommendations.commissionPercentage}"></span>%</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="text-muted small">Current Month</div>
+                            <div class="fw-semibold">Month <span th:text="${bidRecommendations.currentMonthNumber}"></span></div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="text-muted small">Months Remaining</div>
+                            <div class="fw-semibold"><span th:text="${bidRecommendations.monthsRemaining}"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bid submission shortcut using live calculator value -->
+            <div th:each="auction : ${auctions}" th:if="${auction.status.name() == 'OPEN'}">
+                <hr class="my-3">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="fw-semibold"><i class="bi bi-hammer me-1 text-warning"></i>Place Bid for Month <span th:text="${auction.monthNumber}"></span></div>
+                    <form th:action="@{/member/auctions/{id}/bid(id=${auction.id})}" method="post" class="d-flex gap-2 align-items-center flex-grow-1">
+                        <div class="input-group" style="max-width:280px;">
+                            <span class="input-group-text fw-bold">₹</span>
+                            <input type="number" name="bidAmount" id="bidSubmitAmount" class="form-control fw-bold"
+                                   th:min="${bidRecommendations.absoluteMinBid}"
+                                   th:max="${bidRecommendations.absoluteMaxBid}" required
+                                   th:placeholder="${bidRecommendations.recommendedMinBid}">
+                        </div>
+                        <button type="submit" class="btn btn-warning fw-bold px-4">
+                            <i class="bi bi-hammer me-1"></i>Place Bid
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-md-5">
+            <div class="card panel mb-4">
+                <div class="card-header"><i class="bi bi-info-circle me-2 text-primary"></i>Chit Information</div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td class="text-muted">Chit Name</td><td class="fw-semibold" th:text="${membership.chit.name}"></td></tr>
+                        <tr><td class="text-muted">Monthly Amount</td><td class="fw-bold text-success" th:text="'₹' + ${membership.chit.monthlyAmount}"></td></tr>
+                        <tr><td class="text-muted">Total Value</td><td th:text="'₹' + ${membership.chit.totalChitValue}"></td></tr>
+                        <tr><td class="text-muted">Duration</td><td th:text="${membership.chit.durationMonths} + ' months'"></td></tr>
+                        <tr><td class="text-muted">Start Date</td><td th:text="${membership.chit.startDate}"></td></tr>
+                        <tr><td class="text-muted">End Date</td><td th:text="${membership.chit.endDate}"></td></tr>
+                        <tr><td class="text-muted">Commission</td><td th:text="${membership.chit.adminCommissionPercentage} + '%'"></td></tr>
+                        <tr><td class="text-muted">My Status</td><td><span class="badge" th:classappend="${membership.status.name() == 'ACTIVE'} ? 'bg-success' : (${membership.status.name() == 'PENDING'} ? 'bg-warning text-dark' : 'bg-secondary')" th:text="${membership.status}"></span></td></tr>
+                        <tr><td class="text-muted">Total Paid</td><td class="fw-bold text-success" th:text="'₹' + ${totalPaid}"></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Submit Payment -->
+            <div class="card panel" th:if="${membership.status.name() == 'ACTIVE'}">
+                <div class="card-header"><i class="bi bi-upload text-success me-2"></i>Submit Payment Proof</div>
+                <div class="card-body">
+                    <div class="alert alert-info small py-2"><i class="bi bi-qr-code me-1"></i>Pay via QR code, then upload screenshot proof.</div>
+                    <form th:action="@{/member/payments/submit}" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="membershipId" th:value="${membership.id}">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Month Number</label>
+                            <input type="number" name="monthNumber" class="form-control" min="1" th:max="${membership.chit.durationMonths}" required placeholder="e.g. 1">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Payment Screenshot</label>
+                            <input type="file" name="screenshot" class="form-control" accept="image/*">
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-upload me-1"></i>Submit for Verification</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-md-7">
+            <!-- Payment History -->
+            <div class="card panel mb-4">
+                <div class="card-header d-flex justify-content-between">
+                    <span><i class="bi bi-receipt me-2 text-warning"></i>Payment History</span>
+                    <span class="badge bg-secondary" th:text="${payments.size()} + ' records'"></span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Month</th><th>Amount</th><th>Fine</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+                        <tbody>
+                        <tr th:each="p : ${payments}">
+                            <td th:text="'Month ' + ${p.monthNumber}"></td>
+                            <td th:text="'₹' + ${p.amount}"></td>
+                            <td><span th:classappend="${p.lateFine.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'text-danger fw-bold' : 'text-muted'" th:text="'₹' + ${p.lateFine}"></span></td>
+                            <td class="fw-bold" th:text="'₹' + ${p.totalAmount}"></td>
+                            <td>
+                              <span class="badge" th:classappend="${p.status.name() == 'APPROVED'} ? 'bg-success' : (${p.status.name() == 'REJECTED'} ? 'bg-danger' : (${p.status.name()=='PENDING'} ? 'bg-warning text-dark' : 'bg-secondary'))" th:text="${p.status}"></span>
+                              <div th:if="${p.rejectionReason != null and p.status.name() == 'REJECTED'}" class="text-danger small mt-1">
+                                <i class="bi bi-exclamation-circle me-1"></i><span th:text="${p.rejectionReason}"></span>
+                              </div>
+                            </td>
+                            <td th:text="${p.paidDate}"></td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(payments)}"><td colspan="6" class="text-center text-muted py-3">No payments yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Auction History -->
+            <div class="card panel mb-4" th:if="${!#lists.isEmpty(auctions)}">
+                <div class="card-header"><i class="bi bi-hammer text-warning me-2"></i>Auction History</div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Month</th><th>Date</th><th>Status</th><th>Winner</th><th>Payout</th></tr></thead>
+                        <tbody>
+                        <tr th:each="auction : ${auctions}">
+                            <td th:text="'Month ' + ${auction.monthNumber}"></td>
+                            <td th:text="${auction.auctionDate}"></td>
+                            <td><span class="badge" th:classappend="${auction.status.name() == 'OPEN'} ? 'bg-success' : (${auction.status.name() == 'CLOSED'} ? 'bg-secondary' : 'bg-info text-dark')" th:text="${auction.status}"></span></td>
+                            <td th:text="${auction.winner != null ? auction.winner.fullName : '-'}"></td>
+                            <td th:text="${auction.lumpSumPayout != null ? '₹' + auction.lumpSumPayout : '-'}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Early Exit -->
+            <div class="card panel border-danger" th:if="${membership.status.name() == 'ACTIVE'}">
+                <div class="card-header bg-danger bg-opacity-10"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Early Exit Settlement</div>
+                <div class="card-body">
+                    <p class="text-muted small">A <strong>2% deduction</strong> applies on your total paid amount for early exit. All pending dues and fines will be adjusted.</p>
+                    <form th:action="@{/member/memberships/{id}/exit(id=${membership.id})}" method="post"
+                          onsubmit="return confirm('Are you sure you want to request early exit? A 2% deduction will apply.')">
+                        <button type="submit" class="btn btn-outline-danger fw-bold">
+                            <i class="bi bi-door-open me-1"></i>Request Early Exit
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    const commissionPct = /*[[${bidRecommendations?.commissionPercentage}]]*/ 0;
+
+    const liveBidInput = document.getElementById('liveBidInput');
+    const bidSubmitAmount = document.getElementById('bidSubmitAmount');
+
+    if (liveBidInput) {
+        liveBidInput.addEventListener('input', function() {
+            const bid = parseFloat(this.value);
+            if (!isNaN(bid) && bid > 0) {
+                const commission = (bid * commissionPct / 100).toFixed(2);
+                const payout = (bid - parseFloat(commission)).toFixed(2);
+                document.getElementById('previewBid').textContent = '₹' + bid.toLocaleString('en-IN');
+                document.getElementById('previewCommission').textContent = '₹' + parseFloat(commission).toLocaleString('en-IN');
+                document.getElementById('previewPayout').textContent = '₹' + parseFloat(payout).toLocaleString('en-IN');
+
+                // Sync to bid form
+                if (bidSubmitAmount) bidSubmitAmount.value = bid;
+            }
+        });
+    }
+    if (bidSubmitAmount) {
+        bidSubmitAmount.addEventListener('input', function() {
+            if (liveBidInput) liveBidInput.value = this.value;
+            if (liveBidInput) liveBidInput.dispatchEvent(new Event('input'));
+        });
+    }
+</script>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+
+<!-- HEAD fragment -->
+<head th:fragment="head(pageTitle)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f0a500" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="YGC Chits">
+  <meta name="description" content="YGC Internal Chit Fund Management — Save Rupee, Rupee Will Save You In Future">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" th:href="@{/manifest.json}">
+  <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}">
+  <link rel="apple-touch-icon" sizes="152x152" th:href="@{/icons/icon-152.png}">
+  <link rel="apple-touch-icon" sizes="144x144" th:href="@{/icons/icon-144.png}">
+  <link rel="icon" type="image/png" sizes="192x192" th:href="@{/icons/icon-192.png}">
+  <link rel="icon" type="image/png" sizes="96x96"  th:href="@{/icons/icon-96.png}">
+  <title th:text="${pageTitle + ' | YGC Internal'}">YGC Internal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
+<body>
+<!-- ADMIN SIDEBAR -->
+<div th:fragment="adminSidebar(active)" class="sidebar" id="ygc-sidebar">
+  <a class="brand" th:href="@{/admin/dashboard}">
+    <div class="brand-icon">Y</div>
+    <div><div class="brand-name">YGC Internal</div><div class="brand-tag">Save Rupee, Save Future</div></div>
+  </a>
+  <nav class="sidebar-nav">
+    <a th:href="@{/admin/dashboard}"          class="nav-link" th:classappend="${active=='dashboard'   ? ' active' : ''}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+    <a th:href="@{/admin/chits}"              class="nav-link" th:classappend="${active=='chits'        ? ' active' : ''}"><i class="bi bi-collection"></i> Chit Groups</a>
+    <a th:href="@{/admin/members}"            class="nav-link" th:classappend="${active=='members'      ? ' active' : ''}"><i class="bi bi-people"></i> Members</a>
+    <a th:href="@{/admin/payments}"           class="nav-link" th:classappend="${active=='payments'     ? ' active' : ''}"><i class="bi bi-cash-coin"></i> Payments</a>
+    <a th:href="@{/admin/auctions}"           class="nav-link" th:classappend="${active=='auctions'     ? ' active' : ''}"><i class="bi bi-hammer"></i> Auctions</a>
+    <a th:href="@{/admin/settlements}"        class="nav-link" th:classappend="${active=='settlements'  ? ' active' : ''}"><i class="bi bi-bank"></i> Settlements</a>
+    <a th:href="@{/admin/reports/commission}" class="nav-link" th:classappend="${active=='commission'   ? ' active' : ''}"><i class="bi bi-graph-up"></i> Commission</a>
+    <a th:href="@{/admin/announcements}"      class="nav-link" th:classappend="${active=='announcements'? ' active' : ''}"><i class="bi bi-megaphone"></i> Announcements</a>
+    <a th:href="@{/admin/audit}"              class="nav-link" th:classappend="${active=='audit'        ? ' active' : ''}"><i class="bi bi-shield-check"></i> Audit Log</a>
+    <a th:href="@{/help}"                     class="nav-link" th:classappend="${active=='help'         ? ' active' : ''}"><i class="bi bi-question-circle"></i> Help</a>
+    <a th:href="@{/logout}"                   class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+  </nav>
+</div>
+
+<!-- MEMBER SIDEBAR -->
+<div th:fragment="memberSidebar(active)" class="sidebar member-sidebar" id="ygc-sidebar">
+  <a class="brand" th:href="@{/member/dashboard}">
+    <div class="brand-icon">Y</div>
+    <div><div class="brand-name">YGC Internal</div><div class="brand-tag">Save Rupee, Save Future</div></div>
+  </a>
+  <nav class="sidebar-nav">
+    <a th:href="@{/member/dashboard}" class="nav-link" th:classappend="${active=='dashboard' ? ' active' : ''}"><i class="bi bi-house"></i> My Dashboard</a>
+    <a th:href="@{/member/chits}"     class="nav-link" th:classappend="${active=='chits'     ? ' active' : ''}"><i class="bi bi-collection"></i> Browse Chits</a>
+    <a th:href="@{/member/help}"      class="nav-link" th:classappend="${active=='help'      ? ' active' : ''}"><i class="bi bi-question-circle"></i> Help &amp; Rules</a>
+    <a th:href="@{/terms}"            class="nav-link" th:classappend="${active=='terms'     ? ' active' : ''}"><i class="bi bi-file-text"></i> Terms</a>
+    <a th:href="@{/logout}"           class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+  </nav>
+  <div style="padding:16px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;">
+    <small class="text-muted d-block">Support</small>
+    <a href="tel:+918919508889" class="text-warning text-decoration-none small fw-bold"><i class="bi bi-telephone me-1"></i>+91 8919508889</a>
+  </div>
+</div>
+
+<!-- TOPBAR with Bell Icon -->
+<div th:fragment="topbar(title, subtitle, userDisplayName)" class="topbar">
+  <div>
+    <h4 th:utext="${title}">Page Title</h4>
+    <div class="sub" th:if="${subtitle}" th:text="${subtitle}"></div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <span class="ygc-conn-dot" title="Live notifications active"></span>
+    <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary"
+            title="Notifications" aria-label="Notifications" style="font-size:1.3rem;line-height:1">
+      <i class="bi bi-bell"></i>
+      <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+            style="font-size:.6rem;display:none;min-width:16px"></span>
+    </button>
+    <span class="user-badge" th:text="${userDisplayName}">User</span>
+  </div>
+</div>
+
+<!-- ALERTS -->
+<div th:fragment="alerts">
+  <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i><span th:text="${success}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-circle-fill me-2"></i><span th:text="${error}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  <div th:if="${info}" class="alert alert-info alert-dismissible fade show" role="alert">
+    <i class="bi bi-info-circle-fill me-2"></i><span th:text="${info}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+</div>
+
+<!-- INLINE REJECT MODAL (reusable) -->
+<div th:fragment="rejectModal(formAction, modalId)">
+  <div class="modal fade" th:id="${modalId}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Reject — Please give a reason</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form th:action="${formAction}" method="post">
+          <div class="modal-body">
+            <input type="hidden" name="approved" value="false">
+            <label class="form-label fw-semibold">Rejection Reason <span class="text-danger">*</span></label>
+            <textarea name="reason" class="form-control" rows="3" required
+                      placeholder="e.g. Incomplete documentation, payment proof unclear..."></textarea>
+            <small class="text-muted mt-1 d-block">This reason will be sent to the member via push notification and email.</small>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Confirm Rejection</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP SCRIPTS (PWA + SSE + Bell) -->
+<div th:fragment="appScripts">
+  <div id="ygc-toast-container" aria-live="polite" aria-atomic="false"></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script th:src="@{/js/app.js}"></script>
+</div>
+
+<!-- Legacy alias -->
+<div th:fragment="pushNotifications">
+  <div th:replace="~{fragments :: appScripts}"></div>
+</div>
+
+</body>
+</html>
