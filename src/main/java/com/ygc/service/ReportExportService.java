@@ -1,5 +1,6 @@
 package com.ygc.service;
 
+import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
@@ -13,6 +14,7 @@ import com.ygc.model.*;
 import com.ygc.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -55,7 +57,7 @@ public class ReportExportService {
      * Full chit analysis PDF.  Called by ChitHistoryService with a live Chit
      * object (before deletion) and the pre-built JSON snapshot string.
      */
-    public byte[] generateChitAnalysisPdf(com.ygc.model.Chit chit, String snapshotJson) {
+    public byte[] generateChitAnalysisPdf(Chit chit, String snapshotJson) {
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
@@ -95,11 +97,11 @@ public class ReportExportService {
 
             java.util.Map<String, Object> chit     = (java.util.Map<String, Object>) data.getOrDefault("chit",     java.util.Collections.emptyMap());
             java.util.Map<String, Object> summary  = (java.util.Map<String, Object>) data.getOrDefault("summary",  java.util.Collections.emptyMap());
-            java.util.List<java.util.Map<String,Object>> members     = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("members",     java.util.Collections.emptyList());
-            java.util.List<java.util.Map<String,Object>> payments    = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("payments",    java.util.Collections.emptyList());
-            java.util.List<java.util.Map<String,Object>> auctions    = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("auctions",    java.util.Collections.emptyList());
-            java.util.List<java.util.Map<String,Object>> commissions = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("commissions", java.util.Collections.emptyList());
-            java.util.List<java.util.Map<String,Object>> settlements = (java.util.List<java.util.Map<String,Object>>) data.getOrDefault("settlements", java.util.Collections.emptyList());
+            List<java.util.Map<String,Object>> members     = (List<java.util.Map<String,Object>>) data.getOrDefault("members",     java.util.Collections.emptyList());
+            List<java.util.Map<String,Object>> payments    = (List<java.util.Map<String,Object>>) data.getOrDefault("payments",    java.util.Collections.emptyList());
+            List<java.util.Map<String,Object>> auctions    = (List<java.util.Map<String,Object>>) data.getOrDefault("auctions",    java.util.Collections.emptyList());
+            List<java.util.Map<String,Object>> commissions = (List<java.util.Map<String,Object>>) data.getOrDefault("commissions", java.util.Collections.emptyList());
+            List<java.util.Map<String,Object>> settlements = (List<java.util.Map<String,Object>>) data.getOrDefault("settlements", java.util.Collections.emptyList());
 
             // ── Header ─────────────────────────────────────────────────
             addHeader(doc, "Chit Analysis Report", "Complete Record for: " + chitName);
@@ -419,15 +421,47 @@ public class ReportExportService {
 
     // ── PDF Building Helpers ─────────────────────────────────────────────────
 
+    /** Load image bytes from classpath; returns null if not found so callers can fall back. */
+    private byte[] loadImageBytes(String classpathPath) {
+        try {
+            InputStream is = new ClassPathResource(classpathPath).getInputStream();
+            return is.readAllBytes();
+        } catch (Exception e) {
+            log.warn("Report image not found at {}: {}", classpathPath, e.getMessage());
+            return null;
+        }
+    }
+
     private void addHeader(Document doc, String title, String subtitle) {
-        // Top gradient header bar
-        Table header = new Table(UnitValue.createPercentArray(new float[]{1})).useAllAvailableWidth();
-        Cell headerCell = new Cell().setBackgroundColor(NAVY).setPadding(20).setBorder(Border.NO_BORDER);
-        headerCell.add(new Paragraph("Y").setFontColor(GOLD).setFontSize(28).setBold().setMarginBottom(2));
-        headerCell.add(new Paragraph("YGC Internal").setFontColor(DeviceRgb.WHITE).setFontSize(18).setBold());
-        headerCell.add(new Paragraph("Save Rupee, Rupee Will Save You In Future")
+        // Top gradient header bar — logo left, branding right
+        Table header = new Table(UnitValue.createPercentArray(new float[]{0.18f, 0.82f})).useAllAvailableWidth();
+        header.setBorder(Border.NO_BORDER);
+
+        // Logo cell
+        Cell logoCell = new Cell().setBackgroundColor(NAVY).setPadding(12).setBorder(Border.NO_BORDER)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE).setTextAlignment(TextAlignment.CENTER);
+        byte[] logoBytes = loadImageBytes("static/images/ygc-logo.png");
+        if (logoBytes != null) {
+            try {
+                Image logo = new Image(ImageDataFactory.create(logoBytes)).setWidth(70).setHeight(70);
+                logoCell.add(logo);
+            } catch (Exception e) {
+                logoCell.add(new Paragraph("Y&G").setFontColor(GOLD).setFontSize(22).setBold());
+            }
+        } else {
+            logoCell.add(new Paragraph("Y&G").setFontColor(GOLD).setFontSize(22).setBold());
+        }
+        header.addCell(logoCell);
+
+        // Brand text cell
+        Cell brandCell = new Cell().setBackgroundColor(NAVY).setPadding(20).setBorder(Border.NO_BORDER)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE);
+        brandCell.add(new Paragraph("Y & G CHITS").setFontColor(GOLD).setFontSize(20).setBold().setMarginBottom(2));
+        brandCell.add(new Paragraph("Finance & Growth — YGC Internal").setFontColor(DeviceRgb.WHITE).setFontSize(13).setBold());
+        brandCell.add(new Paragraph("Save Rupee, Rupee Will Save You In Future")
                 .setFontColor(new DeviceRgb(180, 180, 200)).setFontSize(9).setMarginTop(2));
-        header.addCell(headerCell);
+        header.addCell(brandCell);
+
         doc.add(header);
 
         // Gold accent bar
@@ -520,16 +554,43 @@ public class ReportExportService {
 
     private void addDigitalSeal(Document doc, String label) {
         doc.add(new Paragraph("").setMarginTop(20));
-        Table seal = new Table(UnitValue.createPercentArray(new float[]{1})).useAllAvailableWidth();
-        Cell c = new Cell().setBorder(new com.itextpdf.layout.borders.DashedBorder(GOLD, 1.5f))
-                .setPadding(14).setTextAlignment(TextAlignment.CENTER)
+        Table sealTable = new Table(UnitValue.createPercentArray(new float[]{0.25f, 0.75f})).useAllAvailableWidth();
+        sealTable.setBorder(new com.itextpdf.layout.borders.DashedBorder(GOLD, 1.5f));
+
+        // Stamp image cell
+        Cell stampCell = new Cell().setPadding(10).setBorder(Border.NO_BORDER)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE).setTextAlignment(TextAlignment.CENTER)
                 .setBackgroundColor(GOLD_LIGHT);
-        c.add(new Paragraph("✦ DIGITALLY CERTIFIED ✦").setFontSize(11).setBold().setFontColor(NAVY).setMarginBottom(4));
-        c.add(new Paragraph(label).setFontSize(9).setFontColor(new DeviceRgb(80, 80, 100)).setMarginBottom(2));
-        c.add(new Paragraph("Generated: " + LocalDateTime.now().format(FMT) + " | YGC Internal System")
+        byte[] stampBytes = loadImageBytes("static/images/ygc-stamp.png");
+        if (stampBytes != null) {
+            try {
+                Image stamp = new Image(ImageDataFactory.create(stampBytes)).setWidth(80).setHeight(80);
+                stampCell.add(stamp);
+            } catch (Exception e) {
+                stampCell.add(new Paragraph("✦").setFontSize(36).setFontColor(GOLD));
+            }
+        } else {
+            stampCell.add(new Paragraph("✦").setFontSize(36).setFontColor(GOLD));
+        }
+        sealTable.addCell(stampCell);
+
+        // Certification text cell
+        Cell textCell = new Cell().setPadding(14).setBorder(Border.NO_BORDER)
+                .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                .setBackgroundColor(GOLD_LIGHT);
+        textCell.add(new Paragraph("✦ DIGITALLY CERTIFIED ✦")
+                .setFontSize(11).setBold().setFontColor(NAVY).setMarginBottom(4));
+        textCell.add(new Paragraph("Y & G CHITS — Finance & Growth")
+                .setFontSize(10).setBold().setFontColor(GOLD).setMarginBottom(2));
+        textCell.add(new Paragraph(label)
+                .setFontSize(9).setFontColor(new DeviceRgb(80, 80, 100)).setMarginBottom(2));
+        textCell.add(new Paragraph("Generated: " + LocalDateTime.now().format(FMT) + " | YGC Internal System")
                 .setFontSize(8).setFontColor(new DeviceRgb(120, 120, 140)));
-        seal.addCell(c);
-        doc.add(seal);
+        textCell.add(new Paragraph("CHITS FUND • CERTIFIED & SEALED")
+                .setFontSize(7).setFontColor(GOLD).setMarginTop(4));
+        sealTable.addCell(textCell);
+
+        doc.add(sealTable);
     }
 
     private void addFooter(Document doc) {
@@ -539,11 +600,179 @@ public class ReportExportService {
         doc.add(ls);
         Table footer = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth().setMarginTop(6);
         footer.addCell(new Cell().setBorder(Border.NO_BORDER).add(
-                new Paragraph("YGC Internal | Save Rupee, Rupee Will Save You In Future")
+                new Paragraph("Y & G Chits — Finance & Growth | Save Rupee, Rupee Will Save You In Future")
                         .setFontSize(8).setFontColor(new DeviceRgb(150, 150, 160))));
         footer.addCell(new Cell().setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT).add(
                 new Paragraph("Contact: +91 8919508889")
                         .setFontSize(8).setFontColor(new DeviceRgb(150, 150, 160))));
         doc.add(footer);
+    }
+
+    // ── Admin: All Members Report PDF ────────────────────────────────────────
+    public byte[] generateMembersReport(List<User> members) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            Document doc = new Document(pdf, PageSize.A4.rotate());
+            doc.setMargins(36, 36, 48, 36);
+
+            addHeader(doc, "Members Report", "All Registered Members");
+            addMetaRow(doc, "Generated", LocalDateTime.now().format(FMT), "Total Members", String.valueOf(members.size()));
+
+            float[] cols = {30f, 160f, 200f, 80f, 80f, 80f, 130f};
+            Table table = createTable(cols);
+            addHeaderRow(table, "#", "Full Name", "Email", "Phone", "Role", "Status", "Joined");
+            int i = 1;
+            for (User u : members) {
+                addDataRow(table, i % 2 == 0, String.valueOf(i++),
+                        u.getFullName() != null ? u.getFullName() : "-",
+                        u.getEmail() != null ? u.getEmail() : "-",
+                        u.getPhone() != null ? u.getPhone() : "-",
+                        u.getRole() != null ? u.getRole().name() : "-",
+                        u.isActive() ? "Active" : "Inactive",
+                        u.getCreatedAt() != null ? u.getCreatedAt().format(DATE_FMT) : "-");
+            }
+            doc.add(table);
+            addDigitalSeal(doc, "Members Report | YGC Admin");
+            addFooter(doc);
+            doc.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            log.error("Failed to generate members report PDF", e);
+            throw new RuntimeException("PDF generation failed", e);
+        }
+    }
+
+    // ── Admin: Chits List Report PDF ─────────────────────────────────────────
+    public byte[] generateChitsReport(List<Chit> chits) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            Document doc = new Document(pdf, PageSize.A4.rotate());
+            doc.setMargins(36, 36, 48, 36);
+
+            addHeader(doc, "Chit Groups Report", "All Chit Fund Groups");
+            addMetaRow(doc, "Generated", LocalDateTime.now().format(FMT), "Total Chits", String.valueOf(chits.size()));
+
+            long open      = chits.stream().filter(c -> c.getStatus() == Chit.ChitStatus.OPEN).count();
+            long active    = chits.stream().filter(c -> c.getStatus() == Chit.ChitStatus.ACTIVE).count();
+            long completed = chits.stream().filter(c -> c.getStatus() == Chit.ChitStatus.COMPLETED).count();
+            addThreeSummaryBoxes(doc,
+                    "Open", String.valueOf(open), SUCCESS,
+                    "Active", String.valueOf(active), GOLD,
+                    "Completed", String.valueOf(completed), BLUE);
+
+            float[] cols = {30f, 140f, 80f, 80f, 70f, 70f, 70f, 80f, 80f};
+            Table table = createTable(cols);
+            addHeaderRow(table, "#", "Chit Name", "Monthly ₹", "Total ₹", "Members", "Duration", "Commission", "Start", "Status");
+            int i = 1;
+            for (Chit c : chits) {
+                addDataRow(table, i % 2 == 0, String.valueOf(i++),
+                        c.getName(),
+                        "₹" + c.getMonthlyAmount().toPlainString(),
+                        "₹" + (c.getTotalChitValue() != null ? c.getTotalChitValue().toPlainString() : "-"),
+                        String.valueOf(c.getTotalMembers()),
+                        c.getDurationMonths() + " mo",
+                        c.getAdminCommissionPercentage().toPlainString() + "%",
+                        c.getStartDate() != null ? c.getStartDate().toString() : "-",
+                        c.getStatus().name());
+            }
+            doc.add(table);
+            addDigitalSeal(doc, "Chit Groups Report | YGC Admin");
+            addFooter(doc);
+            doc.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            log.error("Failed to generate chits report PDF", e);
+            throw new RuntimeException("PDF generation failed", e);
+        }
+    }
+
+    // ── Member: My Memberships & Summary PDF ─────────────────────────────────
+    public byte[] generateMemberSummaryReport(User user, List<ChitMembership> memberships) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            Document doc = new Document(pdf, PageSize.A4);
+            doc.setMargins(40, 40, 50, 40);
+
+            addHeader(doc, "My Chit Memberships", "Personal Summary — " + user.getFullName());
+            addMetaRow(doc, "Member", user.getEmail(), "Generated", LocalDateTime.now().format(FMT));
+
+            long active = memberships.stream().filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count();
+            long settled = memberships.stream().filter(m -> m.getStatus() == ChitMembership.MembershipStatus.SETTLED).count();
+            addThreeSummaryBoxes(doc,
+                    "Total", String.valueOf(memberships.size()), BLUE,
+                    "Active", String.valueOf(active), SUCCESS,
+                    "Settled", String.valueOf(settled), GOLD);
+
+            float[] cols = {30f, 150f, 80f, 80f, 80f, 80f, 70f};
+            Table table = createTable(cols);
+            addHeaderRow(table, "#", "Chit Name", "Monthly ₹", "Total ₹", "Duration", "Status", "Joined");
+            int i = 1;
+            for (ChitMembership m : memberships) {
+                addDataRow(table, i % 2 == 0, String.valueOf(i++),
+                        m.getChit().getName(),
+                        "₹" + m.getChit().getMonthlyAmount().toPlainString(),
+                        "₹" + (m.getChit().getTotalChitValue() != null ? m.getChit().getTotalChitValue().toPlainString() : "-"),
+                        m.getChit().getDurationMonths() + " months",
+                        m.getStatus().name(),
+                        m.getJoinedAt() != null ? m.getJoinedAt().format(DATE_FMT) : "-");
+            }
+            doc.add(table);
+            addDigitalSeal(doc, "Member Summary | " + user.getFullName() + " | YGC Internal");
+            addFooter(doc);
+            doc.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            log.error("Failed to generate member summary report for {}", user.getEmail(), e);
+            throw new RuntimeException("PDF generation failed", e);
+        }
+    }
+
+    // ── Member: Payment History for a Specific Membership PDF ────────────────
+    public byte[] generateMemberPaymentHistoryReport(User user, ChitMembership membership, List<Payment> payments) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            Document doc = new Document(pdf, PageSize.A4);
+            doc.setMargins(40, 40, 50, 40);
+
+            addHeader(doc, "Payment History",
+                    membership.getChit().getName() + " — " + user.getFullName());
+            addMetaRow(doc, "Member", user.getEmail(), "Generated", LocalDateTime.now().format(FMT));
+
+            // Totals
+            BigDecimal totalPaid = payments.stream()
+                    .filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED)
+                    .map(Payment::getTotalAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            long approved = payments.stream().filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED).count();
+            long pending  = payments.stream().filter(p -> p.getStatus() == Payment.PaymentStatus.PENDING).count();
+
+            addThreeSummaryBoxes(doc,
+                    "Total Paid", "₹" + totalPaid.toPlainString(), SUCCESS,
+                    "Approved", String.valueOf(approved), SUCCESS,
+                    "Pending",  String.valueOf(pending), GOLD);
+
+            float[] cols = {30f, 60f, 80f, 70f, 70f, 80f, 90f, 110f};
+            Table table = createTable(cols);
+            addHeaderRow(table, "#", "Month", "Amount", "Fine", "Total", "Status", "Paid Date", "Remarks");
+            int i = 1;
+            for (Payment p : payments) {
+                addDataRow(table, i % 2 == 0, String.valueOf(i++),
+                        "M" + p.getMonthNumber(),
+                        "₹" + p.getAmount().toPlainString(),
+                        p.getLateFine().compareTo(BigDecimal.ZERO) > 0 ? "₹" + p.getLateFine().toPlainString() : "-",
+                        "₹" + p.getTotalAmount().toPlainString(),
+                        p.getStatus().name(),
+                        p.getPaidDate() != null ? p.getPaidDate().toString() : "-",
+                        p.getAdminRemarks() != null ? p.getAdminRemarks() : "-");
+            }
+            doc.add(table);
+            addDigitalSeal(doc, "Payment Statement | " + user.getFullName() + " | " + membership.getChit().getName());
+            addFooter(doc);
+            doc.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            log.error("Failed to generate payment history report for membership {}", membership.getId(), e);
+            throw new RuntimeException("PDF generation failed", e);
+        }
     }
 }

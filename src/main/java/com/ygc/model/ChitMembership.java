@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "chit_memberships")
@@ -43,6 +44,14 @@ public class ChitMembership {
 
     private LocalDateTime joinedAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+    // ── Cascade deletes so removing a membership cleans up child rows ──────
+    @OneToMany(mappedBy = "membership", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Settlement> settlements;
+
+    @OneToMany(mappedBy = "membership", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Payment> payments;
+    // ────────────────────────────────────────────────────────────────────────
 
     @PreUpdate
     public void preUpdate() {
