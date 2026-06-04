@@ -59,8 +59,11 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
+            docker compose down --remove-orphans || true
+
             docker compose pull
-            docker compose up -d
+  
+            docker compose up -d --force-recreate
 
             sleep 30
 
