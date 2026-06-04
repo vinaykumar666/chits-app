@@ -1,29 +1,227 @@
-/* responsive.css — additional overrides loaded after app.css */
-/* Mobile-specific component tweaks */
+/* =============================================================
+   responsive.css — YGC Internal
+   FIX: Comprehensive mobile & tablet fixes
+   - Form field overlapping on narrow viewports
+   - Input groups / button groups wrapping correctly
+   - Table horizontal scroll
+   - Card grid column collapsing
+   - Modal full-screen on mobile
+   ============================================================= */
 
-/* Smooth tap feedback for touch devices */
+/* ── Smooth tap feedback ──────────────────────────────────── */
 @media (hover: none) and (pointer: coarse) {
-  .btn:active { opacity: 0.85; transform: scale(0.98); }
-  .nav-link:active { opacity: 0.85; }
-  .card:active { transform: scale(0.99); }
+  .btn:active        { opacity: .85; transform: scale(.98); }
+  .nav-link:active   { opacity: .85; }
+  .card:active       { transform: scale(.99); }
 }
 
-/* Prevent iOS input zoom (font-size must be >= 16px — enforced in app.css) */
+/* ── Prevent iOS input zoom (font-size >= 16px) ───────────── */
 @supports (-webkit-touch-callout: none) {
-  select { font-size: 16px !important; }
+  select,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  textarea { font-size: 16px !important; }
 }
 
-/* Samsung Internet: fix flex gap */
+/* ── Samsung Internet: fix flex gap ──────────────────────── */
 @supports not (gap: 1rem) {
-  .d-flex > * + * { margin-left: 0.5rem; }
-  .flex-column > * + * { margin-top: 0.5rem; }
+  .d-flex > * + *    { margin-left: .5rem; }
+  .flex-column > * + * { margin-top: .5rem; }
 }
 
-/* Fix Bootstrap modals on mobile */
-@media (max-width: 767px) {
+/* ══════════════════════════════════════════════════════════
+   TABLET  (≤ 1024 px)
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+
+  /* FIX: input-group — prevent text input from overflowing behind button */
+  .input-group { flex-wrap: nowrap; }
+  .input-group .form-control,
+  .input-group .form-select { min-width: 0; flex: 1 1 auto; }
+  .input-group .btn          { flex-shrink: 0; white-space: nowrap; }
+
+  /* FIX: row with multiple cols — allow wrapping so they don't overlap */
+  .row.g-3 > [class*="col-lg-3"],
+  .row.g-3 > [class*="col-lg-4"] {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+
+  /* FIX: form rows with inline label+input pairs */
+  .row.align-items-center > .col-auto,
+  .row.align-items-center > [class*="col-md"] {
+    flex-shrink: 0;
+  }
+
+  /* Tables: horizontal scroll rather than column squeeze */
+  .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Modal: a bit narrower on tablet */
+  .modal-dialog { max-width: 92vw; }
+
+  /* Fix Bootstrap modal z-index */
   .modal-backdrop { z-index: 400; }
-  .modal { z-index: 500; }
+  .modal          { z-index: 500; }
   #ygc-bottom-nav { z-index: 300; }
   .sidebar, .member-sidebar { z-index: 210; }
-  #ygc-sidebar-overlay { z-index: 200; }
+  #ygc-sidebar-overlay      { z-index: 200; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE  (≤ 767 px)
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* FIX: every form row becomes a stacked column */
+  .row.g-2 > [class*="col-"],
+  .row.g-3 > [class*="col-"],
+  .row.g-4 > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* FIX: inline form rows (search + button) — keep side-by-side */
+  .row.g-2.align-items-end  > [class*="col-"],
+  .row.g-2.align-items-center > [class*="col-"] {
+    flex: 1 1 auto;
+    max-width: 100%;
+  }
+
+  /* FIX: input-group full-width; button never wraps behind input */
+  .input-group {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+  .input-group .form-control,
+  .input-group .form-select {
+    min-width: 0;
+    flex: 1 1 auto;
+    width: auto;          /* prevents fixed-width from overflowing */
+  }
+  .input-group .btn { flex-shrink: 0; }
+
+  /* FIX: multi-column filter bars — stack vertically */
+  .d-flex.gap-2.flex-wrap { flex-direction: column; align-items: stretch; }
+  .d-flex.gap-2.flex-wrap > * { width: 100%; }
+
+  /* FIX: paired label-input rows (e.g. "From date … To date …") */
+  .row.row-cols-auto { flex-wrap: wrap; }
+  .row.row-cols-auto > * { flex: 0 0 100%; max-width: 100%; }
+
+  /* FIX: form-select in filter toolbars */
+  .form-select { width: 100%; }
+
+  /* Tables */
+  .table-responsive          { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table                     { min-width: 600px; }
+
+  /* Toast */
+  #ygc-toast-container {
+    bottom: calc(80px + var(--safe-bottom, 0px));
+    left: 16px; right: 16px;
+    max-width: 100%;
+  }
+
+  /* Cards */
+  .col-md-6, .col-lg-4 { flex: 0 0 100%; max-width: 100%; }
+  .col-md-4             { flex: 0 0 100%; max-width: 100%; }
+  .col-md-3             { flex: 0 0 50%;  max-width: 50%;  }
+
+  /* FIX: stat card rows — 2 per row on mobile */
+  .row.g-3 > [class*="col-md-2"],
+  .row.g-3 > [class*="col-md-3"] {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+
+  /* Modals: full-screen sheet */
+  .modal-dialog {
+    margin: 0;
+    max-width: 100%;
+    height: 100%;
+  }
+  .modal-content {
+    border-radius: var(--radius, 12px) var(--radius, 12px) 0 0;
+    min-height: 60vh;
+    max-height: 95vh;
+    overflow-y: auto;
+  }
+
+  /* Modal z-index */
+  .modal-backdrop { z-index: 400; }
+  .modal          { z-index: 500; }
+  #ygc-bottom-nav { z-index: 300; }
+  .sidebar, .member-sidebar { z-index: 210; }
+  #ygc-sidebar-overlay      { z-index: 200; }
+
+  /* FIX: page action toolbars — stack download/filter buttons */
+  .d-flex.justify-content-between.align-items-center.flex-wrap {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: .5rem;
+  }
+  .d-flex.justify-content-between.align-items-center.flex-wrap > * {
+    width: 100%;
+  }
+
+  /* FIX: button groups (export / approve / reject triplets) */
+  .btn-group { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .btn-group .btn { flex: 1 1 auto; }
+
+  /* Inputs */
+  .form-control, .form-select, .btn { min-height: 48px; font-size: 16px; }
+  .btn-sm                            { min-height: 36px; font-size: 14px; }
+
+  /* FIX: date-range row (e.g. reports filter) */
+  .row.align-items-center.gy-2 > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* Hide non-essential table columns */
+  .hide-mobile        { display: none !important; }
+  .btn-action-text    { display: none; }
+
+  /* FIX: notification panel position */
+  #ygc-notif-panel {
+    top: 56px !important;
+    right: 8px !important;
+    width: calc(100vw - 16px) !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SMALL MOBILE  (≤ 480 px)
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+  /* FIX: stat cards — single column on tiny screens */
+  .row.g-3 > [class*="col-md-2"],
+  .row.g-3 > [class*="col-md-3"],
+  .col-md-3 { flex: 0 0 100%; max-width: 100%; }
+
+  /* FIX: amount/date fields side-by-side within a card can overflow */
+  .d-flex.align-items-center.gap-3 { flex-direction: column; align-items: stretch !important; }
+
+  /* Topbar: hide subtitle on tiny screens */
+  .topbar .sub { display: none; }
+
+  /* FIX: form labels above inputs (not side-by-side) */
+  .col-form-label { text-align: left !important; }
+
+  /* FIX: table cells — tighter padding */
+  .table > :not(caption) > * > * { padding: .4rem .5rem; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   PWA STANDALONE MODE
+   ══════════════════════════════════════════════════════════ */
+@media (display-mode: standalone) {
+  body { padding-top: var(--safe-top, 0px); }
+  .sidebar, .member-sidebar { padding-top: calc(var(--safe-top, 0px) + 8px); }
 }
