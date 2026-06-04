@@ -14,4 +14,10 @@ public interface CommissionLedgerRepository extends JpaRepository<CommissionLedg
 
     @Query("SELECT COALESCE(SUM(c.commissionAmount), 0) FROM CommissionLedger c WHERE c.chit = :chit")
     BigDecimal totalCommissionByChit(Chit chit);
+
+    /**
+     * FIX: Single-query fetch for reports — avoids N+1 on chit relationship.
+     */
+    @Query("SELECT c FROM CommissionLedger c JOIN FETCH c.chit ORDER BY c.id")
+    List<CommissionLedger> findAllForReport();
 }

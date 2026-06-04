@@ -6,11 +6,12 @@
 
 (function () {
   'use strict';
+  const APP_VERSION = 'v2.1';
 
   // ─── Service Worker Registration ──────────────────────────────────────────
   function registerSW() {
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=2.1', { scope: '/' })
       .then(reg => {
         console.log('[YGC] SW registered, scope:', reg.scope);
         // Check for updates every 60 s
@@ -145,11 +146,21 @@
   let sseConnection = null;
   let reconnectTimeout = null;
   let reconnectDelay = 5000;
+  // FIX: seed in-memory log from sessionStorage so current-session toasts survive
+  //      soft navigations (same tab, no full reload).
   let notificationLog = [];
+  try {
+    const stored = sessionStorage.getItem('ygc-notif-log');
+    if (stored) notificationLog = JSON.parse(stored);
+  } catch (e) {}
+
+  function isAuthenticatedPage() {
+    return !!document.querySelector('.sidebar, .member-sidebar') || !!document.getElementById('ygc-bell-btn');
+  }
 
   function connectSSE() {
     // Only connect on authenticated pages
-    if (!document.getElementById('ygc-toast-container')) return;
+    if (!isAuthenticatedPage()) return;
 
     if (sseConnection) { sseConnection.close(); sseConnection = null; }
 
@@ -260,67 +271,110 @@
     badge.style.display = 'inline-flex';
   }
 
-  // ─── Bell Icon Panel ─────────────────────────────────────────────────────
+  // ─── Bell Icon: Notification Panel ───────────────────────────────────────
   function initBellIcon() {
     const btn = document.getElementById('ygc-bell-btn');
     if (!btn) return;
 
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
+    btn.addEventListener('click', () => {
       let panel = document.getElementById('ygc-notif-panel');
       if (panel) { panel.remove(); return; }
 
-      // Clear badge
+      // Reset badge
       const badge = document.getElementById('ygc-notif-badge');
       if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
 
-      // Restore from session if page just loaded
-      if (!notificationLog.length) {
-        try { const s = sessionStorage.getItem('ygc-notif-log'); if (s) notificationLog = JSON.parse(s); } catch (e) {}
-      }
-
+      // Build panel shell immediately (with loading state)
       panel = document.createElement('div');
       panel.id = 'ygc-notif-panel';
-      panel.style.cssText = `position:fixed;top:62px;right:14px;z-index:9999;width:320px;max-width:calc(100vw - 24px);
-        background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.18);
-        font-family:system-ui,sans-serif;overflow:hidden;border:1px solid #e8e8e8;`;
-
-      const logs = notificationLog.slice(0, 15);
-      const items = logs.length ? logs.map(n => `
-        <div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-start">
-          <span style="font-size:1.2rem">${(n.style && n.style.icon) || '🔔'}</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:600;font-size:.85rem;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.title||'')}</div>
-            <div style="font-size:.78rem;color:#555;margin-top:2px;line-height:1.4">${esc(n.message||'')}</div>
-            <div style="font-size:.7rem;color:#aaa;margin-top:3px">${n.receivedAt ? new Date(n.receivedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
-          </div>
-        </div>`).join('') :
-        `<div style="padding:28px;text-align:center;color:#aaa;font-size:.85rem"><div style="font-size:2rem;margin-bottom:8px">🔕</div>No notifications yet</div>`;
+      panel.style.cssText = `
+        position:fixed;top:60px;right:12px;z-index:9999;
+        width:340px;max-width:calc(100vw - 24px);
+        background:#fff;border-radius:14px;
+        box-shadow:0 8px 40px rgba(0,0,0,.18);
+        font-family:system-ui,sans-serif;overflow:hidden;
+        border:1px solid #e8e8e8;`;
 
       panel.innerHTML = `
-        <div style="padding:12px 14px;background:#f8f9fa;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:700;font-size:.9rem;color:#1a1a2e">🔔 Notifications</span>
-          <button onclick="document.getElementById('ygc-notif-panel').remove()"
-            style="background:none;border:none;cursor:pointer;color:#aaa;font-size:1.1rem;line-height:1">✕</button>
+        <div id="ygc-np-header" style="padding:12px 14px;background:#1a1a2e;border-bottom:1px solid #e8e8e8;
+             display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700;font-size:.9rem;color:#f0a500">🔔 Notifications</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="ygc-np-clear" title="Clear all"
+              style="background:none;border:none;cursor:pointer;color:#aaa;font-size:.75rem;line-height:1;padding:2px 6px;border-radius:4px;border:1px solid #555">
+              Clear
+            </button>
+            <button onclick="document.getElementById('ygc-notif-panel').remove()"
+              style="background:none;border:none;cursor:pointer;color:#aaa;font-size:1.1rem;line-height:1">✕</button>
+          </div>
         </div>
-        <div style="max-height:340px;overflow-y:auto">${items}</div>`;
+        <div id="ygc-np-body" style="max-height:360px;overflow-y:auto">
+          <div style="padding:24px;text-align:center;color:#aaa;font-size:.85rem">
+            <div style="font-size:1.5rem;margin-bottom:6px">⏳</div>Loading…
+          </div>
+        </div>`;
 
       document.body.appendChild(panel);
 
+      // FIX: Load notification history from server (survives page navigations)
+      function renderNotifications(items) {
+        const body = document.getElementById('ygc-np-body');
+        if (!body) return;
+        if (!items || items.length === 0) {
+          body.innerHTML = `<div style="padding:24px;text-align:center;color:#aaa;font-size:.85rem">
+            <div style="font-size:2rem;margin-bottom:8px">🔕</div>No notifications yet
+          </div>`;
+          return;
+        }
+        body.innerHTML = items.slice(0, 20).map(n => {
+          const style = NOTIFICATION_STYLES[n.type] || { icon: '🔔' };
+          const time = n.createdAt || '';
+          return `<div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-start">
+            <span style="font-size:1.2rem">${style.icon}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:.85rem;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(n.title || '')}</div>
+              <div style="font-size:.78rem;color:#666;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${escapeHtml(n.message || '')}</div>
+              <div style="font-size:.7rem;color:#aaa;margin-top:2px">${escapeHtml(time)}</div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // Merge server history with current-session log (deduplicate by id)
+      fetch('/api/notifications/history')
+        .then(r => r.json())
+        .catch(() => [])
+        .then(serverItems => {
+          // Merge: current session items may be more recent
+          const seen = new Set();
+          const merged = [...notificationLog, ...serverItems].filter(n => {
+            if (seen.has(n.id)) return false;
+            seen.add(n.id); return true;
+          });
+          renderNotifications(merged);
+        });
+
+      // Clear all handler
+      const clearBtn = document.getElementById('ygc-np-clear');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          notificationLog = [];
+          try { sessionStorage.removeItem('ygc-notif-log'); } catch (e) {}
+          fetch('/api/notifications/history', { method: 'DELETE' }).catch(() => {});
+          renderNotifications([]);
+        });
+      }
+
+      // Close on outside click
       setTimeout(() => {
-        document.addEventListener('click', function handler(ev) {
-          const p = document.getElementById('ygc-notif-panel');
-          if (p && !p.contains(ev.target) && ev.target !== btn) {
-            p.remove();
+        document.addEventListener('click', function handler(e) {
+          if (!panel.contains(e.target) && e.target !== btn) {
+            panel.remove();
             document.removeEventListener('click', handler);
           }
         });
       }, 50);
     });
-  }
-
-  function esc(str) {
-    return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   // ─── Web Push Permission Request ──────────────────────────────────────────
@@ -495,6 +549,32 @@
     });
   }
 
+  function showVersionBadge() {
+    if (document.getElementById('ygc-version-badge')) return;
+    const badge = document.createElement('div');
+    badge.id = 'ygc-version-badge';
+    badge.textContent = APP_VERSION;
+    badge.style.cssText = `
+      position:fixed;bottom:12px;left:12px;z-index:9998;
+      background:#1a1a2e;color:#f0a500;border:1px solid rgba(240,165,0,.45);
+      border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;
+      font-family:system-ui,sans-serif;opacity:.88;pointer-events:none;`;
+    document.body.appendChild(badge);
+  }
+
+  // ─── Mobile: Make data tables scrollable ──────────────────────────────────
+  function enhanceTablesForMobile() {
+    if (!isMobile()) return;
+    document.querySelectorAll('.main-content table').forEach(table => {
+      const parent = table.parentElement;
+      if (parent && parent.classList.contains('table-responsive')) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-responsive';
+      table.parentNode.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    });
+  }
+
   // ─── Active link highlighting ──────────────────────────────────────────────
   function highlightActiveNav() {
     const path = window.location.pathname;
@@ -521,10 +601,12 @@
     registerSW();
     showIOSInstallHint();
     initOfflineDetection();
-    connectSSE();
+    if (document.getElementById('ygc-toast-container')) connectSSE();
     injectBottomNav();
     injectMobileSidebarToggle();
     initKeyboardHandling();
+    enhanceTablesForMobile();
+    showVersionBadge();
     highlightActiveNav();
     initBellIcon();
 

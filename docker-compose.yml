@@ -46,6 +46,23 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
 
+      # ── FIX: JVM heap & GC tuning ────────────────────────────
+      # -Xms512m        : initial heap (avoids slow ramp-up on startup)
+      # -Xmx1g          : max heap — increase to 2g if you have RAM to spare
+      # -XX:+UseG1GC    : G1 has better pause-time for web workloads vs ParallelGC
+      # -XX:MaxGCPauseMillis=200 : target pause < 200 ms
+      # -XX:+HeapDumpOnOutOfMemoryError : capture OOM for diagnosis
+      # -XX:HeapDumpPath : write dump inside the container's upload volume
+      # -Djava.security.egd : faster SecureRandom (speeds up JWT signing)
+      JAVA_OPTS: >-
+        -Xms512m
+        -Xmx1g
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/app/uploads/heapdump.hprof
+        -Djava.security.egd=file:/dev/./urandom
+
     volumes:
       - uploads_data:/app/uploads
 

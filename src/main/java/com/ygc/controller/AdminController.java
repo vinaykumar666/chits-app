@@ -559,7 +559,7 @@ public class AdminController {
             @PathVariable Long id) {
         try {
             byte[] pdf = chitHistoryService.getPdfBytesForHistory(id);
-            com.ygc.model.ChitHistory history = chitHistoryService.findById(id)
+            ChitHistory history = chitHistoryService.findById(id)
                     .orElseThrow(() -> new RuntimeException("History not found: " + id));
             String filename = "ChitAnalysis_" + history.getChitName().replaceAll("[^a-zA-Z0-9_-]", "_") + ".pdf";
             return org.springframework.http.ResponseEntity.ok()
@@ -610,7 +610,7 @@ public class AdminController {
 
             // 1. Archive to chit_history + generate PDF
             String reason = closingReason.isBlank() ? "Deleted by admin" : closingReason;
-            com.ygc.model.ChitHistory history = chitHistoryService.archiveChit(chit, "DELETED", reason, admin);
+            ChitHistory history = chitHistoryService.archiveChit(chit, "DELETED", reason, admin);
 
             // 2. Email the PDF to admin
             if (history.getAnalysisPdfPath() != null) {
