@@ -58,11 +58,14 @@ public class Chit {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    @OneToMany(mappedBy = "chit", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "chit", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ChitMembership> memberships;
 
-    @OneToMany(mappedBy = "chit", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "chit", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Auction> auctions;
+
+    @OneToMany(mappedBy = "chit", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CommissionLedger> commissionLedgerEntries;
 
     public enum ChitStatus {
         OPEN, ACTIVE, COMPLETED, CANCELLED

@@ -4,6 +4,7 @@
 <body>
 
 <div th:replace="~{fragments :: adminSidebar('dashboard')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
 
 <div class="main-content">
   <div class="topbar">
@@ -12,10 +13,9 @@
       <div class="sub">YGC Internal Chit Management</div>
     </div>
     <div class="d-flex align-items-center gap-2">
-      <!-- Quick Export Dropdown -->
       <div class="dropdown">
         <button class="btn btn-sm btn-outline-warning fw-bold dropdown-toggle" data-bs-toggle="dropdown" title="Export Reports">
-          <i class="bi bi-file-earmark-pdf me-1"></i>Export
+          <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-action-text">Export</span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
           <li><h6 class="dropdown-header"><i class="bi bi-shield-lock me-1"></i>Admin Reports</h6></li>
@@ -27,7 +27,7 @@
         </ul>
       </div>
       <span class="ygc-conn-dot" title="Live notifications active"></span>
-      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" aria-label="Show notifications" style="font-size:1.3rem;line-height:1">
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
         <i class="bi bi-bell"></i>
         <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
       </button>
@@ -80,9 +80,9 @@
 
   <!-- Quick Actions -->
   <div class="row g-3 mb-4">
-    <div class="col-12"><h6 class="text-muted fw-semibold">QUICK ACTIONS</h6></div>
+    <div class="col-12"><h6 class="text-muted fw-bold" style="font-size:.72rem;letter-spacing:.1em;text-transform:uppercase">Quick Actions</h6></div>
     <div class="col-md-3 col-6">
-      <a th:href="@{/admin/chits/create}" class="card text-decoration-none h-100" style="border:2px dashed #f0a500;border-radius:12px">
+      <a th:href="@{/admin/chits/create}" class="card text-decoration-none h-100" style="border:2px dashed rgba(240,165,0,.4);border-radius:14px;transition:all .22s">
         <div class="card-body text-center py-3">
           <i class="bi bi-plus-circle text-warning fs-3 d-block mb-1"></i>
           <div class="fw-semibold small">Create Chit Group</div>
@@ -90,7 +90,7 @@
       </a>
     </div>
     <div class="col-md-3 col-6">
-      <a th:href="@{/admin/payments}" class="card text-decoration-none h-100" style="border:2px dashed #20c997;border-radius:12px">
+      <a th:href="@{/admin/payments}" class="card text-decoration-none h-100" style="border:2px dashed rgba(32,201,151,.4);border-radius:14px;transition:all .22s">
         <div class="card-body text-center py-3">
           <i class="bi bi-cash-coin text-success fs-3 d-block mb-1"></i>
           <div class="fw-semibold small">Verify Payments</div>
@@ -98,7 +98,7 @@
       </a>
     </div>
     <div class="col-md-3 col-6">
-      <a th:href="@{/admin/auctions}" class="card text-decoration-none h-100" style="border:2px dashed #0dcaf0;border-radius:12px">
+      <a th:href="@{/admin/auctions}" class="card text-decoration-none h-100" style="border:2px dashed rgba(13,202,240,.4);border-radius:14px;transition:all .22s">
         <div class="card-body text-center py-3">
           <i class="bi bi-hammer text-info fs-3 d-block mb-1"></i>
           <div class="fw-semibold small">Manage Auctions</div>
@@ -106,7 +106,7 @@
       </a>
     </div>
     <div class="col-md-3 col-6">
-      <a th:href="@{/admin/reports/commission}" class="card text-decoration-none h-100" style="border:2px dashed #6f42c1;border-radius:12px">
+      <a th:href="@{/admin/reports/commission}" class="card text-decoration-none h-100" style="border:2px dashed rgba(111,66,193,.4);border-radius:14px;transition:all .22s">
         <div class="card-body text-center py-3">
           <i class="bi bi-graph-up d-block mb-1" style="color:#6f42c1;font-size:1.8rem"></i>
           <div class="fw-semibold small">Commission Report</div>
@@ -141,7 +141,7 @@
                 th:text="${log.action}"></span>
             </td>
             <td class="hide-mobile" th:text="${log.entityType}"></td>
-            <td th:text="${log.description}"></td>
+            <td><small th:text="${log.description}"></small></td>
           </tr>
           <tr th:if="${#lists.isEmpty(recentAudits)}">
             <td colspan="4" class="text-center text-muted py-3">No activity yet</td>
