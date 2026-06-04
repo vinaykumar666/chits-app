@@ -151,6 +151,7 @@ public class AdminController {
     }
 
     @PostMapping("/chits/{id}/delete")
+    @org.springframework.transaction.annotation.Transactional
     public String deleteChit(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
         try {
             Chit chit = chitService.findById(id);
@@ -158,7 +159,9 @@ public class AdminController {
                 ra.addFlashAttribute("error", "Cannot delete an active chit. Cancel it first.");
                 return "redirect:/admin/chits/" + id;
             }
-            chitRepository.deleteById(id);
+            // Use entity-based delete to trigger cascade (not deleteById which can skip)
+            chitRepository.delete(chit);
+            chitRepository.flush();
             ra.addFlashAttribute("success", "Chit deleted successfully.");
         } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
         return "redirect:/admin/chits";
@@ -331,6 +334,23 @@ public class AdminController {
         model.addAttribute("user", getCurrentUser(auth));
         model.addAttribute("members", userRepository.findAll());
         return "admin/members";
+    }
+
+    // ── Admin Create User ──────────────────────────────────────────────────
+    @PostMapping("/members/create")
+    public String adminCreateUser(@RequestParam String email,
+                                  @RequestParam String fullName,
+                                  @RequestParam(required = false) String phone,
+                                  @RequestParam(required = false) String address,
+                                  Authentication auth, RedirectAttributes ra) {
+        try {
+            User newUser = userService.registerUser(email, fullName, phone, address);
+            ra.addFlashAttribute("success",
+                    "Member '" + fullName + "' created. Temporary password emailed to " + email + ".");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Create member failed: " + e.getMessage());
+        }
+        return "redirect:/admin/members";
     }
 
     @GetMapping("/members/{id}/edit")
@@ -595,6 +615,7 @@ public class AdminController {
      * Replace or supplement the existing /delete endpoint with this one.
      */
     @PostMapping("/chits/{id}/delete-with-archive")
+    @org.springframework.transaction.annotation.Transactional
     public String deleteChitWithArchive(@PathVariable Long id,
                                         @RequestParam(required = false, defaultValue = "") String closingReason,
                                         Authentication auth,
@@ -635,8 +656,9 @@ public class AdminController {
                                 chit.getName(), "Chit permanently closed/deleted. Reason: " + reason);
                     });
 
-            // 4. Hard-delete
-            chitRepository.deleteById(id);
+            // 4. Hard-delete — entity-based for proper cascade
+            chitRepository.delete(chit);
+            chitRepository.flush();
             ra.addFlashAttribute("success",
                     "Chit deleted. Full analysis PDF emailed to admin and saved to Chit History.");
         } catch (Exception e) {

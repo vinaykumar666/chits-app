@@ -1,112 +1,110 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#1a1a2e">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="YGC Chits">
-    <link rel="manifest" th:href="@{/manifest.json}">
-    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}"><title>Members - YGC Admin</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" th:href="@{/css/app.css}">
-    <link rel="stylesheet" th:href="@{/css/responsive.css}">
-</head>
+<head th:replace="~{fragments :: head('Members')}"></head>
 <body>
-<div class="sidebar">
-    <div class="brand"><div class="brand-icon">Y</div><div><div class="brand-name">YGC Internal</div><div class="brand-tag">Save Rupee, Save Future</div></div></div>
-    <nav class="sidebar-nav">
-        <a th:href="@{/admin/dashboard}" class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a th:href="@{/admin/chits}" class="nav-link"><i class="bi bi-collection"></i> Chit Groups</a>
-        <a th:href="@{/admin/members}" class="nav-link active"><i class="bi bi-people"></i> Members</a>
-        <a th:href="@{/admin/payments}" class="nav-link"><i class="bi bi-cash-coin"></i> Payments</a>
-        <a th:href="@{/admin/auctions}" class="nav-link"><i class="bi bi-hammer"></i> Auctions</a>
-        <a th:href="@{/admin/settlements}" class="nav-link"><i class="bi bi-bank"></i> Settlements</a>
-        <a th:href="@{/admin/reports/commission}" class="nav-link"><i class="bi bi-graph-up"></i> Commission</a>
-        <a th:href="@{/admin/audit}" class="nav-link"><i class="bi bi-shield-check"></i> Audit Log</a>
-        <a th:href="@{/help}" class="nav-link"><i class="bi bi-question-circle"></i> Help &amp; Rules</a>
-        <a th:href="@{/logout}" class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
-    </nav>
-</div>
+<div th:replace="~{fragments :: adminSidebar('members')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
+
 <div class="main-content">
-    <div class="topbar">
-        <div><h4><i class="bi bi-people text-warning me-2"></i>Member Management</h4><div class="sub">View and manage all registered users</div></div>
-        <div class="d-flex align-items-center gap-2">
-            <a th:href="@{/admin/reports/members/pdf}" class="btn btn-sm btn-outline-warning fw-bold" title="Export members list as PDF">
-                <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
-            </a>
-            <span class="ygc-conn-dot" title="Live notifications active"></span>
-            <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
-                <i class="bi bi-bell"></i>
-                <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+    <div th:replace="~{fragments :: topbar('👥 Member Management', 'View and manage all registered users', ${user.fullName})}"></div>
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <!-- Add Member Card -->
+    <div class="card panel mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-person-plus-fill me-2 text-success"></i>Add New Member</span>
+            <button class="btn btn-sm btn-outline-warning" type="button" data-bs-toggle="collapse" data-bs-target="#addMemberForm">
+                <i class="bi bi-plus-lg"></i> <span class="btn-action-text">New Member</span>
             </button>
-            <div class="user-badge" th:text="${user.fullName}">Admin</div>
+        </div>
+        <div class="collapse" id="addMemberForm">
+            <div class="card-body">
+                <form th:action="@{/admin/members/create}" method="post">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-muted">EMAIL *</label>
+                            <input type="email" name="email" class="form-control" placeholder="user@example.com" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-muted">FULL NAME *</label>
+                            <input type="text" name="fullName" class="form-control" placeholder="Full Name" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold small text-muted">PHONE</label>
+                            <input type="tel" name="phone" class="form-control" placeholder="+91 XXXXXXXXXX">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-muted">ADDRESS</label>
+                            <input type="text" name="address" class="form-control" placeholder="City, State">
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="submit" class="btn btn-warning w-100 fw-bold"><i class="bi bi-check-lg"></i></button>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">A temporary password will be emailed to the new member automatically.</small>
+                </form>
+            </div>
         </div>
     </div>
-    <div th:if="${success}" class="alert alert-success alert-dismissible"><span th:text="${success}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    <div th:if="${error}" class="alert alert-danger alert-dismissible"><span th:text="${error}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+
+    <!-- Members Table -->
     <div class="card panel">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span><i class="bi bi-people me-2"></i>All Registered Users</span>
-            <a th:href="@{/register}" class="btn btn-sm btn-warning fw-bold"><i class="bi bi-person-plus"></i> Add Member</a>
+            <a th:href="@{/admin/reports/members/pdf}" class="btn btn-sm btn-outline-warning fw-bold" title="Export PDF">
+                <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-action-text">Export PDF</span>
+            </a>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                <!-- FIX: Added Actions column header (was missing entirely) -->
-                <tr><th>#</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>First Login</th><th>Joined</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
-                <tr th:each="member,idx : ${members}">
-                    <td th:text="${idx.count}"></td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold"
-                                 style="width:32px;height:32px;font-size:.8rem" th:text="${#strings.substring(member.fullName,0,1)}">A</div>
-                            <span th:text="${member.fullName}"></span>
-                        </div>
-                    </td>
-                    <td th:text="${member.email}"></td>
-                    <td th:text="${member.phone != null ? member.phone : '-'}"></td>
-                    <td><span class="badge" th:classappend="${member.role.name() == 'ADMIN'} ? 'bg-danger' : 'bg-primary'" th:text="${member.role}"></span></td>
-                    <td><span class="badge" th:classappend="${member.active} ? 'bg-success' : 'bg-secondary'" th:text="${member.active} ? 'Active' : 'Inactive'"></span></td>
-                    <td>
-                        <span class="badge" th:classappend="${member.firstLogin} ? 'bg-warning text-dark' : 'bg-success'"
-                              th:text="${member.firstLogin} ? 'Pending Change' : 'Completed'"></span>
-                    </td>
-                    <td th:text="${#temporals.format(member.createdAt, 'dd MMM yyyy')}"></td>
-                    <!-- FIX: Added Actions column with Edit, Toggle-Status, and Reset-Password buttons -->
-                    <td>
-                        <div class="d-flex gap-1 flex-wrap">
-                            <a th:href="@{/admin/members/{id}/edit(id=${member.id})}"
-                               class="btn btn-sm btn-outline-primary" title="Edit Member">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            <form th:action="@{/admin/members/{id}/toggle-status(id=${member.id})}" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-sm"
-                                        th:classappend="${member.active} ? 'btn-outline-danger' : 'btn-outline-success'"
-                                        th:title="${member.active} ? 'Deactivate Member' : 'Activate Member'">
-                                    <i class="bi" th:classappend="${member.active} ? 'bi-toggle-on' : 'bi-toggle-off'"></i>
-                                </button>
-                            </form>
-                            <form th:action="@{/admin/members/{id}/reset-password(id=${member.id})}" method="post" class="d-inline"
-                                  th:attr="onsubmit=|return confirm('Reset password for ' + ${member.fullName} + '?')|">
-                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Reset Password">
-                                    <i class="bi bi-key"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                <!-- FIX: Updated colspan from 8 to 9 to match new column count -->
-                <tr th:if="${#lists.isEmpty(members)}"><td colspan="9" class="text-center text-muted py-4">No members registered</td></tr>
-                </tbody>
-            </table>
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr><th>#</th><th>Full Name</th><th>Email</th><th class="hide-mobile">Phone</th><th>Role</th><th>Status</th><th class="hide-mobile">First Login</th><th class="hide-mobile">Joined</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="member,idx : ${members}">
+                            <td th:text="${idx.count}"></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold"
+                                         style="width:32px;height:32px;font-size:.8rem" th:text="${#strings.substring(member.fullName,0,1)}">A</div>
+                                    <span th:text="${member.fullName}"></span>
+                                </div>
+                            </td>
+                            <td th:text="${member.email}"></td>
+                            <td class="hide-mobile" th:text="${member.phone != null ? member.phone : '-'}"></td>
+                            <td><span class="badge" th:classappend="${member.role.name() == 'ADMIN'} ? 'bg-danger' : 'bg-primary'" th:text="${member.role}"></span></td>
+                            <td><span class="badge" th:classappend="${member.active} ? 'bg-success' : 'bg-secondary'" th:text="${member.active} ? 'Active' : 'Inactive'"></span></td>
+                            <td class="hide-mobile">
+                                <span class="badge" th:classappend="${member.firstLogin} ? 'bg-warning text-dark' : 'bg-success'"
+                                      th:text="${member.firstLogin} ? 'Pending' : 'Done'"></span>
+                            </td>
+                            <td class="hide-mobile" th:text="${#temporals.format(member.createdAt, 'dd MMM yyyy')}"></td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <a th:href="@{/admin/members/{id}/edit(id=${member.id})}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    <form th:action="@{/admin/members/{id}/toggle-status(id=${member.id})}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-sm"
+                                                th:classappend="${member.active} ? 'btn-outline-danger' : 'btn-outline-success'"
+                                                th:title="${member.active} ? 'Deactivate' : 'Activate'">
+                                            <i class="bi" th:classappend="${member.active} ? 'bi-toggle-on' : 'bi-toggle-off'"></i>
+                                        </button>
+                                    </form>
+                                    <form th:action="@{/admin/members/{id}/reset-password(id=${member.id})}" method="post" class="d-inline"
+                                          th:attr="onsubmit=|return confirm('Reset password for ' + ${member.fullName} + '?')|">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Reset Password"><i class="bi bi-key"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(members)}"><td colspan="9" class="text-center text-muted py-4">No members registered</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
+
 <div th:replace="~{fragments :: appScripts}"></div>
-</body></html>
+</body>
+</html>
