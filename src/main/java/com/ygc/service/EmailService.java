@@ -18,6 +18,9 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private final LoggingUtil loggingUtil;
 
+    @org.springframework.beans.factory.annotation.Value("${ygc.mail.from:${spring.mail.username:medipalli.vinaykumar@gmail.com}}")
+    private String mailFrom;
+
     @Async
     public void sendEmail(String to, String subject, String body) {
         sendHtmlEmail(to, subject, getPlainHtmlTemplate(subject, body));
@@ -69,7 +72,7 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject("[YGC Internal] " + subject);
             helper.setText(htmlBody, true);
-            helper.setFrom("noreply@ygcinternal.com");
+            helper.setFrom(mailFrom);
 
             if (attachmentPath != null) {
                 File file = new File(attachmentPath);
