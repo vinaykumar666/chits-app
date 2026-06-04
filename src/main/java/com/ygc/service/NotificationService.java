@@ -8,10 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +20,16 @@ public class NotificationService {
 
     private final LoggingUtil loggingUtil;
 
+    /** Live SSE connections keyed by user email */
     private final Map<String, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
+
+    /**
+     * FIX: Server-side notification history per user (last 50 per user).
+     * Persists across page navigations — the bell panel reads from here
+     * via GET /api/notifications/history instead of relying on JS in-memory log.
+     */
+    private final Map<String, Deque<Notification>> history = new ConcurrentHashMap<>();
+    private static final int MAX_HISTORY = 50;
 
     // ── SSE subscription ────────────────────────────────────────────────────
     public SseEmitter subscribe(String userEmail) {
@@ -31,6 +40,24 @@ public class NotificationService {
         emitter.onTimeout(cleanup);
         emitter.onError(e -> cleanup.run());
         loggingUtil.event("subscribe", "SSE_CONNECTED", "user", userEmail, "activeConnections", countConnections());
+
+        // FIX: send any unread history immediately on (re)connect so toasts
+        //      fire for events that arrived while this tab was closed/reloading.
+        Deque<Notification> userHistory = history.get(userEmail);
+        if (userHistory != null && !userHistory.isEmpty()) {
+            List<Notification> pending = new ArrayList<>(userHistory);
+            Collections.reverse(pending); // oldest first
+            for (Notification n : pending) {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .id(n.getId())
+                            .name(n.getType().name())
+                            .data(n.toJson()));
+                } catch (IOException ignored) {
+                    break;
+                }
+            }
+        }
         return emitter;
     }
 
@@ -46,16 +73,56 @@ public class NotificationService {
         return emitters.values().stream().mapToLong(List::size).sum();
     }
 
+    // ── Notification history REST support ───────────────────────────────────
+
+    /**
+     * FIX: Returns the stored notification history for a user as a JSON array string.
+     * Called by GET /api/notifications/history when the bell panel opens.
+     */
+    public String getHistoryJson(String userEmail) {
+        Deque<Notification> userHistory = history.getOrDefault(userEmail, new ArrayDeque<>());
+        List<Notification> list = new ArrayList<>(userHistory); // newest first
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < list.size(); i++) {
+            sb.append(list.get(i).toJson());
+            if (i < list.size() - 1) sb.append(",");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    /**
+     * FIX: Clear history for a user (called when user explicitly dismisses all).
+     */
+    public void clearHistory(String userEmail) {
+        history.remove(userEmail);
+    }
+
     // ── Core push ───────────────────────────────────────────────────────────
     public void push(Notification notification) {
         loggingUtil.event("push", "NOTIFICATION_PUSH",
                 "type", notification.getType(),
                 "target", notification.getTargetUser() != null ? notification.getTargetUser() : "BROADCAST",
                 "chit", notification.getChitName());
+
         if (notification.getTargetUser() != null) {
+            // FIX: store in history before pushing
+            storeInHistory(notification.getTargetUser(), notification);
             pushToUser(notification.getTargetUser(), notification);
         } else {
-            emitters.forEach((user, list) -> pushToUser(user, notification));
+            // Broadcast: store for every connected user
+            emitters.keySet().forEach(user -> {
+                storeInHistory(user, notification);
+                pushToUser(user, notification);
+            });
+        }
+    }
+
+    private void storeInHistory(String userEmail, Notification notification) {
+        Deque<Notification> userHistory = history.computeIfAbsent(userEmail, k -> new ArrayDeque<>());
+        userHistory.addFirst(notification); // newest first
+        while (userHistory.size() > MAX_HISTORY) {
+            userHistory.removeLast();
         }
     }
 
@@ -134,7 +201,6 @@ public class NotificationService {
     }
 
     public void notifyAnnouncement(String title, String message) {
-        // Broadcast to all connected users
         push(new Notification(Notification.Type.ANNOUNCEMENT, "📢 " + title, message, null, null));
     }
 

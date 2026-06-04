@@ -4,9 +4,11 @@ import com.ygc.model.*;
 import com.ygc.repository.*;
 import com.ygc.service.ReportExportService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -15,11 +17,15 @@ import java.time.format.DateTimeFormatter;
 /**
  * Member-facing PDF export endpoints.
  * Each member can only export their own data.
+ *
+ * FIX: @Transactional(readOnly=true) + JOIN FETCH queries prevent
+ * LazyInitializationException and N+1 hangs.
  */
 @RestController
 @RequestMapping("/member/reports")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('MEMBER')")
+@Slf4j
 public class MemberReportController {
 
     private final ReportExportService reportExportService;
@@ -35,15 +41,18 @@ public class MemberReportController {
 
     /** Download a PDF summary of all chit memberships for the current user. */
     @GetMapping("/my-memberships/pdf")
+    @Transactional(readOnly = true)
     public ResponseEntity<byte[]> myMembershipsPdf(Authentication auth) {
         User user = getCurrentUser(auth);
-        var memberships = membershipRepository.findByUser(user);
+        // FIX: use findByUserForReport() — eagerly loads chit in one query
+        var memberships = membershipRepository.findByUserForReport(user);
         byte[] pdf = reportExportService.generateMemberSummaryReport(user, memberships);
         return pdfResponse(pdf, "YGC_My_Memberships_" + ts() + ".pdf");
     }
 
     /** Download a payment-history PDF for a specific membership (owner-only). */
     @GetMapping("/memberships/{id}/payments/pdf")
+    @Transactional(readOnly = true)
     public ResponseEntity<byte[]> membershipPaymentsPdf(@PathVariable Long id, Authentication auth) {
         User user = getCurrentUser(auth);
         ChitMembership membership = membershipRepository.findById(id)
@@ -54,7 +63,8 @@ public class MemberReportController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        var payments = paymentRepository.findByMembership(membership);
+        // FIX: use findByMembershipForReport() — eagerly loads all relations
+        var payments = paymentRepository.findByMembershipForReport(membership);
         byte[] pdf = reportExportService.generateMemberPaymentHistoryReport(user, membership, payments);
         String filename = "YGC_" + membership.getChit().getName().replaceAll("[^a-zA-Z0-9_-]", "_")
                 + "_Payments_" + ts() + ".pdf";
@@ -69,6 +79,7 @@ public class MemberReportController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
                 .body(pdf);
     }
 }
