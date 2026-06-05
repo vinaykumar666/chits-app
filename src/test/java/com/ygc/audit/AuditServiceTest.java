@@ -23,7 +23,7 @@ class AuditServiceTest {
     private AuditService auditService;
 
     @Test
-    @DisplayName("should create audit log with all fields")
+    @DisplayName("should create audit log with all fields and IP")
     void shouldCreateAuditLog() {
         User user = new User();
         user.setId(1L);
@@ -41,6 +41,8 @@ class AuditServiceTest {
         assertThat(saved.getEntityId()).isEqualTo(10L);
         assertThat(saved.getDescription()).isEqualTo("Chit created: Gold");
         assertThat(saved.getTimestamp()).isNotNull();
+        // IP defaults to SYSTEM when no request context (unit test)
+        assertThat(saved.getIpAddress()).isIn("SYSTEM", "UNKNOWN", null);
     }
 
     @Test
@@ -48,9 +50,7 @@ class AuditServiceTest {
     void shouldHandleNullEntityId() {
         User user = new User();
         user.setId(1L);
-
         auditService.log(user, "LOGIN", "User", null, "User logged in");
-
         verify(auditLogRepository).save(any(AuditLog.class));
     }
 }

@@ -140,7 +140,11 @@
     PAYMENT_REMINDER:           { cls: 'warn',    icon: '💰' },
     PAYMENT_DUE_ALERT:          { cls: 'error',   icon: '⚠️' },
     CHIT_MATURITY:              { cls: 'success', icon: '🎉' },
-    AGREEMENT_APPROVED:         { cls: 'success', icon: '📄' }
+    AGREEMENT_APPROVED:         { cls: 'success', icon: '📄' },
+    ADMIN_JOIN_REQUEST:         { cls: 'warn',    icon: '📋' },
+    ADMIN_PAYMENT_SUBMITTED:    { cls: 'warn',    icon: '💳' },
+    ADMIN_SETTLEMENT_REQUEST:   { cls: 'warn',    icon: '🏦' },
+    ADMIN_USER_DELETED:         { cls: 'error',   icon: '🗑' }
   };
 
   let sseConnection = null;
