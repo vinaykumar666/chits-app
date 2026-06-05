@@ -34,6 +34,9 @@ public class User {
     private boolean active = true;
     private boolean termsAccepted = false;
 
+    // Language preference for multilingual UI
+    private String languagePreference = "en"; // en, hi, ta, te, kn
+
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 

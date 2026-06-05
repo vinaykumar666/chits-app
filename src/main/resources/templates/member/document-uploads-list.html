@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('My Documents')}"></head>
+<body>
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>📋 My Uploaded Documents</h1>
+            <p class="text-muted">Track the status of your submitted documents</p>
+        </div>
+        <div class="col-md-4">
+            <a href="/member/documents/upload" class="btn btn-primary float-end">
+                <i class="bi bi-cloud-upload"></i> Upload New Document
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>✓ Success!</strong> <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>✗ Error!</strong> <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- No Documents -->
+    <div th:if="${documents.isEmpty()}">
+        <div class="alert alert-info">
+            <strong>ℹ️ No Documents Yet</strong>
+            <p>You haven't uploaded any documents yet. <a href="/member/documents/upload">Upload your first document here</a></p>
+        </div>
+    </div>
+
+    <!-- Documents List -->
+    <div th:unless="${documents.isEmpty()}">
+        <div class="row">
+            <div th:each="doc : ${documents}" class="col-md-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header">
+                        <div class="row">
+                            <div class="col-md-9">
+                                <h5 class="card-title mb-0" th:text="${doc.documentName}">Document Name</h5>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <span th:if="${doc.approvalStatus == 'PENDING'}" class="badge bg-warning">
+                                    ⏳ Pending
+                                </span>
+                                <span th:if="${doc.approvalStatus == 'APPROVED'}" class="badge bg-success">
+                                    ✓ Approved
+                                </span>
+                                <span th:if="${doc.approvalStatus == 'REJECTED'}" class="badge bg-danger">
+                                    ✗ Rejected
+                                </span>
+                                <span th:if="${doc.approvalStatus == 'UNDER_REVIEW'}" class="badge bg-info">
+                                    🔍 Review
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-5">Type:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-info" th:text="${doc.documentType}">Type</span>
+                            </dd>
+
+                            <dt class="col-sm-5">Language:</dt>
+                            <dd class="col-sm-7">
+                                <span th:switch="${doc.language}">
+                                    <span th:case="'en'">🇬🇧 English</span>
+                                    <span th:case="'hi'">🇮🇳 हिन्दी</span>
+                                    <span th:case="'ta'">தமிழ்</span>
+                                    <span th:case="'te'">తెలుగు</span>
+                                    <span th:case="'kn'">ಕನ್ನಡ</span>
+                                    <span th:default th:text="${doc.language}">Language</span>
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-5">File:</dt>
+                            <dd class="col-sm-7">
+                                <small th:text="${doc.fileName}">filename</small><br>
+                                <small class="text-muted" th:text="${#strings.formatFileSize(doc.fileSize)}">Size</small>
+                            </dd>
+
+                            <dt class="col-sm-5">Uploaded:</dt>
+                            <dd class="col-sm-7">
+                                <small th:text="${#temporals.format(doc.uploadedAt, 'dd-MMM-yyyy HH:mm')}">
+                                    Date
+                                </small>
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="card-footer bg-light">
+                        <a th:href="@{/member/documents/{id}/status(id=${doc.id})}"
+                           class="btn btn-sm btn-outline-primary">
+                            👁️ View Status
+                        </a>
+                        <a href="/member/documents/upload" class="btn btn-sm btn-outline-secondary">
+                            📤 Upload Another
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: appScripts}"></div>
+</body>
+</html>
+

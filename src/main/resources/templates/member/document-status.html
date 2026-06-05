@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Document Status')}"></head>
+<body>
+<div class="container mt-4">
+    <div class="mb-4">
+        <a href="/member/documents/my-uploads" class="btn btn-outline-secondary">← Back to My Documents</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Document Details -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0" th:text="${document.documentName}">Document Name</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Document Information</h6>
+                            <dl class="row">
+                                <dt class="col-sm-5">Type:</dt>
+                                <dd class="col-sm-7">
+                                    <span class="badge bg-info" th:text="${document.documentType}">Type</span>
+                                </dd>
+
+                                <dt class="col-sm-5">Language:</dt>
+                                <dd class="col-sm-7">
+                                    <span th:switch="${document.language}">
+                                        <span th:case="'en'">🇬🇧 English</span>
+                                        <span th:case="'hi'">🇮🇳 हिन्दी (Hindi)</span>
+                                        <span th:case="'ta'">தமிழ் (Tamil)</span>
+                                        <span th:case="'te'">తెలుగు (Telugu)</span>
+                                        <span th:case="'kn'">ಕನ್ನಡ (Kannada)</span>
+                                        <span th:default th:text="${document.language}">Language</span>
+                                    </span>
+                                </dd>
+
+                                <dt class="col-sm-5">File:</dt>
+                                <dd class="col-sm-7">
+                                    <small th:text="${document.fileName}">filename</small>
+                                </dd>
+
+                                <dt class="col-sm-5">Size:</dt>
+                                <dd class="col-sm-7">
+                                    <small th:text="${#strings.formatFileSize(document.fileSize)}">Size</small>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Status Information</h6>
+                            <dl class="row">
+                                <dt class="col-sm-5">Status:</dt>
+                                <dd class="col-sm-7">
+                                    <span th:if="${document.approvalStatus == 'PENDING'}" class="badge bg-warning text-dark">
+                                        ⏳ Pending Review
+                                    </span>
+                                    <span th:if="${document.approvalStatus == 'APPROVED'}" class="badge bg-success">
+                                        ✓ Approved
+                                    </span>
+                                    <span th:if="${document.approvalStatus == 'REJECTED'}" class="badge bg-danger">
+                                        ✗ Rejected
+                                    </span>
+                                    <span th:if="${document.approvalStatus == 'UNDER_REVIEW'}" class="badge bg-info">
+                                        🔍 Under Review
+                                    </span>
+                                </dd>
+
+                                <dt class="col-sm-5">Uploaded:</dt>
+                                <dd class="col-sm-7">
+                                    <small th:text="${#temporals.format(document.uploadedAt, 'dd-MMM-yyyy HH:mm')}">
+                                        Date
+                                    </small>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval History -->
+            <div class="card shadow-sm" th:if="${approvalHistory.isPresent()}">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">📋 Approval History</h5>
+                </div>
+                <div class="card-body">
+                    <div th:with="approval=${approvalHistory.get()}">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Approval Details</h6>
+                                <dl class="row">
+                                    <dt class="col-sm-6">Status:</dt>
+                                    <dd class="col-sm-6">
+                                        <span th:if="${approval.status == 'PENDING'}" class="badge bg-warning text-dark">
+                                            ⏳ Pending
+                                        </span>
+                                        <span th:if="${approval.status == 'APPROVED'}" class="badge bg-success">
+                                            ✓ Approved
+                                        </span>
+                                        <span th:if="${approval.status == 'REJECTED'}" class="badge bg-danger">
+                                            ✗ Rejected
+                                        </span>
+                                        <span th:if="${approval.status == 'UNDER_REVIEW'}" class="badge bg-info">
+                                            🔍 Under Review
+                                        </span>
+                                    </dd>
+
+                                    <dt class="col-sm-6" th:if="${approval.approvedBy}">Approved By:</dt>
+                                    <dd class="col-sm-6" th:if="${approval.approvedBy}">
+                                        <small th:text="${approval.approvedBy.name}">Admin Name</small>
+                                    </dd>
+
+                                    <dt class="col-sm-6" th:if="${approval.approvedAt}">Decision Date:</dt>
+                                    <dd class="col-sm-6" th:if="${approval.approvedAt}">
+                                        <small th:text="${#temporals.format(approval.approvedAt, 'dd-MMM-yyyy HH:mm')}">
+                                            Date
+                                        </small>
+                                    </dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Remarks</h6>
+                                <div th:if="${approval.approvalComments}" class="alert alert-info">
+                                    <p class="mb-0" th:text="${approval.approvalComments}">Comments</p>
+                                </div>
+                                <div th:if="${approval.rejectionReason}" class="alert alert-danger">
+                                    <strong>Reason for Rejection:</strong>
+                                    <p class="mb-0" th:text="${approval.rejectionReason}">Reason</p>
+                                </div>
+                                <div th:if="${!approval.approvalComments && !approval.rejectionReason}" class="text-muted">
+                                    <small>No remarks</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- No Approval History -->
+            <div class="alert alert-info" th:if="${!approvalHistory.isPresent()}">
+                <strong>ℹ️ Awaiting Review</strong>
+                <p class="mb-0">Your document is currently pending admin review. You'll be notified via email once a decision is made.</p>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Status Card -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header" th:classappend="${document.approvalStatus == 'APPROVED' ? 'bg-success' : document.approvalStatus == 'REJECTED' ? 'bg-danger' : 'bg-warning'}">
+                    <h5 class="mb-0 text-white">Current Status</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h3 th:if="${document.approvalStatus == 'PENDING'}" class="text-warning">⏳ Pending</h3>
+                    <h3 th:if="${document.approvalStatus == 'APPROVED'}" class="text-success">✓ Approved</h3>
+                    <h3 th:if="${document.approvalStatus == 'REJECTED'}" class="text-danger">✗ Rejected</h3>
+                    <h3 th:if="${document.approvalStatus == 'UNDER_REVIEW'}" class="text-info">🔍 Under Review</h3>
+
+                    <p class="text-muted mt-2">
+                        <small th:if="${document.approvalStatus == 'PENDING'}">
+                            Your document is in the queue for admin review.
+                        </small>
+                        <small th:if="${document.approvalStatus == 'APPROVED'}">
+                            Your document has been approved by admin.
+                        </small>
+                        <small th:if="${document.approvalStatus == 'REJECTED'}">
+                            Your document was rejected. Please review the reason and resubmit.
+                        </small>
+                        <small th:if="${document.approvalStatus == 'UNDER_REVIEW'}">
+                            Admin is currently reviewing your document.
+                        </small>
+                    </p>
+                </div>
+            </div>
+
+            <!-- What's Next -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Next Steps</h5>
+                </div>
+                <div class="card-body">
+                    <ol class="small">
+                        <li th:if="${document.approvalStatus == 'PENDING'}">
+                            Admin will review your document
+                        </li>
+                        <li th:if="${document.approvalStatus == 'PENDING'}">
+                            You'll receive email notification
+                        </li>
+                        <li th:if="${document.approvalStatus == 'PENDING'}">
+                            Check back here for status updates
+                        </li>
+
+                        <li th:if="${document.approvalStatus == 'REJECTED'}">
+                            Address the rejection reason
+                        </li>
+                        <li th:if="${document.approvalStatus == 'REJECTED'}">
+                            Upload a corrected document
+                        </li>
+
+                        <li th:if="${document.approvalStatus == 'APPROVED'}">
+                            Document is now approved
+                        </li>
+                        <li th:if="${document.approvalStatus == 'APPROVED'}">
+                            You can proceed with your request
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-2">
+                <a href="/member/documents/upload" class="btn btn-primary">
+                    📤 Upload Another Document
+                </a>
+                <a href="/member/documents/my-uploads" class="btn btn-outline-secondary">
+                    📋 View All Documents
+                </a>
+                <a href="/member/dashboard" class="btn btn-outline-secondary">
+                    🏠 Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: appScripts}"></div>
+</body>
+</html>
+

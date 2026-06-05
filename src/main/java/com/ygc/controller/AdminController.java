@@ -39,6 +39,7 @@ public class AdminController {
     private final ChitHistoryService chitHistoryService;
     private final ChitAgreementService chitAgreementService;
     private final AuditService auditService;
+    private final DocumentApprovalService documentApprovalService;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -53,6 +54,7 @@ public class AdminController {
         model.addAttribute("pendingPayments", paymentService.getPendingPayments().size());
         model.addAttribute("pendingSettlements", settlementService.getPendingSettlements().size());
         model.addAttribute("openAuctions", auctionService.getOpenAuctions().size());
+        model.addAttribute("pendingDocuments", documentApprovalService.countPendingApprovals());
         model.addAttribute("recentAudits", auditLogRepository.findAll()
                 .stream().sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()))
                 .limit(10).toList());

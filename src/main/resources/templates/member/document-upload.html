@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Upload Document')}"></head>
+<body>
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>📤 Upload Document for Approval</h1>
+            <p class="text-muted">Upload documents that require admin approval</p>
+        </div>
+    </div>
+
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>✓ Success!</strong> <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>✗ Error!</strong> <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Document Upload Form</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        <!-- Document Name -->
+                        <div class="mb-3">
+                            <label for="documentName" class="form-label">Document Name <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="documentName"
+                                   name="documentName"
+                                   placeholder="e.g., Bank Statement, ID Proof, etc."
+                                   required>
+                            <small class="form-text text-muted">Give your document a clear name</small>
+                        </div>
+
+                        <!-- Document Type -->
+                        <div class="mb-3">
+                            <label for="documentType" class="form-label">Document Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="documentType" name="documentType" required>
+                                <option value="">-- Select Document Type --</option>
+                                <option value="AGREEMENT">Agreement</option>
+                                <option value="CERTIFICATE">Certificate</option>
+                                <option value="PAYMENT_PROOF">Payment Proof</option>
+                                <option value="IDENTIFICATION">Identification</option>
+                                <option value="BANK_STATEMENT">Bank Statement</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                            <small class="form-text text-muted">Select the appropriate document type</small>
+                        </div>
+
+                        <!-- Language -->
+                        <div class="mb-3">
+                            <label for="language" class="form-label">Document Language <span class="text-danger">*</span></label>
+                            <select class="form-select" id="language" name="language" required>
+                                <option value="en">🇬🇧 English</option>
+                                <option value="hi">🇮🇳 हिन्दी (Hindi)</option>
+                                <option value="ta">தமிழ் (Tamil)</option>
+                                <option value="te">తెలుగు (Telugu)</option>
+                                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                            </select>
+                            <small class="form-text text-muted">Select the language in which the document is written. Approval notification will be sent in this language.</small>
+                        </div>
+
+                        <!-- File Upload -->
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Upload File (PDF, Image) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="file"
+                                       class="form-control"
+                                       id="file"
+                                       name="file"
+                                       accept=".pdf,.jpg,.jpeg,.png"
+                                       required
+                                       onchange="updateFileInfo()">
+                                <span class="input-group-text">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </span>
+                            </div>
+                            <small class="form-text text-muted">
+                                Max file size: 10MB. Supported: PDF, JPG, PNG
+                            </small>
+                            <div id="fileInfo" class="mt-2"></div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-cloud-upload"></i> Upload Document
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Info Section -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">ℹ️ Information</h5>
+                </div>
+                <div class="card-body">
+                    <h6>What happens after upload?</h6>
+                    <ol>
+                        <li>Your document will be submitted for admin review</li>
+                        <li>Admin will examine your document</li>
+                        <li>You'll receive email notification with approval/rejection status</li>
+                        <li>Email will be sent in your selected language</li>
+                        <li>If rejected, you can resubmit with corrections</li>
+                    </ol>
+
+                    <h6 class="mt-3">Multilingual Support</h6>
+                    <p>
+                        Your approval notification will be sent in the language you select above.
+                        This helps us communicate better with members across India in their preferred language.
+                    </p>
+
+                    <h6 class="mt-3">Document Guidelines</h6>
+                    <ul>
+                        <li>Ensure documents are clear and legible</li>
+                        <li>Upload original or certified copies</li>
+                        <li>Documents should not be blurry or incomplete</li>
+                        <li>All personal information should be clearly visible</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Quick Tips</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><span class="badge bg-success">✓</span> Clear, high-quality scans</li>
+                        <li><span class="badge bg-success">✓</span> All pages included</li>
+                        <li><span class="badge bg-success">✓</span> Select correct language</li>
+                        <li><span class="badge bg-success">✓</span> Under 10MB file size</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Recent Uploads</h5>
+                </div>
+                <div class="card-body">
+                    <a href="/member/documents/my-uploads" class="btn btn-outline-primary w-100">
+                        View My Uploads
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateFileInfo() {
+    const fileInput = document.getElementById('file');
+    const fileInfo = document.getElementById('fileInfo');
+
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        fileInfo.innerHTML = `<small class="text-success"><strong>File:</strong> ${file.name} (${sizeMB} MB)</small>`;
+    } else {
+        fileInfo.innerHTML = '';
+    }
+}
+
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('file');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        e.preventDefault();
+        alert('Please select a file to upload');
+        return false;
+    }
+    const file = fileInput.files[0];
+    if (file.size > 10 * 1024 * 1024) {
+        e.preventDefault();
+        alert('File size exceeds 10MB limit');
+        return false;
+    }
+});
+</script>
+
+<div th:replace="~{fragments :: appScripts}"></div>
+</body>
+</html>
+
