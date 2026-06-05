@@ -152,9 +152,11 @@
                     </td>
                     <td><small class="text-muted font-monospace" th:text="${m.agreementNumber != null ? m.agreementNumber : '—'}"></small></td>
                     <td>
-                        <span th:if="${m.agreementPdfPath != null}" class="badge bg-primary">
-                            <i class="bi bi-file-earmark-pdf-fill"></i> Generated
-                        </span>
+                        <a th:if="${m.agreementPdfPath != null}"
+                           th:href="@{/admin/agreements/{id}/download(id=${m.id})}"
+                           class="btn btn-sm btn-outline-danger" target="_blank" title="Download Agreement PDF">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i><span class="btn-action-text">PDF</span>
+                        </a>
                         <span th:if="${m.agreementPdfPath == null}" class="text-muted small">—</span>
                     </td>
                     <td><span class="badge" th:classappend="${m.hasWonAuction} ? 'bg-warning text-dark' : 'bg-light text-muted'" th:text="${m.hasWonAuction} ? 'Yes' : 'No'"></span></td>

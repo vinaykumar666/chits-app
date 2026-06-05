@@ -36,6 +36,7 @@ public class AdminController {
     private final PasswordEncoder passwordEncoder;
     private final SettlementRepository settlementRepository;
     private final ChitHistoryService chitHistoryService;
+    private final ChitAgreementService chitAgreementService;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -557,6 +558,43 @@ public class AdminController {
         return "redirect:/admin/chits/" + chitId;
     }
 
+    // ── Agreement Download (Admin can download any agreement anytime) ─────
+    @GetMapping("/agreements/{membershipId}/download")
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.Resource> downloadAgreement(
+            @PathVariable Long membershipId, Authentication auth) {
+        ChitMembership m = membershipRepository.findById(membershipId)
+                .orElseThrow(() -> new RuntimeException("Membership not found: " + membershipId));
+
+        String pdfPath = m.getAgreementPdfPath();
+        if (pdfPath == null || pdfPath.isBlank()) {
+            try {
+                pdfPath = chitAgreementService.generateAndDistributeAgreementPdf(m, getCurrentUser(auth));
+            } catch (Exception regen) {
+                throw new RuntimeException("No agreement PDF and regeneration failed: " + regen.getMessage());
+            }
+        }
+
+        java.nio.file.Path file = java.nio.file.Paths.get(pdfPath);
+        if (!java.nio.file.Files.exists(file)) {
+            // File missing from disk — regenerate
+            try {
+                pdfPath = chitAgreementService.generateAndDistributeAgreementPdf(m, getCurrentUser(auth));
+                file = java.nio.file.Paths.get(pdfPath);
+            } catch (Exception regen) {
+                throw new RuntimeException("Agreement PDF not found and regeneration failed.");
+            }
+        }
+
+        org.springframework.core.io.Resource resource = new org.springframework.core.io.FileSystemResource(file);
+        String filename = "Agreement_" + (m.getAgreementNumber() != null ? m.getAgreementNumber() : membershipId) + ".pdf";
+
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + filename + "\"")
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(resource);
+    }
+
     // ── Chit History (Closed / Archived Chits) ─────────────────────────────
 
     /**
@@ -566,7 +604,15 @@ public class AdminController {
     @GetMapping("/chit-history")
     public String chitHistory(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
-        model.addAttribute("histories", chitHistoryService.findAll());
+        List<ChitHistory> histories = chitHistoryService.findAll();
+        model.addAttribute("histories", histories);
+        // Pre-compute filtered counts — SpEL .?[] inside Thymeleaf #lists can fail at runtime
+        model.addAttribute("deletedCount", histories.stream()
+                .filter(h -> "DELETED".equals(h.getFinalStatus())).count());
+        model.addAttribute("completedCount", histories.stream()
+                .filter(h -> "COMPLETED".equals(h.getFinalStatus())).count());
+        model.addAttribute("cancelledCount", histories.stream()
+                .filter(h -> "CANCELLED".equals(h.getFinalStatus())).count());
         return "admin/chit-history";
     }
 
