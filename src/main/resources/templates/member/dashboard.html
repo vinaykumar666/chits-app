@@ -13,10 +13,13 @@
     </div>
     <div class="d-flex align-items-center gap-2">
       <a th:href="@{/member/reports/my-memberships/pdf}" class="btn btn-sm btn-outline-warning fw-bold" title="Download your chit memberships statement">
-        <i class="bi bi-file-earmark-pdf me-1"></i>My Statement
+        <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-action-text">My Statement</span>
       </a>
       <span class="ygc-conn-dot" title="Live notifications active"></span>
-      <span id="ygc-notif-badge" class="badge bg-danger rounded-pill" style="display:none"></span>
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
       <span class="user-badge" th:text="${user.email}">user@email.com</span>
     </div>
   </div>

@@ -1,6 +1,5 @@
 package com.ygc.controller;
 
-import com.ygc.audit.AuditService;
 import com.ygc.model.*;
 import com.ygc.repository.*;
 import com.ygc.service.*;
@@ -38,7 +37,9 @@ public class AdminController {
     private final SettlementRepository settlementRepository;
     private final ChitHistoryService chitHistoryService;
     private final ChitAgreementService chitAgreementService;
-    private final AuditService auditService;
+    private final EarlyExitService earlyExitService;
+    private final RiskScoreService riskScoreService;
+    private final LoginTrackingService loginTrackingService;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -476,17 +477,52 @@ public class AdminController {
             // 4. Notify admin
             notificationService.notifyAdminUserDeleted(admin.getEmail(), memberName);
 
-            // 5. Delete the user
-            userRepository.delete(member);
-            userRepository.flush();
+            // 5. Soft-delete: anonymize & deactivate (hard-delete would violate
+            //    FK constraints from AuditLog, Bid, Auction, Payment, Chit)
+            member.setActive(false);
+            member.setFullName("[Deleted] " + memberName);
+            member.setPhone(null);
+            member.setAddress(null);
+            member.setFirstLogin(true);
+            member.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            userRepository.save(member);
 
             ra.addFlashAttribute("success",
-                    "User '" + memberName + "' deleted. Email notification sent. " +
-                    activeMemberships.size() + " membership(s) exited.");
+                    "User '" + memberName + "' removed and anonymized. Email notification sent. "
+                    + activeMemberships.size() + " membership(s) exited.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Delete failed: " + e.getMessage());
         }
         return "redirect:/admin/members";
+    }
+
+    // ── Early Exit Management ──────────────────────────────────────────────
+    @GetMapping("/early-exits")
+    public String earlyExits(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("requests", earlyExitService.getAllRequests());
+        return "admin/early-exits";
+    }
+
+    @PostMapping("/early-exits/{id}/process")
+    public String processEarlyExit(@PathVariable Long id,
+                                    @RequestParam boolean approved,
+                                    @RequestParam(required = false) String remarks,
+                                    Authentication auth, RedirectAttributes ra) {
+        try {
+            earlyExitService.processExit(id, approved, remarks != null ? remarks : "", getCurrentUser(auth), null);
+            ra.addFlashAttribute("success", (approved ? "Approved" : "Rejected") + " early exit request #" + id);
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/early-exits";
+    }
+
+    // ── Risk Dashboard ──────────────────────────────────────────────────────
+    @GetMapping("/risk-dashboard")
+    public String riskDashboard(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("alerts", riskScoreService.predictDefaulters());
+        model.addAttribute("recentLogins", loginTrackingService.getRecentLogins());
+        return "admin/risk-dashboard";
     }
 
     // ── Announcements ─────────────────────────────────────────────────────

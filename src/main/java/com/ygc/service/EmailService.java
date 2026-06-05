@@ -18,7 +18,7 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private final LoggingUtil loggingUtil;
 
-    @org.springframework.beans.factory.annotation.Value("${ygc.mail.from:${spring.mail.username:medipalli.vinaykumar@gmail.com}}")
+    @org.springframework.beans.factory.annotation.Value("${ygc.mail.from:${spring.mail.username:noreply@ygcinternal.com}}")
     private String mailFrom;
 
     @Async

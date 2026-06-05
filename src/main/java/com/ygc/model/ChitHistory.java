@@ -33,7 +33,7 @@ public class ChitHistory {
     private String finalStatus;
 
     /** Admin-supplied reason for closing/deleting */
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "CLOB")
     private String closingReason;
 
     /** Admin who triggered the close/delete */
@@ -41,8 +41,7 @@ public class ChitHistory {
     private String closedByName;
 
     /** Full snapshot: chit + members + payments + auctions + commissions + settlements */
-    @Lob
-    @Column(name = "complete_data_json", columnDefinition = "TEXT", nullable = false)
+    @Column(name = "complete_data_json", columnDefinition = "CLOB", nullable = false, length = Integer.MAX_VALUE)
     private String completeDataJson;
 
     /** Path of the generated analysis PDF (null if PDF generation failed) */

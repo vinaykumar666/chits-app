@@ -5,145 +5,78 @@
 <div th:replace="~{fragments :: adminSidebar('history')}"></div>
 <button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
 
-<style>
-    .history-badge-DELETED    { background: #dc3545; }
-    .history-badge-CANCELLED  { background: #fd7e14; }
-    .history-badge-COMPLETED  { background: #198754; }
-    .json-preview {
-        background: #0f0f1a; color: #a8d8a8;
-        font-family: 'Courier New', monospace; font-size: 0.78rem;
-        max-height: 420px; overflow-y: auto;
-        border-radius: 10px; padding: 16px;
-        white-space: pre-wrap; word-break: break-all;
-    }
-</style>
-
 <div class="main-content">
-    <div th:replace="~{fragments :: topbar('📦 Closed Chit History', 'Complete records of all archived, cancelled, completed, and deleted chits', ${user.fullName})}"></div>
+    <div class="topbar">
+        <div>
+            <h4>Closed Chit History</h4>
+            <div class="sub">Records of all archived, cancelled, completed, and deleted chits</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="ygc-conn-dot"></span>
+            <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" style="font-size:1.3rem;line-height:1">
+                <i class="bi bi-bell"></i>
+                <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+            </button>
+            <span class="user-badge" th:text="${user.fullName}">Admin</span>
+        </div>
+    </div>
     <div th:replace="~{fragments :: alerts}"></div>
 
-    <!-- Summary counts — using pre-computed values from controller -->
+    <!-- Stats -->
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
-            <div class="card stat-card h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-archive"></i></div>
-                    <div>
-                        <div class="fw-bold fs-5" th:text="${histories.size()}">0</div>
-                        <small class="text-muted">Total Archived</small>
-                    </div>
-                </div>
-            </div>
+            <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-archive"></i></div>
+                <div><div class="fw-bold fs-5" th:text="${histories.size()}">0</div><small class="text-muted">Total Archived</small></div>
+            </div></div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="card stat-card h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-trash3"></i></div>
-                    <div>
-                        <div class="fw-bold fs-5" th:text="${deletedCount}">0</div>
-                        <small class="text-muted">Deleted</small>
-                    </div>
-                </div>
-            </div>
+            <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-trash3"></i></div>
+                <div><div class="fw-bold fs-5" th:text="${deletedCount}">0</div><small class="text-muted">Deleted</small></div>
+            </div></div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="card stat-card h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-x-circle"></i></div>
-                    <div>
-                        <div class="fw-bold fs-5" th:text="${cancelledCount}">0</div>
-                        <small class="text-muted">Cancelled</small>
-                    </div>
-                </div>
-            </div>
+            <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-x-circle"></i></div>
+                <div><div class="fw-bold fs-5" th:text="${cancelledCount}">0</div><small class="text-muted">Cancelled</small></div>
+            </div></div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="card stat-card h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle"></i></div>
-                    <div>
-                        <div class="fw-bold fs-5" th:text="${completedCount}">0</div>
-                        <small class="text-muted">Completed</small>
-                    </div>
-                </div>
-            </div>
+            <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle"></i></div>
+                <div><div class="fw-bold fs-5" th:text="${completedCount}">0</div><small class="text-muted">Completed</small></div>
+            </div></div>
         </div>
     </div>
 
-    <!-- History table -->
+    <!-- Table -->
     <div class="card panel">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-clock-history me-2 text-warning"></i>All Archived Chit Records</span>
+            <span><i class="bi bi-clock-history me-2 text-warning"></i>All Archived Records</span>
             <small class="text-muted" th:text="${histories.size()} + ' records'"></small>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                <tr>
-                    <th>#</th>
-                    <th>Chit Name</th>
-                    <th>Status</th>
-                    <th class="hide-mobile">Closing Reason</th>
-                    <th class="hide-mobile">Closed By</th>
-                    <th>Archived At</th>
-                    <th>Actions</th>
-                </tr>
+                <tr><th>#</th><th>Chit Name</th><th>Status</th><th class="hide-mobile">Reason</th><th class="hide-mobile">Closed By</th><th>Date</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="h, idx : ${histories}">
                     <td th:text="${idx.count}"></td>
+                    <td><div class="fw-semibold" th:text="${h.chitName}"></div></td>
+                    <td><span class="badge" th:classappend="${h.finalStatus == 'DELETED'} ? 'bg-danger' : (${h.finalStatus == 'COMPLETED'} ? 'bg-success' : 'bg-warning text-dark')" th:text="${h.finalStatus}"></span></td>
+                    <td class="hide-mobile"><small class="text-muted" th:text="${h.closingReason != null ? h.closingReason : '—'}"></small></td>
+                    <td class="hide-mobile" th:text="${h.closedByName}"></td>
+                    <td><small th:text="${h.closedAt != null ? #temporals.format(h.closedAt, 'dd MMM yyyy') : '—'}"></small></td>
                     <td>
-                        <div class="fw-semibold" th:text="${h.chitName}"></div>
-                        <small class="text-muted" th:if="${h.originalChitId != null}"
-                               th:text="'ID #' + ${h.originalChitId}"></small>
-                    </td>
-                    <td>
-                        <span class="badge"
-                              th:classappend="${h.finalStatus == 'DELETED'} ? 'history-badge-DELETED' : (${h.finalStatus == 'COMPLETED'} ? 'history-badge-COMPLETED' : 'history-badge-CANCELLED')"
-                              th:text="${h.finalStatus}"></span>
-                    </td>
-                    <td class="hide-mobile">
-                        <span th:if="${h.closingReason != null}" class="text-muted small"
-                              th:text="${#strings.length(h.closingReason) > 50 ? #strings.substring(h.closingReason,0,50) + '...' : h.closingReason}">
-                        </span>
-                        <span th:if="${h.closingReason == null}" class="text-muted small">—</span>
-                    </td>
-                    <td class="hide-mobile">
-                        <div th:text="${h.closedByName}"></div>
-                        <small class="text-muted" th:text="${h.closedByEmail}"></small>
-                    </td>
-                    <td>
-                        <div th:text="${#temporals.format(h.closedAt, 'dd MMM yyyy')}"></div>
-                        <small class="text-muted" th:text="${#temporals.format(h.closedAt, 'HH:mm')}"></small>
-                    </td>
-                    <td>
-                        <div class="d-flex gap-1 flex-wrap">
-                            <a th:href="@{/admin/chit-history/{id}/pdf(id=${h.id})}"
-                               class="btn btn-sm btn-outline-danger" title="Download PDF" target="_blank">
-                                <i class="bi bi-file-earmark-pdf"></i>
-                            </a>
-                            <button class="btn btn-sm btn-outline-secondary"
-                                    th:data-id="${h.id}"
-                                    th:data-name="${h.chitName}"
-                                    onclick="viewJson(this)"
-                                    title="View JSON">
-                                <i class="bi bi-braces"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-primary"
-                                    data-bs-toggle="modal"
-                                    th:attr="data-bs-target='#summaryModal' + ${h.id}"
-                                    title="View summary">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                        </div>
+                        <a th:href="@{/admin/chit-history/{id}/pdf(id=${h.id})}" class="btn btn-sm btn-outline-danger" target="_blank" title="PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+                        <a th:href="@{/admin/chit-history/{id}/json(id=${h.id})}" class="btn btn-sm btn-outline-secondary" target="_blank" title="JSON"><i class="bi bi-braces"></i></a>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(histories)}">
-                    <td colspan="7" class="text-center text-muted py-5">
-                        <i class="bi bi-archive fs-1 d-block mb-2 opacity-25"></i>
-                        No archived chits yet. Records appear here when a chit is deleted or closed.
-                    </td>
+                    <td colspan="7" class="text-center text-muted py-5"><i class="bi bi-archive fs-1 d-block mb-2 opacity-25"></i>No archived chits yet.</td>
                 </tr>
                 </tbody>
             </table>
@@ -152,107 +85,6 @@
     </div>
 </div>
 
-<!-- Summary modals -->
-<div th:each="h : ${histories}">
-  <div class="modal fade" th:id="'summaryModal' + ${h.id}" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header" style="background:var(--dark,#0f0f1a);color:var(--gold,#f0a500)">
-          <h5 class="modal-title">
-            <i class="bi bi-archive me-2"></i>
-            <span th:text="${h.chitName}"></span>
-            <small class="ms-2 opacity-75" th:text="'[' + ${h.finalStatus} + ']'"></small>
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row g-2 mb-3">
-            <div class="col-sm-6">
-              <div class="p-3 rounded" style="background:#f8f9fe">
-                <small class="text-muted d-block">Closed By</small>
-                <strong th:text="${h.closedByName}"></strong>
-                <div class="text-muted small" th:text="${h.closedByEmail}"></div>
-              </div>
-            </div>
-            <div class="col-sm-6">
-              <div class="p-3 rounded" style="background:#f8f9fe">
-                <small class="text-muted d-block">Archived At</small>
-                <strong th:text="${#temporals.format(h.closedAt, 'dd MMM yyyy HH:mm')}"></strong>
-              </div>
-            </div>
-          </div>
-          <div th:if="${h.closingReason != null}" class="alert alert-warning py-2 mb-3">
-            <i class="bi bi-info-circle me-1"></i>
-            <strong>Reason:</strong> <span th:text="${h.closingReason}"></span>
-          </div>
-          <div class="d-flex gap-2">
-            <a th:href="@{/admin/chit-history/{id}/pdf(id=${h.id})}"
-               class="btn btn-danger btn-sm" target="_blank">
-              <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
-            </a>
-            <a th:href="@{/admin/chit-history/{id}/json(id=${h.id})}"
-               class="btn btn-secondary btn-sm" target="_blank">
-              <i class="bi bi-braces me-1"></i>Raw JSON
-            </a>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- JSON viewer modal -->
-<div class="modal fade" id="jsonViewerModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header" style="background:var(--dark,#0f0f1a);color:#a8d8a8">
-                <h5 class="modal-title"><i class="bi bi-braces me-2"></i>JSON — <span id="jsonModalChitName"></span></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="json-preview" id="jsonContent">Loading...</div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-success btn-sm" onclick="copyJson()">
-                    <i class="bi bi-clipboard me-1"></i>Copy
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div th:replace="~{fragments :: appScripts}"></div>
-<script>
-function viewJson(btn) {
-    var id   = btn.getAttribute('data-id');
-    var name = btn.getAttribute('data-name');
-    document.getElementById('jsonModalChitName').textContent = name;
-    document.getElementById('jsonContent').textContent = 'Loading...';
-    var modal = new bootstrap.Modal(document.getElementById('jsonViewerModal'));
-    modal.show();
-    fetch('/admin/chit-history/' + id + '/json')
-        .then(function(r) { return r.text(); })
-        .then(function(text) {
-            try {
-                document.getElementById('jsonContent').textContent = JSON.stringify(JSON.parse(text), null, 2);
-            } catch(e) {
-                document.getElementById('jsonContent').textContent = text;
-            }
-        })
-        .catch(function(e) { document.getElementById('jsonContent').textContent = 'Error: ' + e; });
-}
-function copyJson() {
-    var text = document.getElementById('jsonContent').textContent;
-    navigator.clipboard.writeText(text).then(function() {
-        var btn = event.target.closest('button');
-        btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
-        setTimeout(function() { btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy'; }, 2000);
-    });
-}
-</script>
 </body>
 </html>

@@ -2,6 +2,7 @@ package com.ygc.repository;
 
 import com.ygc.model.Payment;
 import com.ygc.model.ChitMembership;
+import com.ygc.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -12,6 +13,7 @@ import java.util.List;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByMembership(ChitMembership membership);
+    List<Payment> findByMembershipUser(User user);
     List<Payment> findByStatus(Payment.PaymentStatus status);
     List<Payment> findByMembershipAndStatus(ChitMembership membership, Payment.PaymentStatus status);
 

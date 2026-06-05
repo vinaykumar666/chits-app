@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Early Exits')}"></head>
+<body>
+<div th:replace="~{fragments :: adminSidebar('exits')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
+<div class="main-content">
+    <div th:replace="~{fragments :: topbar('Early Exit Management', 'Review and process member exit requests', ${user.fullName})}"></div>
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <div class="card panel">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-door-open me-2 text-warning"></i>Exit Requests</span>
+            <span class="badge bg-secondary" th:text="${requests.size()} + ' total'"></span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                <tr><th>#</th><th>Member</th><th>Chit</th><th>Paid</th><th>Penalty</th><th>Refund</th><th>Status</th><th class="hide-mobile">Reason</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="r, idx : ${requests}">
+                    <td th:text="${idx.count}"></td>
+                    <td><div class="fw-semibold" th:text="${r.membership.user.fullName}"></div>
+                        <small class="text-muted" th:text="${r.membership.user.email}"></small></td>
+                    <td th:text="${r.membership.chit.name}"></td>
+                    <td class="fw-bold text-success" th:text="'₹' + ${r.totalPaid}"></td>
+                    <td class="text-danger" th:text="'₹' + ${r.penaltyAmount} + ' (' + ${r.penaltyPercentage} + '%)'"></td>
+                    <td class="fw-bold" th:text="'₹' + ${r.refundAmount}"></td>
+                    <td><span class="badge" th:classappend="${r.status.name() == 'REQUESTED'} ? 'bg-warning text-dark' : (${r.status.name() == 'APPROVED'} ? 'bg-success' : (${r.status.name() == 'REJECTED'} ? 'bg-danger' : 'bg-secondary'))" th:text="${r.status}"></span></td>
+                    <td class="hide-mobile"><small th:text="${r.reason}"></small></td>
+                    <td>
+                        <div th:if="${r.status.name() == 'REQUESTED'}" class="d-flex gap-1">
+                            <form th:action="@{/admin/early-exits/{id}/process(id=${r.id})}" method="post" class="d-inline">
+                                <input type="hidden" name="approved" value="true">
+                                <input type="hidden" name="remarks" value="Approved">
+                                <button class="btn btn-sm btn-success"><i class="bi bi-check"></i></button>
+                            </form>
+                            <form th:action="@{/admin/early-exits/{id}/process(id=${r.id})}" method="post" class="d-inline">
+                                <input type="hidden" name="approved" value="false">
+                                <input type="hidden" name="remarks" value="Rejected by admin">
+                                <button class="btn btn-sm btn-danger"><i class="bi bi-x"></i></button>
+                            </form>
+                        </div>
+                        <small th:if="${r.status.name() != 'REQUESTED'}" class="text-muted" th:text="${r.adminRemarks}"></small>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(requests)}"><td colspan="9" class="text-center text-muted py-4">No exit requests</td></tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

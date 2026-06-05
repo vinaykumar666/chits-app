@@ -59,6 +59,8 @@
     <a th:href="@{/admin/chit-history}"       class="nav-link" th:classappend="${active=='history'      ? ' active' : ''}"><i class="bi bi-archive"></i> Chit History</a>
     <a th:href="@{/admin/announcements}"      class="nav-link" th:classappend="${active=='announce'     ? ' active' : ''}"><i class="bi bi-megaphone"></i> Announcements</a>
     <a th:href="@{/admin/audit}"              class="nav-link" th:classappend="${active=='audit'        ? ' active' : ''}"><i class="bi bi-shield-check"></i> Audit Log</a>
+    <a th:href="@{/admin/early-exits}"        class="nav-link" th:classappend="${active=='exits'        ? ' active' : ''}"><i class="bi bi-door-open"></i> Early Exits</a>
+    <a th:href="@{/admin/risk-dashboard}"     class="nav-link" th:classappend="${active=='risk'         ? ' active' : ''}"><i class="bi bi-exclamation-triangle"></i> Risk &amp; Fraud</a>
     <a th:href="@{/help}"                     class="nav-link" th:classappend="${active=='help'         ? ' active' : ''}"><i class="bi bi-question-circle"></i> Help</a>
     <a th:href="@{/logout}"                   class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
   </nav>

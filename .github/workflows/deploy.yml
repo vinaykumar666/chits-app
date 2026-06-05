@@ -3,7 +3,7 @@ name: Deploy YGC Production
 on:
   push:
     branches:
-      - main
+      - feature/extreme-features
 
 concurrency:
   group: production
