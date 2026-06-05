@@ -54,7 +54,7 @@ public class User {
     @Column(nullable = false)
     private String preferredLanguage = "en";
 
-    @Column(columnDefinition = "CLOB")
+    @Column(columnDefinition = "TEXT")
     private String deviceFingerprints;
 
     private String lastLoginIp;
