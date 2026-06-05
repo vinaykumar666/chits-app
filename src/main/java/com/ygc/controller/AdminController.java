@@ -1,5 +1,6 @@
 package com.ygc.controller;
 
+import com.ygc.audit.AuditService;
 import com.ygc.model.*;
 import com.ygc.repository.*;
 import com.ygc.service.*;
@@ -37,6 +38,7 @@ public class AdminController {
     private final SettlementRepository settlementRepository;
     private final ChitHistoryService chitHistoryService;
     private final ChitAgreementService chitAgreementService;
+    private final AuditService auditService;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -423,6 +425,67 @@ public class AdminController {
             notificationService.notifyUserUpdated(member.getEmail(), "Your account has been " + status + " by admin.");
             ra.addFlashAttribute("success", "Member " + status + " successfully.");
         } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/members";
+    }
+
+    // ── Delete User Completely ────────────────────────────────────────────
+    @PostMapping("/members/{id}/delete")
+    @org.springframework.transaction.annotation.Transactional
+    public String deleteMember(@PathVariable Long id, @RequestParam(required = false) String reason,
+                               Authentication auth, RedirectAttributes ra) {
+        try {
+            User admin = getCurrentUser(auth);
+            User member = userService.findById(id);
+
+            if (member.getRole() == User.Role.ADMIN) {
+                ra.addFlashAttribute("error", "Cannot delete an admin user.");
+                return "redirect:/admin/members";
+            }
+
+            String memberName = member.getFullName();
+            String memberEmail = member.getEmail();
+            String deleteReason = (reason != null && !reason.isBlank()) ? reason : "Removed by admin";
+
+            // 1. Check for active memberships
+            List<ChitMembership> activeMemberships = membershipRepository.findByUser(member).stream()
+                    .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE
+                              || m.getStatus() == ChitMembership.MembershipStatus.PENDING)
+                    .toList();
+
+            if (!activeMemberships.isEmpty()) {
+                // Exit all active memberships first
+                for (ChitMembership m : activeMemberships) {
+                    m.setStatus(ChitMembership.MembershipStatus.EXITED);
+                    m.setRejectionReason("User deleted: " + deleteReason);
+                    membershipRepository.save(m);
+                }
+            }
+
+            // 2. Audit the deletion
+            auditService.log(admin, "DELETE_USER", "User", member.getId(),
+                    "Deleted user: " + memberName + " (" + memberEmail + ") — " + deleteReason);
+
+            // 3. Email notification to the deleted user
+            try {
+                emailService.sendAnnouncement(memberEmail, memberName,
+                        "Account Removed — YGC Internal",
+                        "Your YGC Internal account has been removed. Reason: " + deleteReason
+                        + ". If you believe this is an error, contact admin at +91 8919508889.");
+            } catch (Exception ignored) {}
+
+            // 4. Notify admin
+            notificationService.notifyAdminUserDeleted(admin.getEmail(), memberName);
+
+            // 5. Delete the user
+            userRepository.delete(member);
+            userRepository.flush();
+
+            ra.addFlashAttribute("success",
+                    "User '" + memberName + "' deleted. Email notification sent. " +
+                    activeMemberships.size() + " membership(s) exited.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Delete failed: " + e.getMessage());
+        }
         return "redirect:/admin/members";
     }
 

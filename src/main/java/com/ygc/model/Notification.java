@@ -26,7 +26,12 @@ public class Notification {
         EARLY_EXIT_SUBMITTED,
         ANNOUNCEMENT,
         USER_UPDATED,
-        CHIT_UPDATED
+        CHIT_UPDATED,
+        // Admin-facing notifications
+        ADMIN_JOIN_REQUEST,
+        ADMIN_PAYMENT_SUBMITTED,
+        ADMIN_SETTLEMENT_REQUEST,
+        ADMIN_USER_DELETED
     }
 
     private final String id;

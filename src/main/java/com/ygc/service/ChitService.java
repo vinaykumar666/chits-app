@@ -88,6 +88,13 @@ public class ChitService {
 
             auditService.log(user, "JOIN_REQUEST", "ChitMembership", saved.getId(),
                     "Join request with agreement for chit: " + chit.getName());
+
+            // Notify admin about the new join request
+            if (chit.getCreatedBy() != null) {
+                notificationService.notifyAdminJoinRequest(
+                        chit.getCreatedBy().getEmail(), user.getFullName(), chit.getName());
+            }
+
             loggingUtil.transactionComplete("requestJoin", "ChitService");
             return saved;
         } catch (Exception e) {
