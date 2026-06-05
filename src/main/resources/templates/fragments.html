@@ -158,6 +158,25 @@
   <script th:src="@{/js/app.js}"></script>
 </div>
 
+<!-- LANGUAGE SELECTOR (reusable) -->
+<div th:fragment="languageSelector">
+  <!-- Language Selector -->
+  <div class="dropdown" th:if="${availableLanguages != null}">
+    <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-1"
+            type="button" id="langDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size:0.9rem;">
+      <i class="bi bi-globe"></i>
+      <span th:text="${currentLanguage != null ? currentLanguage.toUpperCase() : 'EN'}">EN</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown" style="min-width:150px;">
+      <li><a class="dropdown-item" style="cursor:pointer" onclick="changeLanguage('en'); return false;"><span th:if="${currentLanguage == 'en'}" style="color:green;font-weight:bold;">✓</span> 🇬🇧 English</a></li>
+      <li><a class="dropdown-item" style="cursor:pointer" onclick="changeLanguage('hi'); return false;"><span th:if="${currentLanguage == 'hi'}" style="color:green;font-weight:bold;">✓</span> 🇮🇳 हिन्दी</a></li>
+      <li><a class="dropdown-item" style="cursor:pointer" onclick="changeLanguage('ta'); return false;"><span th:if="${currentLanguage == 'ta'}" style="color:green;font-weight:bold;">✓</span> தமிழ్</a></li>
+      <li><a class="dropdown-item" style="cursor:pointer" onclick="changeLanguage('te'); return false;"><span th:if="${currentLanguage == 'te'}" style="color:green;font-weight:bold;">✓</span> తెలుగు</a></li>
+      <li><a class="dropdown-item" style="cursor:pointer" onclick="changeLanguage('kn'); return false;"><span th:if="${currentLanguage == 'kn'}" style="color:green;font-weight:bold;">✓</span> ಕನ್ನಡ</a></li>
+    </ul>
+  </div>
+</div>
+
 <!-- LEGACY alias -->
 <div th:fragment="pushNotifications">
   <div th:replace="~{fragments :: appScripts}"></div>
