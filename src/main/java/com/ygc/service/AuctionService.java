@@ -309,7 +309,7 @@ public class AuctionService {
             loggingUtil.debug("Fetching open auctions", "AuctionService.getOpenAuctions");
             loggingUtil.databaseOperation("SELECT", "Auction", "AuctionService.getOpenAuctions");
 
-            List<Auction> auctions = auctionRepository.findByStatus(Auction.AuctionStatus.OPEN);
+            List<Auction> auctions = auctionRepository.findByStatusWithBidsAndChit(Auction.AuctionStatus.OPEN);
             loggingUtil.info("Retrieved " + auctions.size() + " open auctions", "AuctionService.getOpenAuctions");
 
             return auctions;
@@ -324,7 +324,7 @@ public class AuctionService {
             loggingUtil.debug("Fetching all auctions", "AuctionService.getAllAuctions");
             loggingUtil.databaseOperation("SELECT", "Auction", "AuctionService.getAllAuctions");
 
-            List<Auction> auctions = auctionRepository.findAll();
+            List<Auction> auctions = auctionRepository.findAllWithBidsAndChit();
             loggingUtil.info("Retrieved " + auctions.size() + " total auctions", "AuctionService.getAllAuctions");
 
             return auctions;

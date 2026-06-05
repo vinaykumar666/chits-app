@@ -45,7 +45,9 @@ public class ChitAgreementService {
     private final LoggingUtil loggingUtil;
     private final NotificationService notificationService;
 
-    private static final String ADMIN_EMAIL = "admin@ygcinternal.com";
+    @org.springframework.beans.factory.annotation.Value("${ygc.mail.from:${spring.mail.username:admin@ygcinternal.com}}")
+    private String adminEmail;
+
     private static final String AGREEMENT_DIR = "uploads/agreements/";
 
     /**
@@ -94,7 +96,7 @@ public class ChitAgreementService {
                     membership.getUser().getFullName(), membership, pdfPath, false);
 
             // Email to admin
-            sendAgreementEmail(ADMIN_EMAIL, "Admin", membership, pdfPath, true);
+            sendAgreementEmail(adminEmail, "Admin", membership, pdfPath, true);
 
             auditService.log(admin, "AGREEMENT_PDF_GENERATED", "ChitMembership",
                     membership.getId(), "Agreement PDF generated and emailed: " + pdfPath);
@@ -272,40 +274,71 @@ public class ChitAgreementService {
 
     private void sendAgreementEmail(String to, String recipientName,
                                      ChitMembership membership, String pdfPath, boolean isAdmin) {
-        String subject = "Chit Agreement " + (isAdmin ? "(Copy) " : "") + "- " + membership.getChit().getName();
-        String body = "Dear " + recipientName + ",<br><br>"
-                + (isAdmin
-                    ? "A new chit membership has been approved. Please find the agreement details below."
-                    : "Congratulations! Your membership in <strong>" + membership.getChit().getName()
-                      + "</strong> has been approved.")
-                + "<br><br>"
-                + "<strong>Agreement Number:</strong> " + membership.getAgreementNumber() + "<br>"
-                + "<strong>Customer:</strong> " + membership.getUser().getFullName() + "<br>"
-                + "<strong>Chit:</strong> " + membership.getChit().getName() + "<br>"
-                + "<strong>Monthly Amount:</strong> ₹" + membership.getChit().getMonthlyAmount() + "<br>"
-                + "<strong>Agreement Accepted:</strong> " + (membership.getAgreementAcceptedAt() != null
-                    ? membership.getAgreementAcceptedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm"))
-                    : "—") + "<br>"
-                + "<strong>Approved At:</strong> " + (membership.getAgreementApprovedAt() != null
-                    ? membership.getAgreementApprovedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm"))
-                    : "—") + "<br><br>"
-                + "The signed agreement PDF (No: " + membership.getAgreementNumber()
-                + ") has been stored in the document repository.<br><br>"
-                + "Contact: +91 8919508889<br>"
-                + "Regards,<br>YGC Internal Team";
+        String subject = (isAdmin ? "[Admin Copy] " : "") + "Chit Agreement — "
+                + membership.getChit().getName() + " | " + membership.getAgreementNumber();
 
-        String htmlBody = "<html><body style='font-family:Arial;'>"
-                + "<div style='background:linear-gradient(135deg,#3366cc,#1a4d99);color:white;padding:20px;border-radius:5px;'>"
-                + "<h1 style='margin:0;'>YGC Internal</h1></div>"
-                + "<div style='padding:20px;border:1px solid #ddd;margin-top:10px;border-radius:5px;'>"
-                + body
-                + "</div><div style='text-align:center;margin-top:20px;color:#999;font-size:12px;'>"
-                + "<p>Save Rupee, Rupee Will Save You In Future</p></div></body></html>";
+        String heading = isAdmin
+                ? "New Membership Approved"
+                : "Your Membership Is Approved!";
+        String intro = isAdmin
+                ? "A new chit membership has been approved. Agreement details below."
+                : "Congratulations <strong>" + membership.getUser().getFullName()
+                  + "</strong>! Your membership in <strong>" + membership.getChit().getName()
+                  + "</strong> has been approved by the admin.";
 
-        // Attach the signed agreement PDF directly in the email
+        String htmlBody = "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+            + "<meta name='viewport' content='width=device-width,initial-scale=1'></head>"
+            + "<body style='margin:0;padding:0;background:#f4f4f7;font-family:Helvetica,Arial,sans-serif'>"
+            + "<table width='100%' cellpadding='0' cellspacing='0' style='background:#f4f4f7;padding:24px 0'>"
+            + "<tr><td align='center'><table width='600' cellpadding='0' cellspacing='0' style='max-width:600px;width:100%'>"
+
+            // Header with gold gradient
+            + "<tr><td style='background:linear-gradient(135deg,#0f0f1a,#1a1a35);padding:28px 32px;border-radius:16px 16px 0 0;text-align:center'>"
+            + "<div style='font-size:28px;font-weight:900;color:#f0a500;letter-spacing:1px'>YGC INTERNAL</div>"
+            + "<div style='font-size:12px;color:rgba(255,255,255,.45);margin-top:4px;letter-spacing:2px'>SAVE RUPEE, RUPEE WILL SAVE YOU IN FUTURE</div>"
+            + "</td></tr>"
+
+            // Body
+            + "<tr><td style='background:#ffffff;padding:32px 32px 24px;border-left:1px solid #e8e8e8;border-right:1px solid #e8e8e8'>"
+            + "<h2 style='margin:0 0 16px;color:#0f0f1a;font-size:20px'>" + heading + "</h2>"
+            + "<p style='color:#555;font-size:14px;line-height:1.7;margin:0 0 20px'>" + intro + "</p>"
+
+            // Agreement details card
+            + "<table width='100%' cellpadding='12' cellspacing='0' style='background:#f8f9fe;border-radius:10px;border:1px solid #eef1f8;margin-bottom:20px'>"
+            + "<tr><td style='color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;padding-bottom:0'>Agreement Number</td></tr>"
+            + "<tr><td style='font-size:18px;font-weight:700;color:#0f0f1a;padding-top:2px'>" + membership.getAgreementNumber() + "</td></tr>"
+            + "</table>"
+
+            + "<table width='100%' cellpadding='8' cellspacing='0' style='font-size:13px;color:#333'>"
+            + "<tr><td style='color:#888;width:140px'>Customer</td><td style='font-weight:600'>" + membership.getUser().getFullName() + "</td></tr>"
+            + "<tr><td style='color:#888'>Email</td><td>" + membership.getUser().getEmail() + "</td></tr>"
+            + "<tr><td style='color:#888'>Chit Group</td><td style='font-weight:600'>" + membership.getChit().getName() + "</td></tr>"
+            + "<tr><td style='color:#888'>Monthly Amount</td><td style='font-weight:700;color:#f0a500'>₹" + membership.getChit().getMonthlyAmount() + "</td></tr>"
+            + "<tr><td style='color:#888'>Total Value</td><td>₹" + membership.getChit().getTotalChitValue() + "</td></tr>"
+            + "<tr><td style='color:#888'>Duration</td><td>" + membership.getChit().getDurationMonths() + " months</td></tr>"
+            + "<tr><td style='color:#888'>Commission</td><td>" + membership.getChit().getAdminCommissionPercentage() + "%</td></tr>"
+            + "<tr><td style='color:#888'>Accepted At</td><td>" + (membership.getAgreementAcceptedAt() != null
+                ? membership.getAgreementAcceptedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm")) : "—") + "</td></tr>"
+            + "<tr><td style='color:#888'>Approved At</td><td>" + (membership.getAgreementApprovedAt() != null
+                ? membership.getAgreementApprovedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm")) : "—") + "</td></tr>"
+            + "</table>"
+
+            + "<div style='margin-top:20px;padding:14px;background:#fff8e1;border-radius:8px;border-left:4px solid #f0a500;font-size:13px;color:#856404'>"
+            + "<strong>📎 Agreement PDF Attached</strong> — The signed agreement (No: " + membership.getAgreementNumber() + ") is attached to this email."
+            + "</div>"
+            + "</td></tr>"
+
+            // Footer
+            + "<tr><td style='background:#0f0f1a;padding:20px 32px;border-radius:0 0 16px 16px;text-align:center'>"
+            + "<div style='color:#f0a500;font-weight:700;font-size:14px'>YGC Internal</div>"
+            + "<div style='color:rgba(255,255,255,.35);font-size:12px;margin-top:4px'>Contact: +91 8919508889</div>"
+            + "<div style='color:rgba(255,255,255,.2);font-size:11px;margin-top:8px'>This is an automated email. Please do not reply.</div>"
+            + "</td></tr>"
+
+            + "</table></td></tr></table></body></html>";
+
         String attachmentName = "Agreement_" + membership.getAgreementNumber() + ".pdf";
         emailService.sendHtmlEmailWithAttachment(to, subject, htmlBody, pdfPath, attachmentName);
-        loggingUtil.info("Agreement email sent to " + to + " with PDF attachment: " + attachmentName,
-                "ChitAgreementService.sendAgreementEmail");
+        loggingUtil.info("Agreement email sent to " + to + " with PDF: " + attachmentName, "ChitAgreementService");
     }
 }

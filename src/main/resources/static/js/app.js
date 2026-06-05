@@ -467,34 +467,71 @@
   }
 
   // ─── Mobile: Sidebar Toggle ───────────────────────────────────────────────
-  function injectMobileSidebarToggle() {
-    const sidebar = document.querySelector('.sidebar, .member-sidebar');
+  function initMobileSidebar() {
+    var sidebar = document.querySelector('.sidebar, .member-sidebar');
     if (!sidebar) return;
-    if (document.getElementById('ygc-mob-toggle')) return;
 
-    const toggle = document.createElement('button');
-    toggle.id = 'ygc-mob-toggle';
-    toggle.innerHTML = '<i class="bi bi-list"></i>';
-    toggle.setAttribute('aria-label', 'Open menu');
+    // Use existing HTML button OR create one for legacy inline-sidebar templates
+    var toggle = document.getElementById('ygc-mob-toggle');
+    if (!toggle) {
+      toggle = document.createElement('button');
+      toggle.id = 'ygc-mob-toggle';
+      toggle.innerHTML = '<i class="bi bi-list"></i>';
+      toggle.setAttribute('aria-label', 'Toggle menu');
+      document.body.appendChild(toggle);
+    }
 
-    toggle.addEventListener('click', () => {
-      sidebar.classList.toggle('sidebar-open');
-      // Overlay
-      let overlay = document.getElementById('ygc-sidebar-overlay');
+    function openSidebar() {
+      sidebar.classList.add('sidebar-open');
+      var overlay = document.getElementById('ygc-sidebar-overlay');
       if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'ygc-sidebar-overlay';
-        overlay.addEventListener('click', () => {
-          sidebar.classList.remove('sidebar-open');
-          overlay.remove();
-        });
         document.body.appendChild(overlay);
+      }
+      overlay.style.display = 'block';
+      overlay.onclick = closeSidebar;
+      document.body.style.overflow = 'hidden'; // prevent scroll-through on iOS
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('sidebar-open');
+      var overlay = document.getElementById('ygc-sidebar-overlay');
+      if (overlay) overlay.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    // Use click event (works on all devices including iOS Safari)
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (sidebar.classList.contains('sidebar-open')) {
+        closeSidebar();
       } else {
-        overlay.remove();
+        openSidebar();
       }
     });
 
-    document.body.appendChild(toggle);
+    // Close sidebar when a nav link is tapped (mobile UX)
+    sidebar.querySelectorAll('.nav-link').forEach(function(link) {
+      link.addEventListener('click', function() {
+        if (window.innerWidth < 768) closeSidebar();
+      });
+    });
+
+    // Close on ESC key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeSidebar();
+    });
+
+    // Close on swipe left (iOS gesture)
+    var touchStartX = 0;
+    sidebar.addEventListener('touchstart', function(e) {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    sidebar.addEventListener('touchend', function(e) {
+      var deltaX = e.changedTouches[0].clientX - touchStartX;
+      if (deltaX < -60) closeSidebar(); // swipe left to close
+    }, { passive: true });
   }
 
   // ─── Offline Detection Banner ─────────────────────────────────────────────
@@ -523,12 +560,8 @@
 
   // ─── Touch Improvements ───────────────────────────────────────────────────
   function initTouchImprovements() {
-    // Prevent double-tap zoom on buttons/links
-    document.querySelectorAll('button, .btn, a.nav-link').forEach(el => {
-      el.addEventListener('touchend', e => { e.preventDefault(); el.click(); }, { passive: false });
-    });
-
-    // Fast tap — remove 300ms delay
+    // Fast tap — rely on touch-action CSS instead of aggressive preventDefault
+    // (preventDefault on touchend breaks iOS scrolling and taps on some elements)
     if ('ontouchstart' in window) {
       document.documentElement.style.touchAction = 'manipulation';
     }
@@ -603,7 +636,7 @@
     initOfflineDetection();
     if (document.getElementById('ygc-toast-container')) connectSSE();
     injectBottomNav();
-    injectMobileSidebarToggle();
+    initMobileSidebar();
     initKeyboardHandling();
     enhanceTablesForMobile();
     showVersionBadge();

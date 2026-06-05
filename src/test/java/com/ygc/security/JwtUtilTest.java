@@ -1,51 +1,77 @@
-//package com.ygc.security;
-//
-//import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.DisplayName;
-//import org.junit.jupiter.api.Test;
-//import org.springframework.test.util.ReflectionTestUtils;
-//
-//import static org.assertj.core.api.Assertions.*;
-//
-//class JwtUtilTest {
-//
-//    private JwtUtil jwtUtil;
-//
-//    @BeforeEach
-//    void setUp() {
-//        jwtUtil = new JwtUtil();
-//        ReflectionTestUtils.setField(jwtUtil, "secret", "test-secret-key-for-jwt-testing-minimum-length-requirement-met");
-//        ReflectionTestUtils.setField(jwtUtil, "expiration", 86400000L);
-//    }
-//
-//    @Test
-//    @DisplayName("should generate and validate token")
-//    void shouldGenerateAndValidateToken() {
-//        String token = jwtUtil.generateToken("test@example.com");
-//
-//        assertThat(token).isNotNull().isNotEmpty();
-//        assertThat(jwtUtil.extractUsername(token)).isEqualTo("test@example.com");
-//        assertThat(jwtUtil.isTokenValid(token, "test@example.com")).isTrue();
-//    }
-//
-//    @Test
-//    @DisplayName("should reject token for different user")
-//    void shouldRejectTokenForDifferentUser() {
-//        String token = jwtUtil.generateToken("user1@test.com");
-//        assertThat(jwtUtil.isTokenValid(token, "user2@test.com")).isFalse();
-//    }
-//
-//    @Test
-//    @DisplayName("should extract correct username from token")
-//    void shouldExtractUsername() {
-//        String token = jwtUtil.generateToken("admin@ygc.com");
-//        assertThat(jwtUtil.extractUsername(token)).isEqualTo("admin@ygc.com");
-//    }
-//
-//    @Test
-//    @DisplayName("should handle invalid token gracefully")
-//    void shouldHandleInvalidToken() {
-//        assertThatThrownBy(() -> jwtUtil.extractUsername("invalid.token.here"))
-//                .isInstanceOf(Exception.class);
-//    }
-//}
+package com.ygc.security;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.Collections;
+
+import static org.assertj.core.api.Assertions.*;
+
+class JwtUtilTest {
+
+    private JwtUtil jwtUtil;
+
+    private UserDetails testUser;
+    private UserDetails otherUser;
+
+    @BeforeEach
+    void setUp() {
+        jwtUtil = new JwtUtil();
+        // secret must be >= 256 bits (32 bytes) for HS256
+        ReflectionTestUtils.setField(jwtUtil, "secret",
+                "test-secret-key-for-jwt-testing-minimum-32-bytes!");
+        ReflectionTestUtils.setField(jwtUtil, "expiration", 86400000L);
+
+        testUser = new User("test@example.com", "password", Collections.emptyList());
+        otherUser = new User("other@example.com", "password", Collections.emptyList());
+    }
+
+    @Test
+    @DisplayName("should generate a non-empty token")
+    void shouldGenerateToken() {
+        String token = jwtUtil.generateToken(testUser);
+        assertThat(token).isNotNull().isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("should extract correct username from token")
+    void shouldExtractUsername() {
+        String token = jwtUtil.generateToken(testUser);
+        assertThat(jwtUtil.extractUsername(token)).isEqualTo("test@example.com");
+    }
+
+    @Test
+    @DisplayName("should validate token for correct user")
+    void shouldValidateTokenForCorrectUser() {
+        String token = jwtUtil.generateToken(testUser);
+        assertThat(jwtUtil.validateToken(token, testUser)).isTrue();
+    }
+
+    @Test
+    @DisplayName("should reject token for different user")
+    void shouldRejectTokenForDifferentUser() {
+        String token = jwtUtil.generateToken(testUser);
+        assertThat(jwtUtil.validateToken(token, otherUser)).isFalse();
+    }
+
+    @Test
+    @DisplayName("should reject malformed token")
+    void shouldRejectMalformedToken() {
+        assertThat(jwtUtil.validateToken("invalid.token.here", testUser)).isFalse();
+    }
+
+    @Test
+    @DisplayName("should reject expired token")
+    void shouldRejectExpiredToken() {
+        // Set expiration to 0ms (immediately expired)
+        ReflectionTestUtils.setField(jwtUtil, "expiration", 0L);
+        String token = jwtUtil.generateToken(testUser);
+
+        // Token is already expired
+        assertThat(jwtUtil.validateToken(token, testUser)).isFalse();
+    }
+}
