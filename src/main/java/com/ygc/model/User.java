@@ -3,6 +3,7 @@ package com.ygc.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import java.time.LocalDateTime;
 
 @Entity
@@ -29,28 +30,47 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role = Role.MEMBER;
 
+    @ColumnDefault("true")
+    @Column(nullable = false)
     private boolean firstLogin = true;
+
+    @ColumnDefault("true")
+    @Column(nullable = false)
     private boolean active = true;
+
+    @ColumnDefault("false")
+    @Column(nullable = false)
     private boolean termsAccepted = false;
 
     // ── Fraud Prevention Fields ────────────────────────────────────────────
     @Column(unique = true)
-    private String aadhaarNumber; // masked: XXXX-XXXX-1234
+    private String aadhaarNumber;
 
+    @ColumnDefault("false")
+    @Column(nullable = false)
     private boolean aadhaarVerified = false;
 
-    private String preferredLanguage = "en"; // en, hi, te, ta, kn, ml
+    @ColumnDefault("'en'")
+    @Column(nullable = false)
+    private String preferredLanguage = "en";
 
     @Column(columnDefinition = "CLOB")
-    private String deviceFingerprints; // JSON array of known device hashes
+    private String deviceFingerprints;
 
     private String lastLoginIp;
     private String lastLoginDevice;
     private LocalDateTime lastLoginAt;
+
+    @ColumnDefault("0")
+    @Column(nullable = false)
     private int consecutiveFailedLogins = 0;
+
+    @ColumnDefault("false")
+    @Column(nullable = false)
     private boolean accountLocked = false;
 
-    /** Risk score 0-100: 0=safe, 100=high risk. Updated by RiskScoreService. */
+    @ColumnDefault("0")
+    @Column(nullable = false)
     private int riskScore = 0;
 
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -61,7 +81,6 @@ public class User {
 
     public enum Role { ADMIN, MEMBER }
 
-    /** Returns masked Aadhaar for display: XXXX-XXXX-1234 */
     public String getMaskedAadhaar() {
         if (aadhaarNumber == null || aadhaarNumber.length() < 4) return "Not provided";
         return "XXXX-XXXX-" + aadhaarNumber.substring(aadhaarNumber.length() - 4);

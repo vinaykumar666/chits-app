@@ -49,21 +49,31 @@
     </div>
   </a>
   <nav class="sidebar-nav">
-    <a th:href="@{/admin/dashboard}"          class="nav-link" th:classappend="${active=='dashboard'   ? ' active' : ''}"><i class="bi bi-speedometer2"></i> Dashboard</a>
-    <a th:href="@{/admin/chits}"              class="nav-link" th:classappend="${active=='chits'        ? ' active' : ''}"><i class="bi bi-collection"></i> Chit Groups</a>
-    <a th:href="@{/admin/members}"            class="nav-link" th:classappend="${active=='members'      ? ' active' : ''}"><i class="bi bi-people"></i> Members</a>
-    <a th:href="@{/admin/payments}"           class="nav-link" th:classappend="${active=='payments'     ? ' active' : ''}"><i class="bi bi-cash-coin"></i> Payments</a>
-    <a th:href="@{/admin/auctions}"           class="nav-link" th:classappend="${active=='auctions'     ? ' active' : ''}"><i class="bi bi-hammer"></i> Auctions</a>
-    <a th:href="@{/admin/settlements}"        class="nav-link" th:classappend="${active=='settlements'  ? ' active' : ''}"><i class="bi bi-bank"></i> Settlements</a>
-    <a th:href="@{/admin/reports/commission}" class="nav-link" th:classappend="${active=='commission'   ? ' active' : ''}"><i class="bi bi-graph-up"></i> Commission</a>
-    <a th:href="@{/admin/chit-history}"       class="nav-link" th:classappend="${active=='history'      ? ' active' : ''}"><i class="bi bi-archive"></i> Chit History</a>
-    <a th:href="@{/admin/announcements}"      class="nav-link" th:classappend="${active=='announce'     ? ' active' : ''}"><i class="bi bi-megaphone"></i> Announcements</a>
-    <a th:href="@{/admin/audit}"              class="nav-link" th:classappend="${active=='audit'        ? ' active' : ''}"><i class="bi bi-shield-check"></i> Audit Log</a>
-    <a th:href="@{/admin/early-exits}"        class="nav-link" th:classappend="${active=='exits'        ? ' active' : ''}"><i class="bi bi-door-open"></i> Early Exits</a>
-    <a th:href="@{/admin/risk-dashboard}"     class="nav-link" th:classappend="${active=='risk'         ? ' active' : ''}"><i class="bi bi-exclamation-triangle"></i> Risk &amp; Fraud</a>
-    <a th:href="@{/help}"                     class="nav-link" th:classappend="${active=='help'         ? ' active' : ''}"><i class="bi bi-question-circle"></i> Help</a>
-    <a th:href="@{/logout}"                   class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    <a th:href="@{/admin/dashboard}"          class="nav-link" th:classappend="${active=='dashboard'   ? ' active' : ''}"><i class="bi bi-speedometer2"></i> <span th:text="#{nav.dashboard}">Dashboard</span></a>
+    <a th:href="@{/admin/chits}"              class="nav-link" th:classappend="${active=='chits'        ? ' active' : ''}"><i class="bi bi-collection"></i> <span th:text="#{nav.chits}">Chit Groups</span></a>
+    <a th:href="@{/admin/members}"            class="nav-link" th:classappend="${active=='members'      ? ' active' : ''}"><i class="bi bi-people"></i> <span th:text="#{nav.members}">Members</span></a>
+    <a th:href="@{/admin/payments}"           class="nav-link" th:classappend="${active=='payments'     ? ' active' : ''}"><i class="bi bi-cash-coin"></i> <span th:text="#{nav.payments}">Payments</span></a>
+    <a th:href="@{/admin/auctions}"           class="nav-link" th:classappend="${active=='auctions'     ? ' active' : ''}"><i class="bi bi-hammer"></i> <span th:text="#{nav.auctions}">Auctions</span></a>
+    <a th:href="@{/admin/settlements}"        class="nav-link" th:classappend="${active=='settlements'  ? ' active' : ''}"><i class="bi bi-bank"></i> <span th:text="#{nav.settlements}">Settlements</span></a>
+    <a th:href="@{/admin/reports/commission}" class="nav-link" th:classappend="${active=='commission'   ? ' active' : ''}"><i class="bi bi-graph-up"></i> <span th:text="#{nav.commission}">Commission</span></a>
+    <a th:href="@{/admin/chit-history}"       class="nav-link" th:classappend="${active=='history'      ? ' active' : ''}"><i class="bi bi-archive"></i> <span th:text="#{nav.history}">Chit History</span></a>
+    <a th:href="@{/admin/announcements}"      class="nav-link" th:classappend="${active=='announce'     ? ' active' : ''}"><i class="bi bi-megaphone"></i> <span th:text="#{nav.announcements}">Announcements</span></a>
+    <a th:href="@{/admin/audit}"              class="nav-link" th:classappend="${active=='audit'        ? ' active' : ''}"><i class="bi bi-shield-check"></i> <span th:text="#{nav.audit}">Audit Log</span></a>
+    <a th:href="@{/admin/early-exits}"        class="nav-link" th:classappend="${active=='exits'        ? ' active' : ''}"><i class="bi bi-door-open"></i> <span th:text="#{nav.exits}">Early Exits</span></a>
+    <a th:href="@{/admin/risk-dashboard}"     class="nav-link" th:classappend="${active=='risk'         ? ' active' : ''}"><i class="bi bi-exclamation-triangle"></i> <span th:text="#{nav.risk}">Risk &amp; Fraud</span></a>
+    <a th:href="@{/help}"                     class="nav-link" th:classappend="${active=='help'         ? ' active' : ''}"><i class="bi bi-question-circle"></i> <span th:text="#{nav.help}">Help</span></a>
+    <a th:href="@{/logout}"                   class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> <span th:text="#{nav.logout}">Logout</span></a>
   </nav>
+  <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);margin-top:auto">
+    <small style="color:rgba(255,255,255,.3);font-size:.65rem;text-transform:uppercase;letter-spacing:.06em" th:text="#{lang.select}">Language</small>
+    <div class="d-flex flex-wrap gap-1 mt-1">
+      <a href="?lang=en" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">EN</a>
+      <a href="?lang=hi" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">हि</a>
+      <a href="?lang=te" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">తె</a>
+      <a href="?lang=kn" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">ಕ</a>
+      <a href="?lang=ta" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">த</a>
+    </div>
+  </div>
 </div>
 
 <!-- MEMBER SIDEBAR -->
@@ -78,13 +88,23 @@
     </div>
   </a>
   <nav class="sidebar-nav">
-    <a th:href="@{/member/dashboard}" class="nav-link" th:classappend="${active=='dashboard' ? ' active' : ''}"><i class="bi bi-house"></i> My Dashboard</a>
-    <a th:href="@{/member/chits}"     class="nav-link" th:classappend="${active=='chits'     ? ' active' : ''}"><i class="bi bi-collection"></i> Browse Chits</a>
-    <a th:href="@{/member/help}"      class="nav-link" th:classappend="${active=='help'      ? ' active' : ''}"><i class="bi bi-question-circle"></i> Help & Rules</a>
-    <a th:href="@{/terms}"            class="nav-link" th:classappend="${active=='terms'     ? ' active' : ''}"><i class="bi bi-file-text"></i> Terms</a>
-    <a th:href="@{/logout}"           class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    <a th:href="@{/member/dashboard}" class="nav-link" th:classappend="${active=='dashboard' ? ' active' : ''}"><i class="bi bi-house"></i> <span th:text="#{nav.my_dashboard}">My Dashboard</span></a>
+    <a th:href="@{/member/chits}"     class="nav-link" th:classappend="${active=='chits'     ? ' active' : ''}"><i class="bi bi-collection"></i> <span th:text="#{nav.browse_chits}">Browse Chits</span></a>
+    <a th:href="@{/member/help}"      class="nav-link" th:classappend="${active=='help'      ? ' active' : ''}"><i class="bi bi-question-circle"></i> <span th:text="#{nav.help}">Help & Rules</span></a>
+    <a th:href="@{/terms}"            class="nav-link" th:classappend="${active=='terms'     ? ' active' : ''}"><i class="bi bi-file-text"></i> <span th:text="#{nav.terms}">Terms</span></a>
+    <a th:href="@{/logout}"           class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> <span th:text="#{nav.logout}">Logout</span></a>
   </nav>
-  <div style="padding:16px;border-top:1px solid rgba(255,255,255,.06);margin-top:auto;">
+  <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06)">
+    <small style="color:rgba(255,255,255,.3);font-size:.65rem;text-transform:uppercase;letter-spacing:.06em" th:text="#{lang.select}">Language</small>
+    <div class="d-flex flex-wrap gap-1 mt-1">
+      <a href="?lang=en" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">EN</a>
+      <a href="?lang=hi" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">हि</a>
+      <a href="?lang=te" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">తె</a>
+      <a href="?lang=kn" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">ಕ</a>
+      <a href="?lang=ta" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">த</a>
+    </div>
+  </div>
+  <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06)">
     <small style="color:rgba(255,255,255,.3);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em" class="d-block mb-1">Support</small>
     <a href="tel:+918919508889" class="text-warning text-decoration-none small fw-bold">
       <i class="bi bi-telephone me-1"></i>+91 8919508889
