@@ -9,8 +9,8 @@
 <div class="main-content">
   <div class="topbar">
     <div>
-      <h4><i class="bi bi-speedometer2 text-warning me-2"></i>Admin Dashboard</h4>
-      <div class="sub">YGC Internal Chit Management</div>
+      <h4><i class="bi bi-speedometer2 text-warning me-2"></i><span th:text="#{dashboard.title}">Dashboard</span></h4>
+      <div class="sub" th:text="#{app.name}">YGC Internal Chit Management</div>
     </div>
     <div class="d-flex align-items-center gap-2">
       <!-- Language Selector -->
@@ -30,15 +30,15 @@
       </div>
       <div class="dropdown">
         <button class="btn btn-sm btn-outline-warning fw-bold dropdown-toggle" data-bs-toggle="dropdown" title="Export Reports">
-          <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-action-text">Export</span>
+          <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-action-text" th:text="#{label.export}">Export</span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-          <li><h6 class="dropdown-header"><i class="bi bi-shield-lock me-1"></i>Admin Reports</h6></li>
-          <li><a class="dropdown-item" th:href="@{/admin/reports/chits/pdf}"><i class="bi bi-collection me-2 text-warning"></i>Chit Groups</a></li>
-          <li><a class="dropdown-item" th:href="@{/admin/reports/members/pdf}"><i class="bi bi-people me-2 text-info"></i>All Members</a></li>
-          <li><a class="dropdown-item" th:href="@{/admin/reports/payments/pdf}"><i class="bi bi-cash-coin me-2 text-success"></i>All Payments</a></li>
-          <li><a class="dropdown-item" th:href="@{/admin/reports/settlements/pdf}"><i class="bi bi-bank me-2 text-primary"></i>Settlements</a></li>
-          <li><a class="dropdown-item" th:href="@{/admin/reports/commission/pdf}"><i class="bi bi-graph-up me-2 text-warning"></i>Commission</a></li>
+          <li><h6 class="dropdown-header"><i class="bi bi-shield-lock me-1"></i><span th:text="#{nav.dashboard}">Admin Reports</span></h6></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/chits/pdf}"><i class="bi bi-collection me-2 text-warning"></i><span th:text="#{nav.chits}">Chit Groups</span></a></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/members/pdf}"><i class="bi bi-people me-2 text-info"></i><span th:text="#{nav.members}">All Members</span></a></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/payments/pdf}"><i class="bi bi-cash-coin me-2 text-success"></i><span th:text="#{nav.payments}">All Payments</span></a></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/settlements/pdf}"><i class="bi bi-bank me-2 text-primary"></i><span th:text="#{nav.settlements}">Settlements</span></a></li>
+          <li><a class="dropdown-item" th:href="@{/admin/reports/commission/pdf}"><i class="bi bi-graph-up me-2 text-warning"></i><span th:text="#{nav.commission}">Commission</span></a></li>
         </ul>
       </div>
       <span class="ygc-conn-dot" title="Live notifications active"></span>
@@ -56,31 +56,31 @@
     <div class="col-md-2 col-6">
       <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
         <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-collection"></i></div>
-        <div><div class="fw-bold fs-4" th:text="${totalChits}">0</div><small class="text-muted">Chits</small></div>
+        <div><div class="fw-bold fs-4" th:text="${totalChits}">0</div><small class="text-muted" th:text="#{label.chits}">Chits</small></div>
       </div></div>
     </div>
     <div class="col-md-2 col-6">
       <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
         <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-people"></i></div>
-        <div><div class="fw-bold fs-4" th:text="${totalMembers}">0</div><small class="text-muted">Members</small></div>
+        <div><div class="fw-bold fs-4" th:text="${totalMembers}">0</div><small class="text-muted" th:text="#{label.members}">Members</small></div>
       </div></div>
     </div>
     <div class="col-md-2 col-6">
       <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
         <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-clock-history"></i></div>
-        <div><div class="fw-bold fs-4" th:text="${pendingPayments}">0</div><small class="text-muted">Pending Pay</small></div>
+        <div><div class="fw-bold fs-4" th:text="${pendingPayments}">0</div><small class="text-muted" th:text="#{dashboard.pending-payments}">Pending Pay</small></div>
       </div></div>
     </div>
     <div class="col-md-2 col-6">
       <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
         <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-hammer"></i></div>
-        <div><div class="fw-bold fs-4" th:text="${openAuctions}">0</div><small class="text-muted">Auctions</small></div>
+        <div><div class="fw-bold fs-4" th:text="${openAuctions}">0</div><small class="text-muted" th:text="#{label.auctions}">Auctions</small></div>
       </div></div>
     </div>
     <div class="col-md-2 col-6">
       <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
         <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-bank"></i></div>
-        <div><div class="fw-bold fs-4" th:text="${pendingSettlements}">0</div><small class="text-muted">Settlements</small></div>
+        <div><div class="fw-bold fs-4" th:text="${pendingSettlements}">0</div><small class="text-muted" th:text="#{label.settlements}">Settlements</small></div>
       </div></div>
     </div>
     <div class="col-md-2 col-6">
