@@ -268,4 +268,34 @@ public class NotificationService {
                 "Your chit agreement (" + agreementNumber + ") for '" + chitName + "' is approved. PDF emailed.",
                 userEmail, chitName));
     }
+
+    // ── Admin-Facing Notifications ──────────────────────────────────────────
+
+    public void notifyAdminJoinRequest(String adminEmail, String memberName, String chitName) {
+        push(new Notification(Notification.Type.ADMIN_JOIN_REQUEST,
+                "📋 New Join Request",
+                memberName + " requested to join '" + chitName + "'. Review and approve/reject.",
+                adminEmail, chitName));
+    }
+
+    public void notifyAdminPaymentSubmitted(String adminEmail, String memberName, String chitName, String amount) {
+        push(new Notification(Notification.Type.ADMIN_PAYMENT_SUBMITTED,
+                "💳 Payment Submitted",
+                memberName + " submitted ₹" + amount + " for '" + chitName + "'. Verify now.",
+                adminEmail, chitName));
+    }
+
+    public void notifyAdminSettlementRequest(String adminEmail, String memberName, String chitName) {
+        push(new Notification(Notification.Type.ADMIN_SETTLEMENT_REQUEST,
+                "🏦 Settlement Request",
+                memberName + " requested settlement for '" + chitName + "'.",
+                adminEmail, chitName));
+    }
+
+    public void notifyAdminUserDeleted(String adminEmail, String deletedUserName) {
+        push(new Notification(Notification.Type.ADMIN_USER_DELETED,
+                "🗑 User Deleted",
+                "User '" + deletedUserName + "' permanently removed from system.",
+                adminEmail, null));
+    }
 }

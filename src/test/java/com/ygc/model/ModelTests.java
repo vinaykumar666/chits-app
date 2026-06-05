@@ -268,7 +268,7 @@ class ModelTests {
         @Test
         @DisplayName("should support all notification types")
         void shouldSupportAllTypes() {
-            assertThat(Notification.Type.values()).hasSize(17);
+            assertThat(Notification.Type.values()).hasSize(21);
         }
 
         @Test

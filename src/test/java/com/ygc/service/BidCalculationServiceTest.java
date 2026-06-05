@@ -4,6 +4,7 @@ import com.ygc.model.Auction;
 import com.ygc.model.Chit;
 import com.ygc.repository.AuctionRepository;
 import com.ygc.repository.BidRepository;
+import com.ygc.repository.ChitMembershipRepository;
 import com.ygc.util.LoggingUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,6 +27,7 @@ class BidCalculationServiceTest {
 
     @Mock private AuctionRepository auctionRepository;
     @Mock private BidRepository bidRepository;
+    @Mock private ChitMembershipRepository membershipRepository;
     @Mock private LoggingUtil loggingUtil;
 
     @InjectMocks
@@ -47,10 +49,9 @@ class BidCalculationServiceTest {
     }
 
     @Test
-    @DisplayName("should calculate recommendations with all required keys")
-    void shouldCalculateRecommendations() {
+    @DisplayName("should return all required recommendation keys")
+    void shouldReturnAllKeys() {
         when(auctionRepository.findByChit(testChit)).thenReturn(List.of());
-
         Map<String, Object> result = bidCalculationService.calculateBidRecommendations(testChit, 1);
 
         assertThat(result).containsKeys(
@@ -59,81 +60,78 @@ class BidCalculationServiceTest {
                 "estimatedCommission", "estimatedPayout",
                 "historicalAvgBid", "currentMonthNumber",
                 "totalChitValue", "monthlyAmount",
-                "commissionPercentage", "monthsRemaining");
+                "commissionPercentage", "monthsRemaining",
+                "eligibleBidders", "urgencyScore",
+                "dividendPerMember", "strategy",
+                "winProbLow", "winProbHigh");
     }
 
     @Test
     @DisplayName("recommended min should not be below absolute min")
-    void minShouldRespectAbsoluteFloor() {
+    void minShouldRespectFloor() {
         when(auctionRepository.findByChit(testChit)).thenReturn(List.of());
-
         Map<String, Object> result = bidCalculationService.calculateBidRecommendations(testChit, 1);
-
-        BigDecimal recMin = (BigDecimal) result.get("recommendedMinBid");
-        BigDecimal absMin = (BigDecimal) result.get("absoluteMinBid");
-        assertThat(recMin).isGreaterThanOrEqualTo(absMin);
+        assertThat((BigDecimal) result.get("recommendedMinBid"))
+                .isGreaterThanOrEqualTo((BigDecimal) result.get("absoluteMinBid"));
     }
 
     @Test
     @DisplayName("recommended max should not exceed absolute max")
-    void maxShouldRespectAbsoluteCeiling() {
+    void maxShouldRespectCeiling() {
         when(auctionRepository.findByChit(testChit)).thenReturn(List.of());
-
         Map<String, Object> result = bidCalculationService.calculateBidRecommendations(testChit, 1);
-
-        BigDecimal recMax = (BigDecimal) result.get("recommendedMaxBid");
-        BigDecimal absMax = (BigDecimal) result.get("absoluteMaxBid");
-        assertThat(recMax).isLessThanOrEqualTo(absMax);
+        assertThat((BigDecimal) result.get("recommendedMaxBid"))
+                .isLessThanOrEqualTo((BigDecimal) result.get("absoluteMaxBid"));
     }
 
     @Test
     @DisplayName("should use historical average when past auctions exist")
-    void shouldUseHistoricalAverage() {
-        Auction pastAuction = new Auction();
-        pastAuction.setWinningBidAmount(new BigDecimal("45000"));
-        when(auctionRepository.findByChit(testChit)).thenReturn(List.of(pastAuction));
+    void shouldUseHistoricalAvg() {
+        Auction a1 = new Auction(); a1.setWinningBidAmount(new BigDecimal("45000")); a1.setMonthNumber(1);
+        Auction a2 = new Auction(); a2.setWinningBidAmount(new BigDecimal("43000")); a2.setMonthNumber(2);
+        when(auctionRepository.findByChit(testChit)).thenReturn(List.of(a1, a2));
 
-        Map<String, Object> result = bidCalculationService.calculateBidRecommendations(testChit, 2);
-
-        assertThat(result.get("historicalAvgBid")).isNotNull();
-        assertThat((BigDecimal) result.get("historicalAvgBid"))
-                .isEqualByComparingTo("45000");
+        Map<String, Object> result = bidCalculationService.calculateBidRecommendations(testChit, 3);
+        assertThat((BigDecimal) result.get("historicalAvgBid")).isEqualByComparingTo("44000");
     }
 
     @Test
-    @DisplayName("should respect admin-configured min/max bid amounts")
-    void shouldRespectConfiguredLimits() {
-        testChit.setMinBidAmount(new BigDecimal("40000"));
-        testChit.setMaxBidAmount(new BigDecimal("48000"));
+    @DisplayName("later months should have higher urgency score")
+    void laterMonthsShouldHaveHigherUrgency() {
         when(auctionRepository.findByChit(testChit)).thenReturn(List.of());
+        Map<String, Object> early = bidCalculationService.calculateBidRecommendations(testChit, 1);
+        Map<String, Object> late = bidCalculationService.calculateBidRecommendations(testChit, 11);
 
-        Map<String, Object> result = bidCalculationService.calculateBidRecommendations(testChit, 1);
-
-        BigDecimal absMax = (BigDecimal) result.get("absoluteMaxBid");
-        assertThat(absMax).isLessThanOrEqualTo(new BigDecimal("48000"));
+        BigDecimal earlyUrgency = (BigDecimal) early.get("urgencyScore");
+        BigDecimal lateUrgency = (BigDecimal) late.get("urgencyScore");
+        assertThat(lateUrgency).isGreaterThan(earlyUrgency);
     }
 
     @Test
-    @DisplayName("calculateForBidAmount should compute commission and payout correctly")
+    @DisplayName("calculateForBidAmount should compute commission, payout, and discount")
     void shouldCalculateForBidAmount() {
         Map<String, BigDecimal> result = bidCalculationService.calculateForBidAmount(testChit, new BigDecimal("45000"));
-
         assertThat(result.get("commission")).isEqualByComparingTo("2250.00");
         assertThat(result.get("payout")).isEqualByComparingTo("42750.00");
+        assertThat(result.get("discount")).isEqualByComparingTo("5000");
+        assertThat(result.get("discountPercent")).isEqualByComparingTo("10.00");
     }
 
     @Test
-    @DisplayName("later months should have lower urgency multiplier")
-    void laterMonthsShouldHaveLowerBids() {
+    @DisplayName("strategy should change with month progression")
+    void strategyShouldChangeOverTime() {
         when(auctionRepository.findByChit(testChit)).thenReturn(List.of());
+        String earlyStrategy = (String) bidCalculationService.calculateBidRecommendations(testChit, 1).get("strategy");
+        String lateStrategy = (String) bidCalculationService.calculateBidRecommendations(testChit, 11).get("strategy");
+        assertThat(earlyStrategy).startsWith("PATIENT");
+        assertThat(lateStrategy).startsWith("AGGRESSIVE");
+    }
 
-        Map<String, Object> earlyResult = bidCalculationService.calculateBidRecommendations(testChit, 1);
-        Map<String, Object> lateResult = bidCalculationService.calculateBidRecommendations(testChit, 11);
-
-        BigDecimal earlyMax = (BigDecimal) earlyResult.get("recommendedMaxBid");
-        BigDecimal lateMax = (BigDecimal) lateResult.get("recommendedMaxBid");
-
-        // Later months should generally have lower recommended bids
-        assertThat(lateMax).isLessThanOrEqualTo(earlyMax);
+    @Test
+    @DisplayName("dividendPerMember should be positive when discount exists")
+    void dividendShouldBePositive() {
+        when(auctionRepository.findByChit(testChit)).thenReturn(List.of());
+        Map<String, Object> result = bidCalculationService.calculateBidRecommendations(testChit, 6);
+        assertThat((BigDecimal) result.get("dividendPerMember")).isPositive();
     }
 }

@@ -94,6 +94,12 @@
                                           th:attr="onsubmit=|return confirm('Reset password for ' + ${member.fullName} + '?')|">
                                         <button type="submit" class="btn btn-sm btn-outline-warning" title="Reset Password"><i class="bi bi-key"></i></button>
                                     </form>
+                                    <form th:if="${member.role.name() != 'ADMIN'}"
+                                          th:action="@{/admin/members/{id}/delete(id=${member.id})}" method="post" class="d-inline"
+                                          th:attr="onsubmit=|return confirm('PERMANENTLY DELETE ' + ${member.fullName} + '? This cannot be undone.')|">
+                                        <input type="hidden" name="reason" value="Removed by admin">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete User"><i class="bi bi-trash3"></i></button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

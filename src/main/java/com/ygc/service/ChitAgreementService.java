@@ -133,122 +133,172 @@ public class ChitAgreementService {
         Chit chit = membership.getChit();
         User customer = membership.getUser();
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
         PdfWriter writer = new PdfWriter(new FileOutputStream(filepath));
         PdfDocument pdf = new PdfDocument(writer);
         Document doc = new Document(pdf);
-        doc.setMargins(50, 50, 50, 50);
+        doc.setMargins(45, 50, 50, 50);
 
-        DeviceRgb brandBlue = new DeviceRgb(51, 102, 204);
-        DeviceRgb lightGray = new DeviceRgb(248, 249, 250);
+        DeviceRgb NAVY     = new DeviceRgb(15, 15, 26);
+        DeviceRgb GOLD     = new DeviceRgb(240, 165, 0);
+        DeviceRgb GOLD_BG  = new DeviceRgb(255, 248, 225);
+        DeviceRgb BLUE     = new DeviceRgb(51, 102, 204);
+        DeviceRgb GREEN    = new DeviceRgb(16, 185, 129);
+        DeviceRgb GRAY     = new DeviceRgb(120, 120, 140);
+        DeviceRgb LGRAY    = new DeviceRgb(245, 246, 250);
+        DeviceRgb WHITE    = new DeviceRgb(255, 255, 255);
 
-        // ---- Header ----
-        Paragraph header = new Paragraph("YGC INTERNAL")
-                .setFontSize(26).setBold()
-                .setFontColor(brandBlue)
-                .setTextAlignment(TextAlignment.CENTER);
-        doc.add(header);
+        // ══════════════ HEADER with logo placeholder ══════════════
+        Table headerTbl = new Table(new float[]{120, 320}).setWidth(UnitValue.createPercentValue(100));
 
-        Paragraph tagline = new Paragraph("Save Rupee, Rupee Will Save You In Future")
-                .setFontSize(11).setFontColor(ColorConstants.GRAY)
-                .setTextAlignment(TextAlignment.CENTER);
-        doc.add(tagline);
+        // Logo cell — circular brand mark
+        Cell logoCell = new Cell()
+                .add(new Paragraph("YGC")
+                        .setFontSize(24).setBold().setFontColor(GOLD)
+                        .setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("EST. 2024")
+                        .setFontSize(7).setFontColor(GRAY)
+                        .setTextAlignment(TextAlignment.CENTER))
+                .setBackgroundColor(NAVY).setBorder(new SolidBorder(GOLD, 2))
+                .setPadding(12).setVerticalAlignment(com.itextpdf.layout.properties.VerticalAlignment.MIDDLE);
+        headerTbl.addCell(logoCell);
 
-        Paragraph title = new Paragraph("CHIT FUND PARTICIPATION AGREEMENT")
-                .setFontSize(16).setBold()
-                .setTextAlignment(TextAlignment.CENTER)
-                .setMarginTop(15).setMarginBottom(5);
-        doc.add(title);
+        // Title cell
+        Cell titleCell = new Cell()
+                .add(new Paragraph("YGC INTERNAL").setFontSize(22).setBold().setFontColor(NAVY))
+                .add(new Paragraph("CHIT FUND PARTICIPATION AGREEMENT")
+                        .setFontSize(13).setBold().setFontColor(BLUE).setMarginTop(2))
+                .add(new Paragraph("Save Rupee, Rupee Will Save You In Future")
+                        .setFontSize(9).setFontColor(GRAY).setItalic().setMarginTop(2))
+                .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
+                .setPaddingLeft(15).setVerticalAlignment(com.itextpdf.layout.properties.VerticalAlignment.MIDDLE);
+        headerTbl.addCell(titleCell);
+        doc.add(headerTbl);
 
-        Paragraph agreementNo = new Paragraph("Agreement No: " + membership.getAgreementNumber())
-                .setFontSize(10).setFontColor(ColorConstants.GRAY)
-                .setTextAlignment(TextAlignment.CENTER)
-                .setMarginBottom(20);
-        doc.add(agreementNo);
+        // Gold divider
+        Table divider = new Table(1).setWidth(UnitValue.createPercentValue(100)).setMarginTop(8).setMarginBottom(8);
+        divider.addCell(new Cell().setHeight(3).setBackgroundColor(GOLD)
+                .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+        doc.add(divider);
 
-        // Horizontal rule (simulated via an empty table with bottom border)
-        Table hr = new Table(1).setWidth(UnitValue.createPercentValue(100));
-        Cell hrCell = new Cell().setBorderTop(new SolidBorder(brandBlue, 2))
-                .setBorderBottom(new SolidBorder(ColorConstants.LIGHT_GRAY, 1))
-                .setBorderLeft(com.itextpdf.layout.borders.Border.NO_BORDER)
-                .setBorderRight(com.itextpdf.layout.borders.Border.NO_BORDER)
-                .setHeight(4);
-        hr.addCell(hrCell);
-        doc.add(hr);
-        doc.add(new Paragraph("\n"));
+        // Agreement number + date badge
+        Table metaRow = new Table(new float[]{250, 250}).setWidth(UnitValue.createPercentValue(100));
+        metaRow.addCell(new Cell().add(new Paragraph("Agreement No: " + membership.getAgreementNumber())
+                .setFontSize(10).setBold().setFontColor(NAVY))
+                .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+        metaRow.addCell(new Cell().add(new Paragraph("Date: " + LocalDateTime.now().format(dateFmt))
+                .setFontSize(10).setFontColor(GRAY).setTextAlignment(TextAlignment.RIGHT))
+                .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+        doc.add(metaRow);
+        doc.add(new Paragraph("\n").setFontSize(4));
 
-        // ---- Customer Details ----
-        addSectionHeader(doc, "CUSTOMER DETAILS", brandBlue);
-        Table customerTable = new Table(new float[]{200, 300}).setWidth(UnitValue.createPercentValue(100));
-        addRow(customerTable, "Full Name", customer.getFullName());
-        addRow(customerTable, "Email Address", customer.getEmail());
-        addRow(customerTable, "Phone Number", customer.getPhone() != null ? customer.getPhone() : "—");
-        addRow(customerTable, "Membership ID", String.valueOf(membership.getId()));
-        doc.add(customerTable);
-        doc.add(new Paragraph("\n"));
+        // ══════════════ CUSTOMER DETAILS ══════════════
+        addSectionHeader(doc, "§ CUSTOMER DETAILS", NAVY);
+        Table ct = new Table(new float[]{180, 320}).setWidth(UnitValue.createPercentValue(100));
+        addRow(ct, "Full Name", customer.getFullName());
+        addRow(ct, "Email", customer.getEmail());
+        addRow(ct, "Phone", customer.getPhone() != null ? customer.getPhone() : "—");
+        addRow(ct, "Address", customer.getAddress() != null ? customer.getAddress() : "—");
+        addRow(ct, "Membership ID", "MEM-" + membership.getId());
+        doc.add(ct);
+        doc.add(new Paragraph("\n").setFontSize(4));
 
-        // ---- Chit Details ----
-        addSectionHeader(doc, "CHIT DETAILS", brandBlue);
-        Table chitTable = new Table(new float[]{200, 300}).setWidth(UnitValue.createPercentValue(100));
-        addRow(chitTable, "Chit Name", chit.getName());
-        addRow(chitTable, "Monthly Contribution", "₹" + chit.getMonthlyAmount());
-        addRow(chitTable, "Total Chit Value", "₹" + chit.getTotalChitValue());
-        addRow(chitTable, "Duration", chit.getDurationMonths() + " months");
-        addRow(chitTable, "Total Members", String.valueOf(chit.getTotalMembers()));
-        addRow(chitTable, "Commission Rate", chit.getAdminCommissionPercentage() + "%");
-        addRow(chitTable, "Start Date", chit.getStartDate().toString());
-        addRow(chitTable, "End Date", chit.getEndDate() != null ? chit.getEndDate().toString() : "—");
-        doc.add(chitTable);
-        doc.add(new Paragraph("\n"));
+        // ══════════════ CHIT DETAILS ══════════════
+        addSectionHeader(doc, "§ CHIT FUND DETAILS", NAVY);
+        Table cht = new Table(new float[]{180, 320}).setWidth(UnitValue.createPercentValue(100));
+        addRow(cht, "Chit Name", chit.getName());
+        addRow(cht, "Monthly Contribution", "₹" + chit.getMonthlyAmount());
+        addRow(cht, "Total Chit Value", "₹" + chit.getTotalChitValue());
+        addRow(cht, "Duration", chit.getDurationMonths() + " months");
+        addRow(cht, "Members", String.valueOf(chit.getTotalMembers()));
+        addRow(cht, "Commission Rate", chit.getAdminCommissionPercentage() + "%");
+        addRow(cht, "Start Date", chit.getStartDate() != null ? chit.getStartDate().toString() : "—");
+        addRow(cht, "End Date", chit.getEndDate() != null ? chit.getEndDate().toString() : "—");
+        doc.add(cht);
+        doc.add(new Paragraph("\n").setFontSize(4));
 
-        // ---- Terms & Conditions ----
-        addSectionHeader(doc, "TERMS AND CONDITIONS", brandBlue);
+        // ══════════════ TERMS ══════════════
+        addSectionHeader(doc, "§ TERMS AND CONDITIONS", NAVY);
         String[] terms = {
-            "1. The subscriber agrees to pay monthly contributions of ₹" + chit.getMonthlyAmount()
-                    + " on or before the due date each month.",
-            "2. A late payment fine of ₹20 per day will be charged for payments received after the due date.",
-            "3. The subscriber is eligible to participate in monthly auctions. The member who bids the lowest"
-                    + " amount wins the chit prize.",
-            "4. YGC Internal will deduct a commission of " + chit.getAdminCommissionPercentage()
-                    + "% from the winning bid amount.",
-            "5. Once a member wins an auction, they are not eligible to bid in subsequent auctions of the same chit.",
-            "6. The subscriber authorises YGC Internal to process their personal information solely for chit operations.",
-            "7. Early exit from the chit is subject to terms agreed with the administrator.",
-            "8. All disputes shall be resolved as per the Chit Funds Act, 1982 and applicable regulations.",
-            "9. This agreement is legally binding upon signing/digital acceptance."
+            "1. Monthly contributions of ₹" + chit.getMonthlyAmount() + " must be paid on/before the due date.",
+            "2. Late fine: ₹20/day charged for payments after the due date.",
+            "3. Auctions: Lowest bidder wins. Winner receives (bid amount – " + chit.getAdminCommissionPercentage() + "% commission).",
+            "4. Once won, the member cannot bid in subsequent auctions of the same chit.",
+            "5. Non-winners earn dividends from the discount (chit value – winning bid), distributed proportionally.",
+            "6. Personal information processed solely for chit operations as per the Information Technology Act, 2000.",
+            "7. Early exit subject to a " + "2% deduction and admin approval.",
+            "8. Disputes resolved per the Chit Funds Act, 1982 and applicable state regulations.",
+            "9. This is a legally binding digital agreement upon acceptance."
         };
-        for (String term : terms) {
-            doc.add(new Paragraph(term).setFontSize(10).setMarginBottom(4));
-        }
+        for (String term : terms) doc.add(new Paragraph(term).setFontSize(9).setMarginBottom(3).setFontColor(new DeviceRgb(60, 60, 80)));
+
+        doc.add(new Paragraph("\n").setFontSize(6));
+
+        // ══════════════ REQUEST & APPROVAL STAMPS ══════════════
+        addSectionHeader(doc, "§ DIGITAL ACCEPTANCE & APPROVAL", NAVY);
+
+        Table stampTbl = new Table(new float[]{250, 250}).setWidth(UnitValue.createPercentValue(100));
+
+        // Request stamp (left)
+        Cell requestStamp = new Cell()
+                .add(new Paragraph("MEMBER REQUEST").setFontSize(11).setBold().setFontColor(BLUE).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("────────────────").setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("Agreement Read: " + (membership.isAgreementRead() ? "✓ YES" : "✗ NO")).setFontSize(9).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("Terms Accepted: " + (membership.isAgreementAccepted() ? "✓ YES" : "✗ NO")).setFontSize(9).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("Info Auth: " + (membership.isInfoProcessingAuthorized() ? "✓ YES" : "✗ NO")).setFontSize(9).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("────────────────").setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("Requested: " + (membership.getAgreementAcceptedAt() != null ? membership.getAgreementAcceptedAt().format(dtf) : "—"))
+                        .setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("By: " + customer.getFullName()).setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER))
+                .setBorder(new SolidBorder(BLUE, 1.5f)).setBackgroundColor(new DeviceRgb(240, 245, 255))
+                .setPadding(12);
+        stampTbl.addCell(requestStamp);
+
+        // Approval stamp (right)
+        Cell approvalStamp = new Cell()
+                .add(new Paragraph("★ APPROVED ★").setFontSize(13).setBold().setFontColor(GREEN).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("────────────────").setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("DIGITALLY APPROVED").setFontSize(9).setBold().setFontColor(new DeviceRgb(5,100,60)).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("YGC Internal Admin").setFontSize(9).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("────────────────").setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("Approved: " + (membership.getAgreementApprovedAt() != null ? membership.getAgreementApprovedAt().format(dtf) : "—"))
+                        .setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("Seal: YGC-" + membership.getAgreementNumber())
+                        .setFontSize(7).setFontColor(GRAY).setItalic().setTextAlignment(TextAlignment.CENTER))
+                .setBorder(new SolidBorder(GREEN, 2f)).setBackgroundColor(new DeviceRgb(236, 253, 245))
+                .setPadding(12);
+        stampTbl.addCell(approvalStamp);
+        doc.add(stampTbl);
+
+        // ══════════════ DIGITAL SEAL ══════════════
+        doc.add(new Paragraph("\n").setFontSize(6));
+        Table sealTable = new Table(1).setWidth(UnitValue.createPercentValue(40))
+                .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
+        Cell sealCell = new Cell()
+                .add(new Paragraph("⬡ YGC DIGITAL SEAL ⬡").setFontSize(10).setBold().setFontColor(GOLD).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("Ref: " + membership.getAgreementNumber()).setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER))
+                .add(new Paragraph("Verified • Authentic • Binding").setFontSize(7).setFontColor(GRAY).setItalic().setTextAlignment(TextAlignment.CENTER))
+                .setBackgroundColor(GOLD_BG).setBorder(new SolidBorder(GOLD, 2))
+                .setPadding(10);
+        sealTable.addCell(sealCell);
+        doc.add(sealTable);
+
+        // ══════════════ FOOTER ══════════════
         doc.add(new Paragraph("\n"));
-
-        // ---- Acceptance Details ----
-        addSectionHeader(doc, "ACCEPTANCE RECORD", brandBlue);
-        Table acceptTable = new Table(new float[]{200, 300}).setWidth(UnitValue.createPercentValue(100));
-        addRow(acceptTable, "Agreement Read", membership.isAgreementRead() ? "✓ Yes" : "No");
-        addRow(acceptTable, "Terms Accepted", membership.isAgreementAccepted() ? "✓ Yes" : "No");
-        addRow(acceptTable, "Info Processing Auth.", membership.isInfoProcessingAuthorized() ? "✓ Yes" : "No");
-        addRow(acceptTable, "Acceptance Timestamp",
-                membership.getAgreementAcceptedAt() != null
-                        ? membership.getAgreementAcceptedAt().format(dtf) : "—");
-        addRow(acceptTable, "Approval Timestamp",
-                membership.getAgreementApprovedAt() != null
-                        ? membership.getAgreementApprovedAt().format(dtf) : "—");
-        addRow(acceptTable, "Approved By", "YGC Internal Admin");
-        doc.add(acceptTable);
-
-        // ---- Footer ----
-        doc.add(new Paragraph("\n\n"));
-        Paragraph footer = new Paragraph(
-                "This is a digitally generated agreement. Agreement No: " + membership.getAgreementNumber()
-                + "\nGenerated on: " + LocalDateTime.now().format(dtf)
-                + "\n\nYGC Internal | Contact: +91 8919508889 | Save Rupee, Rupee Will Save You In Future")
-                .setFontSize(9).setFontColor(ColorConstants.GRAY)
-                .setTextAlignment(TextAlignment.CENTER);
-        doc.add(footer);
+        Table footDiv = new Table(1).setWidth(UnitValue.createPercentValue(100));
+        footDiv.addCell(new Cell().setHeight(2).setBackgroundColor(NAVY)
+                .setBorder(com.itextpdf.layout.borders.Border.NO_BORDER));
+        doc.add(footDiv);
+        doc.add(new Paragraph(
+                "This is a digitally generated and sealed agreement. No physical signature required.\n"
+                + "Agreement No: " + membership.getAgreementNumber()
+                + "  |  Generated: " + LocalDateTime.now().format(dtf)
+                + "\nYGC Internal  |  Contact: +91 8919508889  |  Save Rupee, Rupee Will Save You In Future")
+                .setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER).setMarginTop(6));
 
         doc.close();
-        loggingUtil.info("Agreement PDF created at: " + filepath, "ChitAgreementService");
+        loggingUtil.info("Agreement PDF created: " + filepath, "ChitAgreementService");
         return filepath;
     }
 
