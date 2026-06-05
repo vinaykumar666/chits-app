@@ -499,7 +499,7 @@ body {
 
 /* ── Sidebar Overlay ──────────────────────────────────────── */
 #ygc-sidebar-overlay {
-  display: block;
+  display: none;
   position: fixed; inset: 0;
   z-index: 190;
   background: rgba(0,0,0,.55);
@@ -708,6 +708,71 @@ body {
     appearance: none;
     min-height: 44px;
   }
+  /* Fix iOS Safari 100vh bug */
+  body { min-height: -webkit-fill-available; }
+  /* Fix iOS momentum scrolling */
+  .sidebar, .member-sidebar { -webkit-overflow-scrolling: touch; }
+  .table-responsive { -webkit-overflow-scrolling: touch; }
+  /* Fix iOS tap highlight */
+  .btn, .nav-link, a { -webkit-tap-highlight-color: rgba(240,165,0,.15); }
+}
+
+/* ── Mobile stat cards — impressive on all devices ────────── */
+@media (max-width: 767px) {
+  .stat-card {
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.06);
+    border: 1px solid rgba(0,0,0,.03);
+    overflow: hidden;
+    position: relative;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--gradient-gold);
+    opacity: 1;
+  }
+  .stat-card .card-body {
+    padding: 14px 12px;
+  }
+  .stat-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    font-size: 1.15rem;
+  }
+  /* Make panels look great on mobile */
+  .panel {
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.06);
+    border: 1px solid rgba(0,0,0,.03);
+    overflow: hidden;
+  }
+  .panel .card-header {
+    border-radius: 16px 16px 0 0 !important;
+    padding: 14px 16px;
+  }
+  /* Quick action cards on mobile */
+  .card[style*="dashed"] {
+    border-radius: 16px !important;
+    border-width: 2px !important;
+  }
+  .card[style*="dashed"] .card-body {
+    padding: 16px 10px !important;
+  }
+  /* Alert on mobile */
+  .alert {
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: .85rem;
+  }
+}
+
+/* ── Tablet impressive cards ──────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .stat-card { border-radius: 16px; }
+  .panel { border-radius: 16px; }
 }
 
 /* Prevent horizontal scroll */
