@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 @RequiredArgsConstructor
-public class HelpController {
+public class HelpController extends BaseController {
     private final UserRepository userRepository;
 
     @GetMapping("/terms")

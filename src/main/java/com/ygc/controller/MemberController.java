@@ -17,7 +17,7 @@ import java.util.Map;
 @Controller
 @RequestMapping("/member")
 @RequiredArgsConstructor
-public class MemberController {
+public class MemberController extends BaseController {
     private final UserRepository userRepository;
     private final ChitService chitService;
     private final PaymentService paymentService;

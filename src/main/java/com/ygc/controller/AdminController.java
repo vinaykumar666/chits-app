@@ -20,7 +20,7 @@ import java.util.List;
 @Controller
 @RequestMapping("/admin")
 @RequiredArgsConstructor
-public class AdminController {
+public class AdminController extends BaseController {
     private final UserRepository userRepository;
     private final ChitService chitService;
     private final PaymentService paymentService;

@@ -665,6 +665,27 @@
     });
   }
 
+  // ─── Language Change Handler ─────────────────────────────────────────────
+  window.changeLanguage = function(lang) {
+    const supportedLanguages = ['en', 'hi', 'ta', 'te', 'kn'];
+    if (!supportedLanguages.includes(lang)) {
+      console.warn('[YGC] Unsupported language:', lang);
+      return;
+    }
+
+    // Set cookie for server-side locale resolution
+    const maxAge = 365 * 24 * 60 * 60;
+    document.cookie = `ygc_lang=${lang}; max-age=${maxAge}; path=/`;
+
+    // Also send to server via API
+    fetch(`/api/language/set/${lang}`, { method: 'POST' })
+      .then(() => {
+        // Reload page to apply new language
+        window.location.reload();
+      })
+      .catch(err => console.error('[YGC] Language change failed:', err));
+  };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
