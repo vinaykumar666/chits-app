@@ -1,5 +1,6 @@
 package com.ygc.controller;
 
+import com.ygc.audit.AuditService;
 import com.ygc.model.*;
 import com.ygc.repository.*;
 import com.ygc.service.*;
@@ -40,6 +41,7 @@ public class AdminController {
     private final EarlyExitService earlyExitService;
     private final RiskScoreService riskScoreService;
     private final LoginTrackingService loginTrackingService;
+    private final AuditService auditService;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
