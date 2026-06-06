@@ -119,6 +119,14 @@
     </div>
   </div>
 
+  <!-- Smart Insights -->
+  <div th:if="${!insights.isEmpty()}" class="card panel mb-4" style="border-left:4px solid #f0a500">
+    <div class="card-body py-3">
+      <h6 class="fw-bold small text-uppercase text-muted mb-2" style="letter-spacing:.1em"><i class="bi bi-lightbulb text-warning me-1"></i>Smart Insights</h6>
+      <div th:each="insight : ${insights}" class="py-1 small" th:text="${insight}"></div>
+    </div>
+  </div>
+
   <!-- Quick Actions -->
   <div class="row g-3 mb-4">
     <div class="col-12"><h6 class="text-muted fw-bold" style="font-size:.72rem;letter-spacing:.1em;text-transform:uppercase">Quick Actions</h6></div>

@@ -121,24 +121,12 @@
   </div>
   <div class="d-flex align-items-center gap-2">
     <span class="ygc-conn-dot" title="Live notifications active"></span>
-    <!-- Issue 1: Notification bell with dropdown -->
-    <div class="dropdown">
-      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary dropdown-toggle"
-              data-bs-toggle="dropdown" data-bs-auto-close="outside"
-              title="Notifications" aria-label="Show notifications" style="font-size:1.3rem;line-height:1">
-        <i class="bi bi-bell"></i>
-        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
-      </button>
-      <div class="dropdown-menu dropdown-menu-end shadow-lg p-0" style="min-width:320px;max-height:400px;overflow-y:auto;border-radius:14px">
-        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-          <span class="fw-bold small">Notifications</span>
-          <button class="btn btn-sm btn-link text-muted p-0" onclick="clearNotifications()" style="font-size:.75rem">Clear all</button>
-        </div>
-        <div id="ygc-notif-list">
-          <div class="text-center text-muted py-4 small" id="ygc-notif-empty"><i class="bi bi-bell-slash d-block mb-1 fs-5"></i>No notifications</div>
-        </div>
-      </div>
-    </div>
+    <!-- Bell: app.js handles the panel via initBellIcon() -->
+    <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary"
+            title="Notifications" aria-label="Show notifications" style="font-size:1.3rem;line-height:1">
+      <i class="bi bi-bell"></i>
+      <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+    </button>
     <span class="user-badge" th:text="${userDisplayName}">User</span>
   </div>
 </div>
@@ -162,25 +150,17 @@
   <script th:src="@{/js/app.js}"></script>
   <script th:src="@{/js/i18n.js}"></script>
   <script>function switchLang(l){var u=new URL(window.location);u.searchParams.set('lang',l);window.location=u.toString();}
-  var _notifs=[];
-  function addNotification(msg,link){
-    _notifs.unshift({msg:msg,link:link||'#',time:new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})});
-    if(_notifs.length>20)_notifs.pop();
-    renderNotifs();
-  }
-  function clearNotifications(){_notifs=[];renderNotifs();}
-  function renderNotifs(){
-    var b=document.getElementById('ygc-notif-badge');
-    var l=document.getElementById('ygc-notif-list');
-    var e=document.getElementById('ygc-notif-empty');
-    if(!l)return;
-    if(_notifs.length===0){l.innerHTML='<div class="text-center text-muted py-4 small" id="ygc-notif-empty"><i class="bi bi-bell-slash d-block mb-1 fs-5"></i>No notifications</div>';if(b)b.style.display='none';return;}
-    if(b){b.textContent=_notifs.length;b.style.display='';}
-    l.innerHTML=_notifs.map(function(n){return '<a href="'+n.link+'" class="dropdown-item d-flex gap-2 py-2 border-bottom" style="white-space:normal"><div><div class="small">'+n.msg+'</div><small class="text-muted">'+n.time+'</small></div></a>';}).join('');
-  }
-  // Hook into existing SSE toast system
-  var _origShowToast=window.showYGCToast;
-  if(typeof _origShowToast==='function'){window.showYGCToast=function(m,t){_origShowToast(m,t);var link='#';if(m.indexOf('payment')>=0||m.indexOf('Payment')>=0)link='/admin/payments';else if(m.indexOf('exit')>=0||m.indexOf('Exit')>=0)link='/admin/early-exits';else if(m.indexOf('join')>=0||m.indexOf('Join')>=0)link='/admin/chits';else if(m.indexOf('settle')>=0||m.indexOf('Settle')>=0)link='/admin/settlements';addNotification(m,link);};}
+  // Load notification badge count on page load
+  (function(){
+    try{
+      var s=sessionStorage.getItem('ygc-notif-log');
+      if(s){var n=JSON.parse(s);if(n&&n.length>0){var b=document.getElementById('ygc-notif-badge');if(b){b.textContent=n.length;b.style.display='inline-flex';}}}
+    }catch(e){}
+    // Also fetch from server
+    fetch('/api/notifications/history').then(function(r){return r.json()}).then(function(data){
+      if(data&&data.length>0){var b=document.getElementById('ygc-notif-badge');if(b){var c=parseInt(b.textContent)||0;var total=Math.max(c,data.length);if(total>0){b.textContent=total;b.style.display='inline-flex';}}}
+    }).catch(function(){});
+  })();
   </script>
 </div>
 

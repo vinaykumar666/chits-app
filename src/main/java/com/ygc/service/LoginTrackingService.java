@@ -55,6 +55,11 @@ public class LoginTrackingService {
         return loginHistoryRepo.findTop20ByUserOrderByLoginAtDesc(user);
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteByUser(User user) {
+        loginHistoryRepo.deleteByUser(user);
+    }
+
     private String extractDevice(String ua) {
         if (ua == null) return "Unknown";
         if (ua.contains("iPhone")) return "iPhone";

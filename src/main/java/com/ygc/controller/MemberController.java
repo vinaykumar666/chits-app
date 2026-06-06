@@ -29,6 +29,7 @@ public class MemberController {
     private final PdfCertificateService pdfCertificateService;
     private final BidCalculationService bidCalculationService;
     private final EarlyExitService earlyExitService;
+    private final NotificationService notificationService;
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
     }
@@ -161,6 +162,17 @@ public class MemberController {
             membership.setAgreementRead(true);
             membership.setInfoProcessingAuthorized(true);
             membershipRepository.save(membership);
+
+            // Notify admin that member accepted — they can now approve
+            try {
+                if (membership.getChit().getCreatedBy() != null) {
+                    notificationService.notifyUserUpdated(
+                            membership.getChit().getCreatedBy().getEmail(),
+                            user.getFullName() + " accepted the agreement for '" + membership.getChit().getName()
+                            + "'. You can now approve their membership.");
+                }
+            } catch (Exception ignored) {}
+
             ra.addFlashAttribute("success", "Agreement accepted successfully! Admin can now approve your membership.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());

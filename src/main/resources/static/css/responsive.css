@@ -225,3 +225,154 @@
   body { padding-top: var(--safe-top, 0px); }
   .sidebar, .member-sidebar { padding-top: calc(var(--safe-top, 0px) + 8px); }
 }
+
+/* ══════════════════════════════════════════════════════════
+   iPAD / iPAD PRO SPECIFIC  (768-1366px, touch device)
+   ══════════════════════════════════════════════════════════ */
+@media (min-width: 768px) and (max-width: 1366px) and (hover: none) {
+  /* Larger touch targets */
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 38px; }
+  .nav-link { padding: 12px 18px !important; }
+  .table > :not(caption) > * > * { padding: .6rem .75rem; }
+
+  /* Better card spacing */
+  .stat-card .card-body { padding: 16px; }
+  .stat-icon { width: 48px; height: 48px; }
+
+  /* 2-column stat cards on iPad */
+  .row.g-3 > .col-md-2 { flex: 0 0 33.333%; max-width: 33.333%; }
+
+  /* Sidebar overlay mode on iPad portrait */
+  @media (orientation: portrait) {
+    .sidebar, .member-sidebar {
+      transform: translateX(-100%);
+      position: fixed;
+      z-index: 210;
+    }
+    .sidebar.sidebar-open, .member-sidebar.sidebar-open {
+      transform: translateX(0);
+    }
+    .main-content { margin-left: 0 !important; }
+    #ygc-mob-toggle { display: flex !important; }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   iPHONE SAFE AREAS (notch, dynamic island, home bar)
+   ══════════════════════════════════════════════════════════ */
+@supports (padding: env(safe-area-inset-top)) {
+  .sidebar, .member-sidebar {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  }
+  .main-content {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  }
+  #ygc-mob-toggle {
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+  }
+  .topbar {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4px);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   ENHANCED CARD STYLES — glass morphism + better shadows
+   ══════════════════════════════════════════════════════════ */
+.stat-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(249,250,252,0.9));
+  border: 1px solid rgba(0,0,0,.04);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all .25s cubic-bezier(.4,0,.2,1);
+}
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
+}
+.stat-card .fw-bold.fs-4, .stat-card .fw-bold.fs-5 {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Actionable alert cards */
+.card[style*="border-radius:12px"] {
+  transition: all .2s ease;
+}
+.card[style*="border-radius:12px"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+}
+
+/* Better progress bars */
+.progress {
+  background: rgba(0,0,0,.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.progress-bar {
+  border-radius: 8px;
+  transition: width .6s ease;
+}
+
+/* Quick action cards — subtle hover glow */
+.card[style*="dashed"]:hover {
+  border-style: solid !important;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(240,165,0,.12);
+}
+
+/* Panel cards — smoother */
+.panel {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+.panel .card-header {
+  border-radius: 0 !important;
+}
+
+/* Table row hover — subtle highlight */
+.table-hover tbody tr:hover {
+  background: rgba(240,165,0,.03) !important;
+}
+tr[style*="cursor:pointer"]:hover {
+  background: rgba(240,165,0,.06) !important;
+}
+
+/* Badge polish */
+.badge {
+  letter-spacing: .02em;
+  font-weight: 600;
+}
+
+/* Topbar dropdown notification panel */
+.dropdown-menu[style*="min-width:320px"] {
+  border: 1px solid rgba(0,0,0,.08);
+  box-shadow: 0 16px 48px rgba(0,0,0,.12);
+}
+
+/* ══════════════════════════════════════════════════════════
+   DARK MODE PWA — when installed as app
+   ══════════════════════════════════════════════════════════ */
+@media (display-mode: standalone) {
+  /* Smooth app-like transitions */
+  .main-content { transition: none; }
+  .card, .panel { transition: transform .2s ease; }
+
+  /* Better status bar blending */
+  body { background-color: #f8f9fa; }
+  .topbar { background: rgba(248,249,250,.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   PRINT — hide UI chrome
+   ══════════════════════════════════════════════════════════ */
+@media print {
+  .sidebar, .member-sidebar, #ygc-bottom-nav, #ygc-mob-toggle,
+  #ygc-toast-container, .btn-action, .topbar .btn, .dropdown { display: none !important; }
+  .main-content { margin: 0 !important; padding: 0 !important; }
+  .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #ddd !important; }
+}

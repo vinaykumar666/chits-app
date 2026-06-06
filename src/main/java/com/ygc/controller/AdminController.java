@@ -71,6 +71,29 @@ public class AdminController {
         model.addAttribute("recentAudits", auditLogRepository.findAll()
                 .stream().sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()))
                 .limit(10).toList());
+
+        // Smart Insights — auto-detected patterns
+        List<String> insights = new java.util.ArrayList<>();
+        try {
+            if (pendingPay > 5) insights.add("⚠️ " + pendingPay + " payments awaiting verification — review queue is growing");
+            if (pendingJoins > 0 && pendingJoins > 3) insights.add("📋 " + pendingJoins + " pending join requests — members are waiting for approval");
+            long activeChits = chitRepository.findAll().stream().filter(c -> c.getStatus() == Chit.ChitStatus.ACTIVE).count();
+            long totalMemberCount = userRepository.findAll().stream().filter(u -> u.getRole() == User.Role.MEMBER && u.isActive()).count();
+            if (activeChits > 0 && totalMemberCount > 0) {
+                double avgMembers = (double) membershipRepository.findAll().stream()
+                        .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count() / activeChits;
+                if (avgMembers < 3) insights.add("📉 Average " + String.format("%.1f", avgMembers) + " members per active chit — consider member outreach");
+            }
+            long lockedCount = userRepository.findAll().stream().filter(User::isAccountLocked).count();
+            if (lockedCount > 0) insights.add("🔒 " + lockedCount + " account(s) locked — check Security Log");
+            long overduePayments = 0;
+            try { overduePayments = paymentService.getAllPayments().stream()
+                    .filter(p -> p.getStatus() == Payment.PaymentStatus.OVERDUE).count(); } catch (Exception ignored) {}
+            if (overduePayments > 0) insights.add("🔴 " + overduePayments + " overdue payment(s) across all chits");
+            if (pendingExits > 0) insights.add("🚪 " + pendingExits + " early exit request(s) need review");
+        } catch (Exception ignored) {}
+        model.addAttribute("insights", insights);
+
         return "admin/dashboard";
     }
 
@@ -555,49 +578,82 @@ public class AdminController {
             String memberEmail = member.getEmail();
             String deleteReason = (reason != null && !reason.isBlank()) ? reason : "Removed by admin";
 
-            // 1. Check for active memberships
-            List<ChitMembership> activeMemberships = membershipRepository.findByUser(member).stream()
-                    .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE
-                              || m.getStatus() == ChitMembership.MembershipStatus.PENDING)
-                    .toList();
-
-            if (!activeMemberships.isEmpty()) {
-                // Exit all active memberships first
-                for (ChitMembership m : activeMemberships) {
+            // 1. Exit all active/pending memberships
+            List<ChitMembership> memberships = membershipRepository.findByUser(member);
+            int exitedCount = 0;
+            for (ChitMembership m : memberships) {
+                if (m.getStatus() == ChitMembership.MembershipStatus.ACTIVE
+                        || m.getStatus() == ChitMembership.MembershipStatus.PENDING) {
                     m.setStatus(ChitMembership.MembershipStatus.EXITED);
-                    m.setRejectionReason("User deleted: " + deleteReason);
+                    m.setRejectionReason("User permanently deleted: " + deleteReason);
                     membershipRepository.save(m);
+                    exitedCount++;
                 }
             }
 
-            // 2. Audit the deletion
-            auditService.log(admin, "DELETE_USER", "User", member.getId(),
-                    "Deleted user: " + memberName + " (" + memberEmail + ") — " + deleteReason);
+            // 2. Comprehensive audit BEFORE deletion (preserved permanently)
+            auditService.log(admin, "PERMANENT_DELETE_USER", "User", member.getId(),
+                    "PERMANENTLY DELETED — Name: " + memberName
+                    + " | Email: " + memberEmail
+                    + " | Phone: " + (member.getPhone() != null ? member.getPhone() : "N/A")
+                    + " | Address: " + (member.getAddress() != null ? member.getAddress() : "N/A")
+                    + " | Aadhaar: " + (member.getAadhaarNumber() != null ? "XXXX" + member.getAadhaarNumber().substring(Math.max(0, member.getAadhaarNumber().length() - 4)) : "N/A")
+                    + " | Memberships exited: " + exitedCount
+                    + " | Reason: " + deleteReason);
 
             // 3. Email notification to the deleted user
             try {
                 emailService.sendAnnouncement(memberEmail, memberName,
-                        "Account Removed — YGC Internal",
-                        "Your YGC Internal account has been removed. Reason: " + deleteReason
+                        "Account Permanently Removed — YGC Internal",
+                        "Your YGC Internal account has been permanently removed. Reason: " + deleteReason
                         + ". If you believe this is an error, contact admin at +91 8919508889.");
             } catch (Exception ignored) {}
 
-            // 4. Notify admin
-            notificationService.notifyAdminUserDeleted(admin.getEmail(), memberName);
+            // 4. Nullify all FK references to this user before hard-delete
+            // Audit logs: set user to null (audit text already has the user info)
+            auditLogRepository.findAll().stream()
+                    .filter(a -> a.getUser() != null && a.getUser().getId().equals(id))
+                    .forEach(a -> { a.setUser(null); auditLogRepository.save(a); });
 
-            // 5. Soft-delete: anonymize & deactivate (hard-delete would violate
-            //    FK constraints from AuditLog, Bid, Auction, Payment, Chit)
-            member.setActive(false);
-            member.setFullName("[Deleted] " + memberName);
-            member.setPhone(null);
-            member.setAddress(null);
-            member.setFirstLogin(true);
-            member.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
-            userRepository.save(member);
+            // Login history: delete all records for this user
+            try {
+                loginTrackingService.deleteByUser(member);
+            } catch (Exception ignored) {}
+
+            // Early exit requests: nullify reviewer references
+            try {
+                earlyExitRequestRepository.findAll().stream()
+                        .filter(e -> e.getReviewedBy() != null && e.getReviewedBy().getId().equals(id))
+                        .forEach(e -> { e.setReviewedBy(null); earlyExitRequestRepository.save(e); });
+            } catch (Exception ignored) {}
+
+            // Settlements: nullify approvedBy
+            try {
+                settlementRepository.findAll().stream()
+                        .filter(s -> s.getApprovedBy() != null && s.getApprovedBy().getId().equals(id))
+                        .forEach(s -> { s.setApprovedBy(null); settlementRepository.save(s); });
+            } catch (Exception ignored) {}
+
+            // Chits: nullify createdBy
+            try {
+                chitRepository.findAll().stream()
+                        .filter(c -> c.getCreatedBy() != null && c.getCreatedBy().getId().equals(id))
+                        .forEach(c -> { c.setCreatedBy(null); chitRepository.save(c); });
+            } catch (Exception ignored) {}
+
+            // 5. Delete all memberships (cascade deletes payments, bids, etc.)
+            for (ChitMembership m : memberships) {
+                membershipRepository.delete(m);
+            }
+            membershipRepository.flush();
+
+            // 6. HARD DELETE the user — email is now freed for re-registration
+            userRepository.delete(member);
+            userRepository.flush();
 
             ra.addFlashAttribute("success",
-                    "User '" + memberName + "' removed and anonymized. Email notification sent. "
-                    + activeMemberships.size() + " membership(s) exited.");
+                    "User '" + memberName + "' permanently deleted. Email " + memberEmail
+                    + " is now available for re-registration. " + exitedCount + " membership(s) exited. Full details in Audit Log.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Delete failed: " + e.getMessage());
         }
@@ -857,8 +913,8 @@ public class AdminController {
             User member = userRepository.findByEmail(memberEmail)
                     .orElseThrow(() -> new RuntimeException("No user found with email: " + memberEmail));
 
-            if (membershipRepository.existsByChitAndUser(chit, member)) {
-                ra.addFlashAttribute("error", "Member " + member.getFullName() + " is already in this chit.");
+            if (membershipRepository.findActiveOrPendingByChitAndUser(chit, member).isPresent()) {
+                ra.addFlashAttribute("error", "Member " + member.getFullName() + " already has an active or pending membership in this chit.");
                 return "redirect:/admin/chits/" + chitId;
             }
 
@@ -868,12 +924,13 @@ public class AdminController {
             membership.setStatus(ChitMembership.MembershipStatus.PENDING);
             membershipRepository.save(membership);
 
-            // Notify
+            // Notify member — clear actionable message
             notificationService.notifyUserUpdated(member.getEmail(),
-                    "You have been added to chit '" + chit.getName() + "' by admin. Pending approval.");
+                    "You've been invited to join '" + chit.getName() + "'. Open your dashboard to review the agreement and accept.");
             emailService.sendUserUpdated(member.getEmail(), member.getFullName(),
-                    "You have been enrolled in chit '" + chit.getName() + "' by the admin. "
-                            + "Your membership is pending approval.");
+                    "You have been invited to chit '" + chit.getName() + "' by the admin. "
+                            + "Please log in to your dashboard, review the agreement, and accept to proceed. "
+                            + "Monthly: ₹" + chit.getMonthlyAmount() + " | Duration: " + chit.getDurationMonths() + " months.");
 
             ra.addFlashAttribute("success",
                     member.getFullName() + " added to chit as PENDING. Notification sent.");

@@ -14,4 +14,5 @@ public interface LoginHistoryRepository extends JpaRepository<LoginHistory, Long
     long countByUserAndSuccessFalseAndLoginAtAfter(User user, LocalDateTime after);
     List<LoginHistory> findByIpAddressAndUserNot(String ip, User user);
     boolean existsByUserAndIpAddress(User user, String ip);
+    void deleteByUser(User user);
 }

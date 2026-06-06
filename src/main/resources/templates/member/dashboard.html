@@ -26,6 +26,26 @@
   </div>
   <div th:replace="~{fragments :: alerts}"></div>
 
+  <!-- Pending Membership Actions — requires user attention -->
+  <th:block th:each="m : ${memberships}" th:if="${m.status.name() == 'PENDING'}">
+    <div class="alert mb-3" style="border-left:4px solid #f0a500;background:linear-gradient(135deg,#fffdf0,#fff8e1);border-radius:12px;border:1px solid rgba(240,165,0,.2)">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <h6 class="fw-bold mb-1" style="color:#b8860b"><i class="bi bi-bell-fill me-1"></i>New Chit Invitation</h6>
+          <p class="mb-1 small">You have been added to <strong th:text="${m.chit.name}"></strong> (₹<span th:text="${m.chit.monthlyAmount}"></span>/month).</p>
+          <small class="text-muted" th:if="${!m.agreementAccepted}"><i class="bi bi-exclamation-circle text-danger me-1"></i>Review and accept the agreement to proceed.</small>
+          <small class="text-success" th:if="${m.agreementAccepted}"><i class="bi bi-check-circle me-1"></i>Agreement accepted — waiting for admin approval.</small>
+        </div>
+        <a th:href="@{/member/memberships/{id}(id=${m.id})}" class="btn btn-sm fw-bold"
+           th:classappend="${m.agreementAccepted} ? 'btn-outline-success' : 'btn-warning'"
+           onclick="event.stopPropagation()">
+          <i class="bi" th:classappend="${m.agreementAccepted} ? 'bi-eye' : 'bi-file-earmark-text'"></i>
+          <span th:text="${m.agreementAccepted} ? 'View' : 'Review Agreement'"></span>
+        </a>
+      </div>
+    </div>
+  </th:block>
+
   <!-- Settlement Pending Acknowledgment -->
   <div th:each="s : ${mySettlements}" th:if="${s.status.name() == 'APPROVED' and !s.userAcknowledged}">
     <div class="alert border-success mb-3" style="border-left:4px solid #198754;background:#f0fff4;border-radius:12px">

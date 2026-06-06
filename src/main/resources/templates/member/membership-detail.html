@@ -86,6 +86,41 @@
         </div>
     </div>
 
+    <!-- Agreement Acceptance Required — prominent CTA for PENDING members -->
+    <div th:if="${membership.status.name() == 'PENDING' and !membership.agreementAccepted}" class="card mb-4 border-warning" style="border-left:4px solid #f0a500;border-radius:14px">
+        <div class="card-body">
+            <h5 class="fw-bold mb-3" style="color:#b8860b"><i class="bi bi-file-earmark-text me-2"></i>Agreement Acceptance Required</h5>
+            <div class="alert alert-light border mb-3 small" style="max-height:200px;overflow-y:auto">
+                <p class="fw-semibold">Chit Fund Participation Agreement — <span th:text="${membership.chit.name}"></span></p>
+                <ol>
+                    <li>I agree to pay <strong>₹<span th:text="${membership.chit.monthlyAmount}"></span></strong> monthly for <strong><span th:text="${membership.chit.durationMonths}"></span> months</strong>.</li>
+                    <li>Late payment will attract a fine of ₹20 per day.</li>
+                    <li>Admin commission of <strong><span th:text="${membership.chit.adminCommissionPercentage}"></span>%</strong> will be deducted from the prize money.</li>
+                    <li>Early exit is subject to a 2% deduction on total paid amount.</li>
+                    <li>I authorize YGC Internal to process my personal information including Aadhaar for KYC verification.</li>
+                    <li>I have read and understood all terms and conditions of this chit fund scheme.</li>
+                </ol>
+            </div>
+            <form th:action="@{/member/memberships/{id}/accept-terms(id=${membership.id})}" method="post">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="agreeCheck" required>
+                    <label class="form-check-label small fw-semibold" for="agreeCheck">
+                        I have read the agreement, accept all terms and conditions, and authorize processing of my information.
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-warning fw-bold w-100">
+                    <i class="bi bi-check-circle me-1"></i>Accept Agreement &amp; Join
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Agreement Accepted — waiting for admin approval -->
+    <div th:if="${membership.status.name() == 'PENDING' and membership.agreementAccepted}" class="alert alert-success mb-4" style="border-radius:12px">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>Agreement accepted!</strong> Waiting for admin to approve your membership. You will be notified once approved.
+    </div>
+
     <!-- Intelligent Bid Recommendation Panel — only for ACTIVE chits -->
     <div th:if="${hasOpenAuction and !membership.hasWonAuction and bidRecommendations != null
                  and membership.chit.status.name() != 'CANCELLED'
