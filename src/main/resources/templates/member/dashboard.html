@@ -4,6 +4,7 @@
 <body>
 
 <div th:replace="~{fragments :: memberSidebar('dashboard')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
 
 <div class="main-content">
   <div class="topbar">
@@ -68,7 +69,8 @@
             </tr>
           </thead>
           <tbody>
-          <tr th:each="m : ${memberships}">
+          <tr th:each="m : ${memberships}" style="cursor:pointer"
+              th:onclick="'window.location.href=\'/member/memberships/' + ${m.id} + '\''">
             <td>
               <div class="fw-semibold" th:text="${m.chit.name}"></div>
               <small class="text-muted d-none d-sm-block" th:text="${m.chit.description}"></small>

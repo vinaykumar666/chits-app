@@ -26,6 +26,10 @@ public class UserService {
 
     @Transactional
     public User registerUser(String email, String fullName, String phone, String address) {
+        return registerUser(email, fullName, phone, address, null);
+    }
+
+    public User registerUser(String email, String fullName, String phone, String address, String aadhaarNumber) {
         loggingUtil.transactionStart("registerUser", "UserService");
         try {
             loggingUtil.debug("Registering user with email: " + email, "UserService.registerUser");
@@ -42,6 +46,9 @@ public class UserService {
             user.setFullName(fullName);
             user.setPhone(phone);
             user.setAddress(address);
+            if (aadhaarNumber != null && !aadhaarNumber.isBlank()) {
+                user.setAadhaarNumber(aadhaarNumber.replaceAll("\\s", ""));
+            }
             user.setPassword(passwordEncoder.encode(tempPassword));
             user.setFirstLogin(true);
 

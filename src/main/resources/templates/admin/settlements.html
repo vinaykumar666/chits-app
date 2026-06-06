@@ -33,7 +33,7 @@
                 <tr><th>Member</th><th>Chit</th><th>Type</th><th>Total Paid</th><th>Late Fines</th><th>Deduction</th><th>Final Amount</th><th>Requested</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
-                <tr th:each="s : ${settlements}">
+                <tr th:each="s : ${settlements}" style="cursor:pointer" th:onclick="'window.location.href=\x27/admin/chits/' + ${s.membership.chit.id} + '\x27'">
                     <td><div class="fw-semibold" th:text="${s.membership.user.fullName}"></div><small class="text-muted" th:text="${s.membership.user.email}"></small></td>
                     <td th:text="${s.membership.chit.name}"></td>
                     <td><span class="badge" th:classappend="${s.type.name() == 'EARLY_EXIT'} ? 'bg-warning text-dark' : 'bg-success'" th:text="${s.type}"></span></td>
@@ -70,7 +70,7 @@
                 <tr><th>Member</th><th>Chit</th><th>Type</th><th>Final Amount</th><th>Status</th><th>Reason</th><th>Processed</th><th>Approved By</th></tr>
                 </thead>
                 <tbody>
-                <tr th:each="s : ${allSettlements}">
+                <tr th:each="s : ${allSettlements}" style="cursor:pointer" th:onclick="'window.location.href=\'/admin/chits/' + ${s.membership.chit.id} + '\''">
                     <td th:text="${s.membership.user.fullName}"></td>
                     <td th:text="${s.membership.chit.name}"></td>
                     <td><span class="badge" th:classappend="${s.type.name() == 'EARLY_EXIT'} ? 'bg-warning text-dark' : 'bg-success'" th:text="${s.type}"></span></td>

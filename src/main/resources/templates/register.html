@@ -72,12 +72,25 @@
           <input type="text" name="fullName" class="form-control" placeholder="Your full name" required>
         </div>
         <div class="mb-3">
-          <label class="form-label">Phone Number</label>
-          <input type="tel" name="phone" class="form-control" placeholder="+91 XXXXXXXXXX" inputmode="tel">
+          <label class="form-label">Phone Number *</label>
+          <input type="tel" name="phone" class="form-control" placeholder="+91 XXXXXXXXXX" required inputmode="tel">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Aadhaar Number *</label>
+          <input type="text" name="aadhaarNumber" class="form-control" placeholder="XXXX XXXX XXXX"
+                 required pattern="\d{4}\s?\d{4}\s?\d{4}" maxlength="14" inputmode="numeric"
+                 title="Enter 12-digit Aadhaar number">
+          <div style="margin-top:6px;padding:8px 12px;border-radius:8px;background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.15)">
+            <small style="color:rgba(255,255,255,.5);font-size:.7rem">
+              <i class="bi bi-shield-lock me-1" style="color:#f0a500"></i>
+              <strong style="color:#f0a500">Encrypted & Secure:</strong>
+              Your Aadhaar number is encrypted with AES-256 and stored securely. It is used solely for identity verification as per KYC norms and will never be shared with third parties.
+            </small>
+          </div>
         </div>
         <div class="mb-4">
-          <label class="form-label">Address</label>
-          <input type="text" name="address" class="form-control" placeholder="City, State">
+          <label class="form-label">Address *</label>
+          <input type="text" name="address" class="form-control" placeholder="City, State" required>
         </div>
         <button type="submit" class="btn btn-register">
           <i class="bi bi-person-plus me-2"></i>Create Account

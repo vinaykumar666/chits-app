@@ -78,6 +78,47 @@
     </div>
   </div>
 
+  <!-- Issue 5: Actionable Alerts — pending requests needing admin action -->
+  <div th:if="${pendingJoins > 0 or pendingExits > 0 or pendingPayments > 0 or pendingSettlements > 0}" class="row g-2 mb-4">
+    <div class="col-12"><h6 class="text-danger fw-bold" style="font-size:.72rem;letter-spacing:.1em;text-transform:uppercase"><i class="bi bi-bell-fill me-1"></i>Requires Your Action</h6></div>
+    <div class="col-md-3 col-6" th:if="${pendingJoins > 0}">
+      <a th:href="@{/admin/chits}" class="card text-decoration-none border-warning h-100" style="border-radius:12px">
+        <div class="card-body py-2 d-flex align-items-center gap-2">
+          <span class="badge bg-warning text-dark rounded-pill fs-6" th:text="${pendingJoins}">0</span>
+          <small class="fw-semibold">Join Requests</small>
+          <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6" th:if="${pendingPayments > 0}">
+      <a th:href="@{/admin/payments}" class="card text-decoration-none border-success h-100" style="border-radius:12px">
+        <div class="card-body py-2 d-flex align-items-center gap-2">
+          <span class="badge bg-success rounded-pill fs-6" th:text="${pendingPayments}">0</span>
+          <small class="fw-semibold">Payment Approvals</small>
+          <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6" th:if="${pendingExits > 0}">
+      <a th:href="@{/admin/early-exits}" class="card text-decoration-none border-danger h-100" style="border-radius:12px">
+        <div class="card-body py-2 d-flex align-items-center gap-2">
+          <span class="badge bg-danger rounded-pill fs-6" th:text="${pendingExits}">0</span>
+          <small class="fw-semibold">Exit Requests</small>
+          <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3 col-6" th:if="${pendingSettlements > 0}">
+      <a th:href="@{/admin/settlements}" class="card text-decoration-none border-primary h-100" style="border-radius:12px">
+        <div class="card-body py-2 d-flex align-items-center gap-2">
+          <span class="badge bg-primary rounded-pill fs-6" th:text="${pendingSettlements}">0</span>
+          <small class="fw-semibold">Pending Settlements</small>
+          <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </div>
+      </a>
+    </div>
+  </div>
+
   <!-- Quick Actions -->
   <div class="row g-3 mb-4">
     <div class="col-12"><h6 class="text-muted fw-bold" style="font-size:.72rem;letter-spacing:.1em;text-transform:uppercase">Quick Actions</h6></div>

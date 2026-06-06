@@ -54,9 +54,20 @@ public class AdminController {
         model.addAttribute("user", getCurrentUser(auth));
         model.addAttribute("totalChits", chitRepository.count());
         model.addAttribute("totalMembers", userRepository.findAll().stream().filter(u -> u.getRole() == User.Role.MEMBER).count());
-        model.addAttribute("pendingPayments", paymentService.getPendingPayments().size());
-        model.addAttribute("pendingSettlements", settlementService.getPendingSettlements().size());
-        model.addAttribute("openAuctions", auctionService.getOpenAuctions().size());
+        long pendingPay = 0; long pendingSettle = 0; long openAuct = 0;
+        long pendingJoins = 0; long pendingExits = 0;
+        try { pendingPay = paymentService.getPendingPayments().size(); } catch (Exception ignored) {}
+        try { pendingSettle = settlementService.getPendingSettlements().size(); } catch (Exception ignored) {}
+        try { openAuct = auctionService.getOpenAuctions().size(); } catch (Exception ignored) {}
+        try { pendingJoins = membershipRepository.findAll().stream()
+                .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.PENDING).count(); } catch (Exception ignored) {}
+        try { pendingExits = earlyExitService.getAllRequests().stream()
+                .filter(r -> r.getStatus() == EarlyExitRequest.ExitStatus.REQUESTED).count(); } catch (Exception ignored) {}
+        model.addAttribute("pendingPayments", pendingPay);
+        model.addAttribute("pendingSettlements", pendingSettle);
+        model.addAttribute("openAuctions", openAuct);
+        model.addAttribute("pendingJoins", pendingJoins);
+        model.addAttribute("pendingExits", pendingExits);
         model.addAttribute("recentAudits", auditLogRepository.findAll()
                 .stream().sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()))
                 .limit(10).toList());
@@ -235,6 +246,11 @@ public class AdminController {
         try {
             ChitMembership membership = membershipRepository.findById(id).orElseThrow();
             Long chitId = membership.getChit().getId();
+            // Issue 6: Require agreement acceptance before admin can approve
+            if (!membership.isAgreementAccepted()) {
+                ra.addFlashAttribute("error", "Cannot approve: Member has not accepted the agreement yet. Wait for member to review and accept.");
+                return "redirect:/admin/chits/" + chitId;
+            }
             chitService.approveMembership(id, getCurrentUser(auth));
             ra.addFlashAttribute("success", "Membership approved! Agreement PDF sent.");
             return "redirect:/admin/chits/" + chitId;

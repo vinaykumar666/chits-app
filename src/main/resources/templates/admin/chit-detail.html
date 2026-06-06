@@ -127,13 +127,12 @@
         </div>
     </div>
 
-    <!-- ── Member List ─────────────────────────────────────────────────────── -->
+    <!-- ── Member Payment Analytics ──────────────────────────────────────── -->
     <div class="card panel mt-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-people me-2 text-primary"></i>Member List</span>
+            <span><i class="bi bi-people me-2 text-primary"></i>Member Analytics &amp; Payment Tracking</span>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-secondary" th:text="${memberships.size()} + ' members'"></span>
-                <!-- Add Member button -->
                 <button class="btn btn-sm btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#addMemberModal">
                     <i class="bi bi-person-plus me-1"></i>Add Member
                 </button>
@@ -143,36 +142,54 @@
             <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                    <tr><th>Member</th><th>Email</th><th>Status</th><th>Agreement</th><th>Agreement No.</th><th>PDF</th><th>Won</th><th>Joined</th><th>Actions</th></tr>
+                    <tr>
+                        <th>Member</th>
+                        <th>Status</th>
+                        <th class="hide-mobile">Agreement</th>
+                        <th class="hide-mobile">Won Bid</th>
+                        <th>Paid</th>
+                        <th class="hide-mobile">Overdue</th>
+                        <th>Payment</th>
+                        <th class="hide-mobile">Joined</th>
+                        <th>Actions</th>
+                    </tr>
                 </thead>
                 <tbody>
                 <tr th:each="m : ${memberships}">
-                    <td th:text="${m.user.fullName}"></td>
-                    <td><small th:text="${m.user.email}"></small></td>
+                    <td>
+                        <div class="fw-semibold" th:text="${m.user.fullName}"></div>
+                        <small class="text-muted" th:text="${m.user.email}"></small>
+                    </td>
                     <td>
                         <span class="badge"
                               th:classappend="${m.status.name() == 'ACTIVE'} ? 'bg-success' : (${m.status.name() == 'PENDING'} ? 'bg-warning text-dark' : (${m.status.name() == 'EXITED'} ? 'bg-danger' : 'bg-secondary'))"
                               th:text="${m.status}"></span>
                     </td>
+                    <td class="hide-mobile">
+                        <span class="badge" th:classappend="${m.agreementAccepted} ? 'bg-success' : 'bg-danger'"
+                              th:text="${m.agreementAccepted} ? '✓ Accepted' : '✗ Pending'"></span>
+                    </td>
+                    <td class="hide-mobile">
+                        <span class="badge" th:classappend="${m.hasWonAuction} ? 'bg-warning text-dark' : 'bg-light text-muted border'"
+                              th:text="${m.hasWonAuction} ? 'Yes' : 'No'"></span>
+                    </td>
                     <td>
-                        <div th:if="${m.agreementAccepted}">
-                            <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Accepted</span>
-                            <div class="text-muted" style="font-size:0.72rem;" th:if="${m.agreementAcceptedAt != null}"
-                                 th:text="${#temporals.format(m.agreementAcceptedAt, 'dd MMM HH:mm')}"></div>
+                        <span class="fw-bold text-success" th:text="'₹' + ${m.payments != null ? m.payments.stream().filter(p -> p.status.name() == 'APPROVED').map(p -> p.totalAmount).reduce(T(java.math.BigDecimal).ZERO, (a,b) -> a.add(b)) : 0}"></span>
+                    </td>
+                    <td class="hide-mobile">
+                        <span th:with="overdueN=${m.payments != null ? m.payments.stream().filter(p -> p.status.name() == 'OVERDUE').count() : 0}">
+                            <span class="badge" th:classappend="${overdueN > 0} ? 'bg-danger' : 'bg-success'"
+                                  th:text="${overdueN > 0} ? ${overdueN} + ' overdue' : 'On time'"></span>
+                        </span>
+                    </td>
+                    <td>
+                        <div class="progress" style="height:6px;min-width:60px"
+                             th:with="paidCount=${m.payments != null ? m.payments.stream().filter(p -> p.status.name() == 'APPROVED').count() : 0}, totalMo=${m.chit.durationMonths}">
+                            <div class="progress-bar bg-success" th:style="'width:' + ${totalMo > 0 ? (paidCount * 100 / totalMo) : 0} + '%'"></div>
                         </div>
-                        <span th:if="${!m.agreementAccepted}" class="badge bg-secondary">Not Accepted</span>
+                        <small class="text-muted" th:text="${m.payments != null ? m.payments.stream().filter(p -> p.status.name() == 'APPROVED').count() : 0} + '/' + ${m.chit.durationMonths} + ' mo'"></small>
                     </td>
-                    <td><small class="text-muted font-monospace" th:text="${m.agreementNumber != null ? m.agreementNumber : '—'}"></small></td>
-                    <td>
-                        <a th:if="${m.agreementPdfPath != null}"
-                           th:href="@{/admin/agreements/{id}/download(id=${m.id})}"
-                           class="btn btn-sm btn-outline-danger" target="_blank" title="Download Agreement PDF">
-                            <i class="bi bi-file-earmark-pdf-fill me-1"></i><span class="btn-action-text">PDF</span>
-                        </a>
-                        <span th:if="${m.agreementPdfPath == null}" class="text-muted small">—</span>
-                    </td>
-                    <td><span class="badge" th:classappend="${m.hasWonAuction} ? 'bg-warning text-dark' : 'bg-light text-muted'" th:text="${m.hasWonAuction} ? 'Yes' : 'No'"></span></td>
-                    <td><small th:text="${#temporals.format(m.joinedAt, 'dd MMM yyyy')}"></small></td>
+                    <td class="hide-mobile"><small class="text-muted" th:text="${m.joinedAt != null ? #temporals.format(m.joinedAt, 'dd MMM yy') : '—'}"></small></td>
 
                     <!-- Actions column -->
                     <td>
