@@ -754,21 +754,90 @@ public class AdminController {
     @GetMapping("/login-tracking")
     public String loginTracking(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
-        model.addAttribute("recentLogins", loginTrackingService.getRecentLogins());
-        // Members with locked accounts
-        model.addAttribute("lockedAccounts", userRepository.findAll().stream()
-                .filter(u -> u.isAccountLocked()).toList());
-        // Members with failed login attempts > 0
-        model.addAttribute("failedLoginUsers", userRepository.findAll().stream()
+
+        List<LoginHistory> allLogins = loginTrackingService.getRecentLogins();
+        model.addAttribute("recentLogins", allLogins);
+
+        // Locked accounts
+        List<User> locked = userRepository.findAll().stream()
+                .filter(User::isAccountLocked).toList();
+        model.addAttribute("lockedAccounts", locked);
+
+        // Failed login users
+        List<User> failedUsers = userRepository.findAll().stream()
                 .filter(u -> u.getConsecutiveFailedLogins() > 0)
                 .sorted((a, b) -> b.getConsecutiveFailedLogins() - a.getConsecutiveFailedLogins())
-                .toList());
-        // Aadhaar verification status
-        model.addAttribute("aadhaarVerified", userRepository.findAll().stream()
-                .filter(u -> u.getRole() == User.Role.MEMBER && u.isAadhaarVerified()).count());
-        model.addAttribute("aadhaarPending", userRepository.findAll().stream()
-                .filter(u -> u.getRole() == User.Role.MEMBER && !u.isAadhaarVerified()).count());
+                .toList();
+        model.addAttribute("failedLoginUsers", failedUsers);
+
+        // Aadhaar stats
+        List<User> members = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == User.Role.MEMBER && u.isActive()).toList();
+        long aadhaarVerified = members.stream().filter(User::isAadhaarVerified).count();
+        long aadhaarPending = members.stream().filter(u -> !u.isAadhaarVerified()).count();
+        model.addAttribute("aadhaarVerified", aadhaarVerified);
+        model.addAttribute("aadhaarPending", aadhaarPending);
+        model.addAttribute("allMembers", members);
+
+        // Enhanced: Login statistics (last 30 days)
+        long totalLogins = allLogins.size();
+        long failedLogins = allLogins.stream().filter(l -> !l.isSuccess()).count();
+        long successLogins = totalLogins - failedLogins;
+        int successRate = totalLogins > 0 ? (int)(successLogins * 100 / totalLogins) : 100;
+        long uniqueIPs = allLogins.stream().map(LoginHistory::getIpAddress)
+                .filter(ip -> ip != null).distinct().count();
+        model.addAttribute("totalLogins", totalLogins);
+        model.addAttribute("failedLogins", failedLogins);
+        model.addAttribute("successRate", successRate);
+        model.addAttribute("uniqueIPs", uniqueIPs);
+        model.addAttribute("aadhaarCompliancePct",
+                members.isEmpty() ? 100 : (int)(aadhaarVerified * 100 / members.size()));
+
+        // Suspicious: users with multiple different IPs in recent logins
+        java.util.Map<String, java.util.Set<String>> userIpMap = new java.util.HashMap<>();
+        for (LoginHistory l : allLogins) {
+            if (l.getUser() != null && l.getIpAddress() != null) {
+                userIpMap.computeIfAbsent(l.getUser().getEmail(), k -> new java.util.HashSet<>())
+                        .add(l.getIpAddress());
+            }
+        }
+        List<String> suspiciousUsers = userIpMap.entrySet().stream()
+                .filter(e -> e.getValue().size() >= 3)
+                .map(java.util.Map.Entry::getKey).toList();
+        model.addAttribute("suspiciousUsers", suspiciousUsers);
+        model.addAttribute("suspiciousCount", suspiciousUsers.size());
+
         return "admin/login-tracking";
+    }
+
+    // ── Aadhaar Verification Toggle ──────────────────────────────────────
+    @PostMapping("/members/{id}/toggle-aadhaar")
+    public String toggleAadhaar(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try {
+            User member = userService.findById(id);
+            member.setAadhaarVerified(!member.isAadhaarVerified());
+            userRepository.save(member);
+            String status = member.isAadhaarVerified() ? "verified" : "unverified";
+            auditService.log(getCurrentUser(auth), "AADHAAR_" + status.toUpperCase(),
+                    "User", id, "Aadhaar " + status + " for: " + member.getFullName());
+            ra.addFlashAttribute("success", "Aadhaar " + status + " for " + member.getFullName());
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/login-tracking";
+    }
+
+    // ── Reset Failed Login Counter ──────────────────────────────────────
+    @PostMapping("/members/{id}/reset-login-counter")
+    public String resetLoginCounter(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try {
+            User member = userService.findById(id);
+            member.setConsecutiveFailedLogins(0);
+            member.setAccountLocked(false);
+            userRepository.save(member);
+            auditService.log(getCurrentUser(auth), "RESET_LOGIN_COUNTER",
+                    "User", id, "Reset failed login counter for: " + member.getFullName());
+            ra.addFlashAttribute("success", "Login counter reset and account unlocked for " + member.getFullName());
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/login-tracking";
     }
     // ── Chit Member Management ─────────────────────────────────────────────
     //  Add a member directly to a chit (admin-initiated)
