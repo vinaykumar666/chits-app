@@ -317,6 +317,20 @@
                             <i class="bi bi-check-circle me-1"></i>
                             <strong>Admin Remarks:</strong> <span th:text="${s.adminRemarks}"></span>
                         </div>
+                        <!-- Settlement acknowledgment CTA -->
+                        <div th:if="${s.status.name() == 'APPROVED' and !s.userAcknowledged}" class="mt-2">
+                            <form th:action="@{/member/settlements/{id}/acknowledge(id=${s.id})}" method="post" class="d-inline">
+                                <button class="btn btn-success btn-sm fw-bold"
+                                        onclick="return confirm('Confirm you have received the settlement payment?')">
+                                    <i class="bi bi-check2-all me-1"></i>Confirm Payment Received
+                                </button>
+                            </form>
+                        </div>
+                        <div th:if="${s.userAcknowledged}" class="mt-2">
+                            <span class="badge bg-success"><i class="bi bi-check2-all me-1"></i>Payment Received — Acknowledged</span>
+                            <small class="text-muted d-block" th:if="${s.acknowledgedAt != null}"
+                                   th:text="'on ' + ${#temporals.format(s.acknowledgedAt, 'dd MMM yyyy HH:mm')}"></small>
+                        </div>
                         <div th:if="${s.status.name() == 'PENDING'}"
                              class="mt-2 text-muted small fst-italic">
                             <i class="bi bi-hourglass-split me-1"></i>Awaiting admin review…

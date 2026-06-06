@@ -26,6 +26,25 @@
   </div>
   <div th:replace="~{fragments :: alerts}"></div>
 
+  <!-- Settlement Pending Acknowledgment -->
+  <div th:each="s : ${mySettlements}" th:if="${s.status.name() == 'APPROVED' and !s.userAcknowledged}">
+    <div class="alert border-success mb-3" style="border-left:4px solid #198754;background:#f0fff4;border-radius:12px">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <h6 class="fw-bold text-success mb-1"><i class="bi bi-bank me-1"></i>Settlement Ready</h6>
+          <p class="mb-1 small" th:text="'Chit: ' + ${s.membership.chit.name} + ' | Refund: ₹' + ${s.finalSettlementAmount}"></p>
+          <small class="text-muted" th:text="'Total Paid: ₹' + ${s.totalPaidAmount} + ' | Deduction: ₹' + ${s.deductionAmount}"></small>
+        </div>
+        <form th:action="@{/member/settlements/{id}/acknowledge(id=${s.id})}" method="post">
+          <button class="btn btn-success btn-sm fw-bold" onclick="return confirm('Confirm you have received ₹' + this.closest('form').querySelector('[name=amt]')?.value + '?')">
+            <i class="bi bi-check-circle me-1"></i>Payment Received
+          </button>
+          <input type="hidden" name="amt" th:value="${s.finalSettlementAmount}">
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Quick Stats -->
   <div class="row g-3 mb-4">
     <div class="col-md-4 col-6">

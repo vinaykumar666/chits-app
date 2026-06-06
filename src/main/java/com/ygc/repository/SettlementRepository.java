@@ -11,6 +11,8 @@ import java.util.List;
 public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     List<Settlement> findByMembership(ChitMembership membership);
     List<Settlement> findByStatus(Settlement.SettlementStatus status);
+    List<Settlement> findByMembershipUserId(Long userId);
+    List<Settlement> findByMembershipId(Long membershipId);
 
     /**
      * FIX: Single-query fetch for reports — avoids N+1 on membership → user / chit.

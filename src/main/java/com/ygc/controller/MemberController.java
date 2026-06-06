@@ -39,10 +39,8 @@ public class MemberController {
         List<ChitMembership> memberships = chitService.getMembershipsForUser(user);
         long activeCount = memberships.stream()
                 .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count();
-        // Fetch early exit / maturity settlements for this user
-        List<Settlement> mySettlements = settlementRepository.findAll().stream()
-                .filter(s -> s.getMembership().getUser().getId().equals(user.getId()))
-                .toList();
+        // Fetch settlements for this user (proper indexed query)
+        List<Settlement> mySettlements = settlementRepository.findByMembershipUserId(user.getId());
         model.addAttribute("user", user);
         model.addAttribute("memberships", memberships);
         model.addAttribute("activeCount", activeCount);
@@ -125,9 +123,7 @@ public class MemberController {
         model.addAttribute("bidRecommendations", bidRecommendations);
         model.addAttribute("hasOpenAuction", hasOpenAuction);
         // Early-exit settlement tracking: find any settlement for this membership
-        List<Settlement> mySettlements = settlementRepository.findAll().stream()
-                .filter(s -> s.getMembership().getId().equals(membership.getId()))
-                .toList();
+        List<Settlement> mySettlements = settlementRepository.findByMembershipId(membership.getId());
         model.addAttribute("mySettlements", mySettlements);
         return "member/membership-detail";
     }
@@ -159,8 +155,13 @@ public class MemberController {
                 ra.addFlashAttribute("error", "Unauthorized action.");
                 return "redirect:/member/dashboard";
             }
+            membership.setTermsAccepted(true);
+            membership.setAgreementAccepted(true);
+            membership.setAgreementAcceptedAt(java.time.LocalDateTime.now());
+            membership.setAgreementRead(true);
+            membership.setInfoProcessingAuthorized(true);
             membershipRepository.save(membership);
-            ra.addFlashAttribute("success", "Terms accepted.");
+            ra.addFlashAttribute("success", "Agreement accepted successfully! Admin can now approve your membership.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
         }
@@ -215,5 +216,38 @@ public class MemberController {
             ra.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/member/memberships/" + id;
+    }
+
+    /**
+     * Member acknowledges settlement payment received.
+     */
+    @PostMapping("/settlements/{id}/acknowledge")
+    public String acknowledgeSettlement(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try {
+            User user = getCurrentUser(auth);
+            Settlement settlement = settlementRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Settlement not found"));
+            if (!settlement.getMembership().getUser().getId().equals(user.getId())) {
+                ra.addFlashAttribute("error", "Unauthorized action.");
+                return "redirect:/member/dashboard";
+            }
+            if (settlement.getStatus() != Settlement.SettlementStatus.APPROVED) {
+                ra.addFlashAttribute("error", "Settlement is not in approved state.");
+                return "redirect:/member/dashboard";
+            }
+            // Mark as acknowledged and close the membership
+            settlement.setUserAcknowledged(true);
+            settlement.setAcknowledgedAt(java.time.LocalDateTime.now());
+            settlementRepository.save(settlement);
+
+            ChitMembership membership = settlement.getMembership();
+            membership.setStatus(ChitMembership.MembershipStatus.EXITED);
+            membershipRepository.save(membership);
+
+            ra.addFlashAttribute("success", "Settlement acknowledged. Your participation in this chit is now closed.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/member/dashboard";
     }
 }

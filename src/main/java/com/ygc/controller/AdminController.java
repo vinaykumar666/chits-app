@@ -159,6 +159,30 @@ public class AdminController {
         model.addAttribute("activeMembers", memberships.stream()
                 .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count());
         model.addAttribute("collectionPct", collectionPct);
+
+        // Pre-compute per-member payment stats (avoids lazy-loading m.payments in template)
+        java.util.Map<Long, BigDecimal> memberPaidMap = new java.util.HashMap<>();
+        java.util.Map<Long, Long> memberOverdueMap = new java.util.HashMap<>();
+        java.util.Map<Long, Long> memberPaidMonthsMap = new java.util.HashMap<>();
+        for (ChitMembership m : memberships) {
+            try {
+                BigDecimal paid = paymentService.getTotalPaid(m);
+                memberPaidMap.put(m.getId(), paid != null ? paid : BigDecimal.ZERO);
+                List<Payment> mPayments = paymentService.getPaymentsForMembership(m);
+                memberOverdueMap.put(m.getId(), mPayments.stream()
+                        .filter(p -> p.getStatus() == Payment.PaymentStatus.OVERDUE).count());
+                memberPaidMonthsMap.put(m.getId(), mPayments.stream()
+                        .filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED).count());
+            } catch (Exception e) {
+                memberPaidMap.put(m.getId(), BigDecimal.ZERO);
+                memberOverdueMap.put(m.getId(), 0L);
+                memberPaidMonthsMap.put(m.getId(), 0L);
+            }
+        }
+        model.addAttribute("memberPaidMap", memberPaidMap);
+        model.addAttribute("memberOverdueMap", memberOverdueMap);
+        model.addAttribute("memberPaidMonthsMap", memberPaidMonthsMap);
+
         return "admin/chit-detail";
     }
 

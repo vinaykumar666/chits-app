@@ -174,20 +174,20 @@
                               th:text="${m.hasWonAuction} ? 'Yes' : 'No'"></span>
                     </td>
                     <td>
-                        <span class="fw-bold text-success" th:text="'₹' + ${m.payments != null ? m.payments.stream().filter(p -> p.status.name() == 'APPROVED').map(p -> p.totalAmount).reduce(T(java.math.BigDecimal).ZERO, (a,b) -> a.add(b)) : 0}"></span>
+                        <span class="fw-bold text-success" th:text="'₹' + ${memberPaidMap.get(m.id)}"></span>
                     </td>
                     <td class="hide-mobile">
-                        <span th:with="overdueN=${m.payments != null ? m.payments.stream().filter(p -> p.status.name() == 'OVERDUE').count() : 0}">
-                            <span class="badge" th:classappend="${overdueN > 0} ? 'bg-danger' : 'bg-success'"
-                                  th:text="${overdueN > 0} ? ${overdueN} + ' overdue' : 'On time'"></span>
+                        <span th:with="overdueN=${memberOverdueMap.get(m.id)}">
+                            <span class="badge" th:classappend="${overdueN != null and overdueN > 0} ? 'bg-danger' : 'bg-success'"
+                                  th:text="${overdueN != null and overdueN > 0} ? ${overdueN} + ' overdue' : 'On time'"></span>
                         </span>
                     </td>
                     <td>
                         <div class="progress" style="height:6px;min-width:60px"
-                             th:with="paidCount=${m.payments != null ? m.payments.stream().filter(p -> p.status.name() == 'APPROVED').count() : 0}, totalMo=${m.chit.durationMonths}">
+                             th:with="paidCount=${memberPaidMonthsMap.get(m.id)}, totalMo=${m.chit.durationMonths}">
                             <div class="progress-bar bg-success" th:style="'width:' + ${totalMo > 0 ? (paidCount * 100 / totalMo) : 0} + '%'"></div>
                         </div>
-                        <small class="text-muted" th:text="${m.payments != null ? m.payments.stream().filter(p -> p.status.name() == 'APPROVED').count() : 0} + '/' + ${m.chit.durationMonths} + ' mo'"></small>
+                        <small class="text-muted" th:text="${memberPaidMonthsMap.get(m.id)} + '/' + ${m.chit.durationMonths} + ' mo'"></small>
                     </td>
                     <td class="hide-mobile"><small class="text-muted" th:text="${m.joinedAt != null ? #temporals.format(m.joinedAt, 'dd MMM yy') : '—'}"></small></td>
 
@@ -196,11 +196,18 @@
                         <div class="d-flex gap-1 flex-wrap">
                             <!-- Approve / Reject for PENDING -->
                             <th:block th:if="${m.status.name() == 'PENDING'}">
-                                <form th:action="@{/admin/memberships/{id}/approve(id=${m.id})}" method="post">
-                                    <button class="btn btn-sm btn-success" title="Approve &amp; generate agreement PDF">
-                                        <i class="bi bi-check"></i>
-                                    </button>
-                                </form>
+                                <th:block th:if="${m.agreementAccepted}">
+                                    <form th:action="@{/admin/memberships/{id}/approve(id=${m.id})}" method="post">
+                                        <button class="btn btn-sm btn-success" title="Approve &amp; generate agreement PDF">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    </form>
+                                </th:block>
+                                <span th:if="${!m.agreementAccepted}" class="btn btn-sm btn-outline-secondary disabled"
+                                      title="Waiting for member to accept agreement"
+                                      style="cursor:not-allowed;font-size:.7rem">
+                                    <i class="bi bi-hourglass-split me-1"></i>Awaiting
+                                </span>
                                 <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
                                         th:data-bs-target="'#memberRejectModal' + ${m.id}"
                                         title="Reject with reason">

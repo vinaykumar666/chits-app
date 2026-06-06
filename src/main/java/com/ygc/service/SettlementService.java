@@ -106,13 +106,19 @@ public class SettlementService {
 
         // Notify all admin users about early exit request
         try {
-            membershipRepository.findAll().stream()
-                .map(m -> m.getUser())
+            membershipRepository.findByChit(membership.getChit()).stream()
+                .map(ChitMembership::getUser)
                 .filter(u -> u.getRole() == User.Role.ADMIN)
                 .map(User::getEmail)
                 .distinct()
                 .forEach(adminEmail -> notificationService.notifyEarlyExitSubmitted(
                     adminEmail, member.getFullName(), membership.getChit().getName()));
+            // Also notify chit creator directly
+            if (membership.getChit().getCreatedBy() != null) {
+                notificationService.notifyEarlyExitSubmitted(
+                    membership.getChit().getCreatedBy().getEmail(),
+                    member.getFullName(), membership.getChit().getName());
+            }
         } catch (Exception ignored) {}
 
         return saved;
