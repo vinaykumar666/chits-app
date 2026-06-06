@@ -28,6 +28,7 @@ public class MemberController {
     private final AuctionRepository auctionRepository;
     private final PdfCertificateService pdfCertificateService;
     private final BidCalculationService bidCalculationService;
+    private final EarlyExitService earlyExitService;
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
     }
@@ -193,10 +194,23 @@ public class MemberController {
     }
 
     @PostMapping("/memberships/{id}/exit")
-    public String requestEarlyExit(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+    public String requestEarlyExit(@PathVariable Long id,
+                                    @RequestParam(required = false, defaultValue = "") String exitReason,
+                                    Authentication auth, RedirectAttributes ra) {
         try {
-            settlementService.requestEarlyExit(id, getCurrentUser(auth));
-            ra.addFlashAttribute("success", "Early exit request submitted.");
+            User user = getCurrentUser(auth);
+            ChitMembership membership = membershipRepository.findById(id).orElseThrow();
+            if (!membership.getUser().getId().equals(user.getId())) {
+                ra.addFlashAttribute("error", "Unauthorized action.");
+                return "redirect:/member/dashboard";
+            }
+            String reason = (exitReason != null && !exitReason.isBlank()) ? exitReason : "No reason provided";
+
+            // Issue 1: Create both Settlement AND EarlyExitRequest for proper admin tracking
+            settlementService.requestEarlyExit(id, user);
+            earlyExitService.requestExit(membership, reason);
+
+            ra.addFlashAttribute("success", "Early exit request submitted. Admin will review shortly.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
         }

@@ -17,6 +17,13 @@ public interface ChitMembershipRepository extends JpaRepository<ChitMembership, 
     long countByChitAndStatusNot(Chit chit, ChitMembership.MembershipStatus status);
     boolean existsByChitAndUser(Chit chit, User user);
 
+    // Issue 10A: Find existing membership including EXITED (rejected) ones for re-application logic
+    @Query("SELECT m FROM ChitMembership m WHERE m.chit = :chit AND m.user = :user AND m.status != 'EXITED'")
+    Optional<ChitMembership> findActiveOrPendingByChitAndUser(Chit chit, User user);
+
+    @Query("SELECT COUNT(m) FROM ChitMembership m WHERE m.chit = :chit AND m.user = :user AND m.status = 'EXITED'")
+    int countRejectionsByChitAndUser(Chit chit, User user);
+
     /**
      * FIX: Fetch memberships with chit eagerly loaded — avoids N+1 in member report.
      */

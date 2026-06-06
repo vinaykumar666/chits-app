@@ -83,9 +83,21 @@ public class AdminPaymentController {
 
     @GetMapping("/{id}/view-screenshot")
     @ResponseBody
-    public byte[] viewScreenshot(@PathVariable Long id) throws Exception {
+    public org.springframework.http.ResponseEntity<byte[]> viewScreenshot(@PathVariable Long id) throws Exception {
         Payment payment = paymentRepository.findById(id).orElseThrow();
-        return java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(payment.getScreenshotPath()));
+        if (payment.getScreenshotPath() == null || "N/A".equals(payment.getScreenshotPath())) {
+            return org.springframework.http.ResponseEntity.notFound().build();
+        }
+        java.nio.file.Path path = java.nio.file.Paths.get(payment.getScreenshotPath());
+        if (!java.nio.file.Files.exists(path)) {
+            return org.springframework.http.ResponseEntity.notFound().build();
+        }
+        byte[] bytes = java.nio.file.Files.readAllBytes(path);
+        String contentType = java.nio.file.Files.probeContentType(path);
+        if (contentType == null) contentType = "image/png";
+        return org.springframework.http.ResponseEntity.ok()
+                .header("Content-Type", contentType)
+                .body(bytes);
     }
 }
 

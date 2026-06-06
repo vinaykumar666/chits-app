@@ -25,6 +25,60 @@ public class SettlementService {
     @Value("${ygc.early-exit-deduction-percentage:2}")
     private BigDecimal earlyExitDeduction;
 
+    @Value("${ygc.cancellation-settlement-charge:1}")
+    private BigDecimal cancellationChargePercentage;
+
+    /**
+     * Issue 10: Auto-generate settlement payments for all active members when a chit is cancelled.
+     * Settlement charge percentage is configurable via ygc.cancellation-settlement-charge property.
+     */
+    @Transactional
+    public List<Settlement> generateCancellationSettlements(Chit chit, User admin) {
+        List<Settlement> settlements = new java.util.ArrayList<>();
+        List<ChitMembership> activeMembers = membershipRepository.findByChit(chit).stream()
+                .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE)
+                .toList();
+
+        for (ChitMembership membership : activeMembers) {
+            BigDecimal totalPaid = paymentRepository.sumApprovedPaymentsByMembership(membership);
+            if (totalPaid == null) totalPaid = BigDecimal.ZERO;
+            BigDecimal pendingFines = paymentRepository.sumLateFinesByMembership(membership);
+            if (pendingFines == null) pendingFines = BigDecimal.ZERO;
+
+            BigDecimal deduction = totalPaid.multiply(cancellationChargePercentage)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            BigDecimal finalAmount = totalPaid.subtract(deduction).subtract(pendingFines);
+
+            Settlement settlement = new Settlement();
+            settlement.setMembership(membership);
+            settlement.setTotalPaidAmount(totalPaid);
+            settlement.setLateFines(pendingFines);
+            settlement.setDeductionPercentage(cancellationChargePercentage);
+            settlement.setDeductionAmount(deduction);
+            settlement.setFinalSettlementAmount(finalAmount.max(BigDecimal.ZERO));
+            settlement.setType(Settlement.SettlementType.EARLY_EXIT);
+            settlement.setStatus(Settlement.SettlementStatus.PENDING);
+            settlement.setAdminRemarks("Auto-generated: chit cancelled");
+            Settlement saved = settlementRepository.save(settlement);
+            settlements.add(saved);
+
+            // Notify member
+            User member = membership.getUser();
+            try {
+                notificationService.notifySettlementApproved(member.getEmail(),
+                        chit.getName(), finalAmount.toPlainString());
+                emailService.sendSettlementConfirmation(member.getEmail(), member.getFullName(),
+                        chit.getName(), finalAmount.toPlainString());
+            } catch (Exception ignored) {}
+
+            auditService.log(admin, "CANCELLATION_SETTLEMENT", "Settlement", saved.getId(),
+                    "Auto-settlement for cancelled chit: " + chit.getName()
+                    + " | Member: " + member.getFullName()
+                    + " | Amount: ₹" + finalAmount);
+        }
+        return settlements;
+    }
+
     @Transactional
     public Settlement requestEarlyExit(Long membershipId, User member) {
         ChitMembership membership = membershipRepository.findById(membershipId)

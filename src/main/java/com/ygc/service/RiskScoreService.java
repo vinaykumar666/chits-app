@@ -50,7 +50,7 @@ public class RiskScoreService {
             long total = payments.size();
             long overdue = payments.stream().filter(p -> p.getStatus() == Payment.PaymentStatus.OVERDUE).count();
             long rejected = payments.stream().filter(p -> p.getStatus() == Payment.PaymentStatus.REJECTED).count();
-            long late = payments.stream().filter(p -> p.getLateFine().compareTo(BigDecimal.ZERO) > 0).count();
+            long late = payments.stream().filter(p -> p.getLateFine() != null && p.getLateFine().compareTo(BigDecimal.ZERO) > 0).count();
 
             double overdueRatio = (double) overdue / total;
             double rejectedRatio = (double) rejected / total;
@@ -62,9 +62,13 @@ public class RiskScoreService {
         }
 
         // 2. Login security (20% weight)
-        long failedLogins = loginHistoryRepository.countByUserAndSuccessFalseAndLoginAtAfter(
-                user, LocalDateTime.now().minusDays(30));
-        score += Math.min(20, failedLogins * 4); // 5 fails = 20 points
+        try {
+            long failedLogins = loginHistoryRepository.countByUserAndSuccessFalseAndLoginAtAfter(
+                    user, LocalDateTime.now().minusDays(30));
+            score += Math.min(20, failedLogins * 4); // 5 fails = 20 points
+        } catch (Exception e) {
+            log.debug("Could not fetch login history for user {}: {}", user.getEmail(), e.getMessage());
+        }
 
         // 3. Account flags (15% weight)
         if (user.isAccountLocked()) score += 15;

@@ -61,20 +61,22 @@
     <a th:href="@{/admin/audit}"              class="nav-link" th:classappend="${active=='audit'        ? ' active' : ''}"><i class="bi bi-shield-check"></i> <span th:text="#{nav.audit}">Audit Log</span></a>
     <a th:href="@{/admin/early-exits}"        class="nav-link" th:classappend="${active=='exits'        ? ' active' : ''}"><i class="bi bi-door-open"></i> <span th:text="#{nav.exits}">Early Exits</span></a>
     <a th:href="@{/admin/risk-dashboard}"     class="nav-link" th:classappend="${active=='risk'         ? ' active' : ''}"><i class="bi bi-exclamation-triangle"></i> <span th:text="#{nav.risk}">Risk &amp; Fraud</span></a>
+    <a th:href="@{/admin/login-tracking}"    class="nav-link" th:classappend="${active=='security'     ? ' active' : ''}"><i class="bi bi-shield-lock"></i> <span>Security Log</span></a>
     <a th:href="@{/help}"                     class="nav-link" th:classappend="${active=='help'         ? ' active' : ''}"><i class="bi bi-question-circle"></i> <span th:text="#{nav.help}">Help</span></a>
     <a th:href="@{/logout}"                   class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> <span th:text="#{nav.logout}">Logout</span></a>
   </nav>
   <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);margin-top:auto">
     <small style="color:rgba(255,255,255,.3);font-size:.65rem;text-transform:uppercase;letter-spacing:.06em" th:text="#{lang.select}">Language</small>
     <div class="d-flex flex-wrap gap-1 mt-1">
-      <a href="?lang=en" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">EN</a>
-      <a href="?lang=hi" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">हि</a>
-      <a href="?lang=te" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">తె</a>
-      <a href="?lang=kn" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">ಕ</a>
-      <a href="?lang=ta" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">த</a>
+      <a href="#" onclick="switchLang('en')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">EN</a>
+      <a href="#" onclick="switchLang('hi')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">हि</a>
+      <a href="#" onclick="switchLang('te')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">తె</a>
+      <a href="#" onclick="switchLang('kn')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">ಕ</a>
+      <a href="#" onclick="switchLang('ta')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">த</a>
     </div>
   </div>
 </div>
+<script>function switchLang(l){var u=new URL(window.location);u.searchParams.set('lang',l);window.location=u.toString();}</script>
 
 <!-- MEMBER SIDEBAR -->
 <div th:fragment="memberSidebar(active)" class="sidebar member-sidebar" id="ygc-sidebar">
@@ -97,11 +99,11 @@
   <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06)">
     <small style="color:rgba(255,255,255,.3);font-size:.65rem;text-transform:uppercase;letter-spacing:.06em" th:text="#{lang.select}">Language</small>
     <div class="d-flex flex-wrap gap-1 mt-1">
-      <a href="?lang=en" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">EN</a>
-      <a href="?lang=hi" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">हि</a>
-      <a href="?lang=te" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">తె</a>
-      <a href="?lang=kn" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">ಕ</a>
-      <a href="?lang=ta" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">த</a>
+      <a href="#" onclick="switchLang('en')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">EN</a>
+      <a href="#" onclick="switchLang('hi')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">हि</a>
+      <a href="#" onclick="switchLang('te')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">తె</a>
+      <a href="#" onclick="switchLang('kn')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">ಕ</a>
+      <a href="#" onclick="switchLang('ta')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">த</a>
     </div>
   </div>
   <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06)">

@@ -33,6 +33,9 @@ public class ChitMembership {
     // Rejection reason (set by admin on any rejection)
     private String rejectionReason;
 
+    // Issue 10A: Track rejection count for re-application (max 3)
+    private int rejectionCount = 0;
+
     // Agreement workflow fields
     private boolean agreementRead = false;
     private boolean agreementAccepted = false;

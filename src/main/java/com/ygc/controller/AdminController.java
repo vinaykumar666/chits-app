@@ -100,10 +100,42 @@ public class AdminController {
     @GetMapping("/chits/{id}")
     public String chitDetail(@PathVariable Long id, Model model, Authentication auth) {
         Chit chit = chitService.findById(id);
+        List<ChitMembership> memberships = chitService.getMembershipsForChit(chit);
         model.addAttribute("user", getCurrentUser(auth));
         model.addAttribute("chit", chit);
-        model.addAttribute("memberships", chitService.getMembershipsForChit(chit));
+        model.addAttribute("memberships", memberships);
         model.addAttribute("auctions", auctionService.getAuctionsByChit(chit));
+
+        // Issue 11: Chit-level analytics
+        List<Payment> chitPayments = new java.util.ArrayList<>();
+        BigDecimal totalCollected = BigDecimal.ZERO;
+        long paidMembers = 0;
+        long unpaidMembers = 0;
+        long overdueCount = 0;
+        for (ChitMembership m : memberships) {
+            if (m.getStatus() == ChitMembership.MembershipStatus.ACTIVE) {
+                List<Payment> memberPayments = paymentService.getPaymentsForMembership(m);
+                chitPayments.addAll(memberPayments);
+                BigDecimal memberPaid = paymentService.getTotalPaid(m);
+                totalCollected = totalCollected.add(memberPaid);
+                if (memberPaid.compareTo(BigDecimal.ZERO) > 0) paidMembers++;
+                else unpaidMembers++;
+                overdueCount += memberPayments.stream()
+                        .filter(p -> p.getStatus() == Payment.PaymentStatus.OVERDUE).count();
+            }
+        }
+        BigDecimal totalPending = chit.getTotalChitValue() != null
+                ? chit.getTotalChitValue().subtract(totalCollected) : BigDecimal.ZERO;
+        long activeMembers = memberships.stream()
+                .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count();
+
+        model.addAttribute("totalCollected", totalCollected);
+        model.addAttribute("totalPending", totalPending.max(BigDecimal.ZERO));
+        model.addAttribute("paidMembers", paidMembers);
+        model.addAttribute("unpaidMembers", unpaidMembers);
+        model.addAttribute("overdueCount", overdueCount);
+        model.addAttribute("activeMembers", activeMembers);
+        model.addAttribute("chitPayments", chitPayments);
         return "admin/chit-detail";
     }
 
@@ -142,6 +174,18 @@ public class AdminController {
                 chit.setClosingReason(null);
             }
             chitRepository.save(chit);
+
+            // Issue 10: Auto-generate cancellation settlements when chit is cancelled
+            if (newStatus == Chit.ChitStatus.CANCELLED) {
+                try {
+                    List<Settlement> settlements = settlementService.generateCancellationSettlements(chit, getCurrentUser(auth));
+                    if (!settlements.isEmpty()) {
+                        ra.addFlashAttribute("info", settlements.size() + " settlement(s) auto-generated for affected members.");
+                    }
+                } catch (Exception e) {
+                    ra.addFlashAttribute("warning", "Settlements could not be auto-generated: " + e.getMessage());
+                }
+            }
 
             // Notify all active members of this chit
             String detail = "Name: " + name + ", Status: " + status;
@@ -195,6 +239,7 @@ public class AdminController {
             Long chitId = membership.getChit().getId();
             membership.setStatus(ChitMembership.MembershipStatus.EXITED);
             membership.setRejectionReason(reason);
+            membership.setRejectionCount(membership.getRejectionCount() + 1);
             membershipRepository.save(membership);
 
             notificationService.notifyChitRegistrationRejected(
@@ -522,8 +567,17 @@ public class AdminController {
     @GetMapping("/risk-dashboard")
     public String riskDashboard(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
-        model.addAttribute("alerts", riskScoreService.predictDefaulters());
-        model.addAttribute("recentLogins", loginTrackingService.getRecentLogins());
+        try {
+            model.addAttribute("alerts", riskScoreService.predictDefaulters());
+        } catch (Exception e) {
+            model.addAttribute("alerts", java.util.Collections.emptyList());
+            model.addAttribute("riskError", "Risk calculation error: " + e.getMessage());
+        }
+        try {
+            model.addAttribute("recentLogins", loginTrackingService.getRecentLogins());
+        } catch (Exception e) {
+            model.addAttribute("recentLogins", java.util.Collections.emptyList());
+        }
         return "admin/risk-dashboard";
     }
 
@@ -570,6 +624,27 @@ public class AdminController {
         model.addAttribute("auditLogs", auditLogRepository.findAll()
                 .stream().sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp())).toList());
         return "admin/audit";
+    }
+
+    // ── Issue 3: Login & Security Tracking Dashboard ──────────────────────
+    @GetMapping("/login-tracking")
+    public String loginTracking(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("recentLogins", loginTrackingService.getRecentLogins());
+        // Members with locked accounts
+        model.addAttribute("lockedAccounts", userRepository.findAll().stream()
+                .filter(u -> u.isAccountLocked()).toList());
+        // Members with failed login attempts > 0
+        model.addAttribute("failedLoginUsers", userRepository.findAll().stream()
+                .filter(u -> u.getConsecutiveFailedLogins() > 0)
+                .sorted((a, b) -> b.getConsecutiveFailedLogins() - a.getConsecutiveFailedLogins())
+                .toList());
+        // Aadhaar verification status
+        model.addAttribute("aadhaarVerified", userRepository.findAll().stream()
+                .filter(u -> u.getRole() == User.Role.MEMBER && u.isAadhaarVerified()).count());
+        model.addAttribute("aadhaarPending", userRepository.findAll().stream()
+                .filter(u -> u.getRole() == User.Role.MEMBER && !u.isAadhaarVerified()).count());
+        return "admin/login-tracking";
     }
     // ── Chit Member Management ─────────────────────────────────────────────
     //  Add a member directly to a chit (admin-initiated)

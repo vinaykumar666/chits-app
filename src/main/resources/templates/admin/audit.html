@@ -63,7 +63,14 @@
             <div class="table-responsive">
             <table class="table table-hover mb-0" id="auditTable">
                 <thead class="table-light">
-                <tr><th>Time</th><th>User</th><th>Action</th><th class="hide-mobile">Entity</th><th class="hide-mobile">IP</th><th>Description</th></tr>
+                <tr>
+                    <th style="cursor:pointer" onclick="sortAudit('date')">Time <i class="bi bi-arrow-down-up" style="font-size:.7rem"></i></th>
+                    <th>User</th>
+                    <th style="cursor:pointer" onclick="sortAudit('action')">Action <i class="bi bi-arrow-down-up" style="font-size:.7rem"></i></th>
+                    <th class="hide-mobile">Entity</th>
+                    <th class="hide-mobile">IP</th>
+                    <th>Description</th>
+                </tr>
                 </thead>
                 <tbody id="auditBody">
                 <tr th:each="log : ${auditLogs}" class="audit-row"
@@ -105,6 +112,8 @@
 <div th:replace="~{fragments :: appScripts}"></div>
 <script>
 var currentPage = 0;
+var sortField = null;
+var sortAsc = true;
 function filterAudit() {
     currentPage = 0;
     applyFilter();
@@ -115,6 +124,12 @@ function resetFilters() {
     document.getElementById('auditDateFrom').value = '';
     document.getElementById('auditDateTo').value = '';
     currentPage = 0;
+    sortField = null;
+    applyFilter();
+}
+function sortAudit(field) {
+    if (sortField === field) { sortAsc = !sortAsc; }
+    else { sortField = field; sortAsc = true; }
     applyFilter();
 }
 function changePage(dir) {
@@ -147,6 +162,24 @@ function applyFilter() {
         }
         row.style.display = 'none';
     });
+
+    // Issue 7: Sort visible rows
+    if (sortField) {
+        visible.sort(function(a, b) {
+            var av, bv;
+            if (sortField === 'date') {
+                av = a.getAttribute('data-date') || '';
+                bv = b.getAttribute('data-date') || '';
+            } else if (sortField === 'action') {
+                av = (a.getAttribute('data-action') || '').toLowerCase();
+                bv = (b.getAttribute('data-action') || '').toLowerCase();
+            }
+            var cmp = av < bv ? -1 : (av > bv ? 1 : 0);
+            return sortAsc ? cmp : -cmp;
+        });
+        var tbody = document.getElementById('auditBody');
+        visible.forEach(function(row) { tbody.appendChild(row); });
+    }
 
     var totalPages = Math.ceil(visible.length / pageSize);
     if (currentPage >= totalPages) currentPage = Math.max(0, totalPages - 1);

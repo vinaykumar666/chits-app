@@ -81,8 +81,10 @@ public class EarlyExitService {
             m.setRejectionReason("Early exit approved: " + adminRemarks);
             membershipRepo.save(m);
 
-            // Notify member
+            // Issue 6: Notify member via SSE + email
             try {
+                notificationService.notifySettlementApproved(m.getUser().getEmail(),
+                        m.getChit().getName(), req.getRefundAmount().toPlainString());
                 emailService.sendAnnouncement(m.getUser().getEmail(), m.getUser().getFullName(),
                         "Early Exit Approved — " + m.getChit().getName(),
                         "Your early exit has been approved. Refund: ₹" + req.getRefundAmount()
@@ -90,7 +92,12 @@ public class EarlyExitService {
             } catch (Exception ignored) {}
         } else {
             req.setStatus(EarlyExitRequest.ExitStatus.REJECTED);
+            // Issue 6: Notify member via SSE + email
             try {
+                notificationService.notifySettlementRejected(
+                        req.getMembership().getUser().getEmail(),
+                        req.getMembership().getChit().getName(),
+                        adminRemarks != null ? adminRemarks : "No reason provided");
                 emailService.sendAnnouncement(
                         req.getMembership().getUser().getEmail(),
                         req.getMembership().getUser().getFullName(),

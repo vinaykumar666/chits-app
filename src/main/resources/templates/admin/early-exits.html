@@ -32,16 +32,10 @@
                     <td class="hide-mobile"><small th:text="${r.reason}"></small></td>
                     <td>
                         <div th:if="${r.status.name() == 'REQUESTED'}" class="d-flex gap-1">
-                            <form th:action="@{/admin/early-exits/{id}/process(id=${r.id})}" method="post" class="d-inline">
-                                <input type="hidden" name="approved" value="true">
-                                <input type="hidden" name="remarks" value="Approved">
-                                <button class="btn btn-sm btn-success"><i class="bi bi-check"></i></button>
-                            </form>
-                            <form th:action="@{/admin/early-exits/{id}/process(id=${r.id})}" method="post" class="d-inline">
-                                <input type="hidden" name="approved" value="false">
-                                <input type="hidden" name="remarks" value="Rejected by admin">
-                                <button class="btn btn-sm btn-danger"><i class="bi bi-x"></i></button>
-                            </form>
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                    th:data-bs-target="'#exitApproveModal' + ${r.id}"><i class="bi bi-check"></i></button>
+                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal"
+                                    th:data-bs-target="'#exitRejectModal' + ${r.id}"><i class="bi bi-x"></i></button>
                         </div>
                         <small th:if="${r.status.name() != 'REQUESTED'}" class="text-muted" th:text="${r.adminRemarks}"></small>
                     </td>
@@ -53,5 +47,73 @@
         </div>
     </div>
 </div>
+
+<!-- Issue 9: Approval modals with calculation details -->
+<div th:each="r : ${requests}" th:if="${r.status.name() == 'REQUESTED'}">
+    <!-- Approve Modal -->
+    <div class="modal fade" th:id="'exitApproveModal' + ${r.id}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>Approve Early Exit</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/early-exits/{id}/process(id=${r.id})}" method="post">
+                    <input type="hidden" name="approved" value="true">
+                    <div class="modal-body">
+                        <div class="alert alert-light border mb-3">
+                            <div class="fw-semibold mb-2"><i class="bi bi-calculator me-1"></i>Settlement Calculation</div>
+                            <table class="table table-sm mb-0">
+                                <tr><td class="text-muted">Member</td><td class="fw-semibold" th:text="${r.membership.user.fullName}"></td></tr>
+                                <tr><td class="text-muted">Chit</td><td th:text="${r.membership.chit.name}"></td></tr>
+                                <tr><td class="text-muted">Total Paid</td><td class="text-success fw-bold" th:text="'₹' + ${r.totalPaid}"></td></tr>
+                                <tr><td class="text-muted">Penalty (<span th:text="${r.penaltyPercentage}"></span>%)</td><td class="text-danger" th:text="'-₹' + ${r.penaltyAmount}"></td></tr>
+                                <tr class="table-warning"><td class="fw-bold">Refund Amount</td><td class="fw-bold text-primary" th:text="'₹' + ${r.refundAmount}"></td></tr>
+                            </table>
+                        </div>
+                        <div th:if="${r.reason != null}" class="mb-3">
+                            <label class="form-label fw-semibold small text-muted">Member's Reason</label>
+                            <div class="alert alert-info py-2 small" th:text="${r.reason}"></div>
+                        </div>
+                        <label class="form-label fw-semibold">Admin Remarks</label>
+                        <textarea name="remarks" class="form-control" rows="2" placeholder="Optional approval notes..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success fw-bold"><i class="bi bi-check-circle me-1"></i>Approve Exit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Reject Modal -->
+    <div class="modal fade" th:id="'exitRejectModal' + ${r.id}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Reject Early Exit</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/early-exits/{id}/process(id=${r.id})}" method="post">
+                    <input type="hidden" name="approved" value="false">
+                    <div class="modal-body">
+                        <div class="alert alert-warning py-2 mb-3">
+                            Rejecting exit request from <strong th:text="${r.membership.user.fullName}"></strong>
+                            for chit <strong th:text="${r.membership.chit.name}"></strong>
+                        </div>
+                        <label class="form-label fw-semibold">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea name="remarks" class="form-control" rows="3" required
+                                  placeholder="e.g. Active auction in progress, minimum tenure not met..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Reject</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div th:replace="~{fragments :: appScripts}"></div>
 </body></html>

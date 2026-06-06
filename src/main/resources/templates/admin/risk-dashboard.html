@@ -51,7 +51,7 @@
                     <td><small th:text="${#temporals.format(l.loginAt, 'dd MMM HH:mm')}"></small></td>
                     <td><div class="fw-semibold small" th:text="${l.user.fullName}"></div></td>
                     <td><code style="font-size:.75rem" th:text="${l.ipAddress}"></code></td>
-                    <td class="hide-mobile small" th:text="${l.userAgent != null ? l.userAgent.substring(0, T(Math).min(40, l.userAgent.length())) : '—'}"></td>
+                    <td class="hide-mobile small" th:text="${l.userAgent != null ? (l.userAgent.length() > 40 ? l.userAgent.substring(0, 40) + '…' : l.userAgent) : '—'}"></td>
                     <td><span class="badge" th:classappend="${l.success} ? 'bg-success' : 'bg-danger'" th:text="${l.success} ? 'OK' : 'FAIL'"></span></td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(recentLogins)}"><td colspan="5" class="text-center text-muted py-3">No login records yet</td></tr>
