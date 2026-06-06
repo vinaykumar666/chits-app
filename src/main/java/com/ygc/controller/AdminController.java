@@ -38,7 +38,11 @@ public class AdminController {
     private final SettlementRepository settlementRepository;
     private final ChitHistoryService chitHistoryService;
     private final ChitAgreementService chitAgreementService;
+    private final EarlyExitService earlyExitService;
+    private final RiskScoreService riskScoreService;
+    private final LoginTrackingService loginTrackingService;
     private final AuditService auditService;
+    private final EarlyExitRequestRepository earlyExitRequestRepository;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -50,9 +54,20 @@ public class AdminController {
         model.addAttribute("user", getCurrentUser(auth));
         model.addAttribute("totalChits", chitRepository.count());
         model.addAttribute("totalMembers", userRepository.findAll().stream().filter(u -> u.getRole() == User.Role.MEMBER).count());
-        model.addAttribute("pendingPayments", paymentService.getPendingPayments().size());
-        model.addAttribute("pendingSettlements", settlementService.getPendingSettlements().size());
-        model.addAttribute("openAuctions", auctionService.getOpenAuctions().size());
+        long pendingPay = 0; long pendingSettle = 0; long openAuct = 0;
+        long pendingJoins = 0; long pendingExits = 0;
+        try { pendingPay = paymentService.getPendingPayments().size(); } catch (Exception ignored) {}
+        try { pendingSettle = settlementService.getPendingSettlements().size(); } catch (Exception ignored) {}
+        try { openAuct = auctionService.getOpenAuctions().size(); } catch (Exception ignored) {}
+        try { pendingJoins = membershipRepository.findAll().stream()
+                .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.PENDING).count(); } catch (Exception ignored) {}
+        try { pendingExits = earlyExitService.getAllRequests().stream()
+                .filter(r -> r.getStatus() == EarlyExitRequest.ExitStatus.REQUESTED).count(); } catch (Exception ignored) {}
+        model.addAttribute("pendingPayments", pendingPay);
+        model.addAttribute("pendingSettlements", pendingSettle);
+        model.addAttribute("openAuctions", openAuct);
+        model.addAttribute("pendingJoins", pendingJoins);
+        model.addAttribute("pendingExits", pendingExits);
         model.addAttribute("recentAudits", auditLogRepository.findAll()
                 .stream().sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()))
                 .limit(10).toList());
@@ -97,10 +112,77 @@ public class AdminController {
     @GetMapping("/chits/{id}")
     public String chitDetail(@PathVariable Long id, Model model, Authentication auth) {
         Chit chit = chitService.findById(id);
+        List<ChitMembership> memberships = chitService.getMembershipsForChit(chit);
         model.addAttribute("user", getCurrentUser(auth));
         model.addAttribute("chit", chit);
-        model.addAttribute("memberships", chitService.getMembershipsForChit(chit));
+        model.addAttribute("memberships", memberships);
         model.addAttribute("auctions", auctionService.getAuctionsByChit(chit));
+
+        // Issue 11: Chit-level analytics — wrapped in try-catch for safety
+        BigDecimal totalCollected = BigDecimal.ZERO;
+        long paidMembers = 0;
+        long unpaidMembers = 0;
+        long overdueCount = 0;
+        try {
+            for (ChitMembership m : memberships) {
+                if (m.getStatus() == ChitMembership.MembershipStatus.ACTIVE) {
+                    BigDecimal memberPaid = paymentService.getTotalPaid(m);
+                    if (memberPaid == null) memberPaid = BigDecimal.ZERO;
+                    totalCollected = totalCollected.add(memberPaid);
+                    if (memberPaid.compareTo(BigDecimal.ZERO) > 0) paidMembers++;
+                    else unpaidMembers++;
+                    try {
+                        List<Payment> memberPayments = paymentService.getPaymentsForMembership(m);
+                        overdueCount += memberPayments.stream()
+                                .filter(p -> p.getStatus() == Payment.PaymentStatus.OVERDUE).count();
+                    } catch (Exception ignored) {}
+                }
+            }
+        } catch (Exception e) {
+            // Analytics failure is non-fatal
+        }
+
+        BigDecimal totalChitValue = chit.getTotalChitValue() != null ? chit.getTotalChitValue() : BigDecimal.ZERO;
+        BigDecimal totalPending = totalChitValue.subtract(totalCollected).max(BigDecimal.ZERO);
+        int collectionPct = 0;
+        if (totalChitValue.compareTo(BigDecimal.ZERO) > 0) {
+            collectionPct = totalCollected.multiply(BigDecimal.valueOf(100))
+                    .divide(totalChitValue, 0, java.math.RoundingMode.HALF_UP).intValue();
+            collectionPct = Math.min(100, Math.max(0, collectionPct));
+        }
+
+        model.addAttribute("totalCollected", totalCollected);
+        model.addAttribute("totalPending", totalPending);
+        model.addAttribute("paidMembers", paidMembers);
+        model.addAttribute("unpaidMembers", unpaidMembers);
+        model.addAttribute("overdueCount", overdueCount);
+        model.addAttribute("activeMembers", memberships.stream()
+                .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count());
+        model.addAttribute("collectionPct", collectionPct);
+
+        // Pre-compute per-member payment stats (avoids lazy-loading m.payments in template)
+        java.util.Map<Long, BigDecimal> memberPaidMap = new java.util.HashMap<>();
+        java.util.Map<Long, Long> memberOverdueMap = new java.util.HashMap<>();
+        java.util.Map<Long, Long> memberPaidMonthsMap = new java.util.HashMap<>();
+        for (ChitMembership m : memberships) {
+            try {
+                BigDecimal paid = paymentService.getTotalPaid(m);
+                memberPaidMap.put(m.getId(), paid != null ? paid : BigDecimal.ZERO);
+                List<Payment> mPayments = paymentService.getPaymentsForMembership(m);
+                memberOverdueMap.put(m.getId(), mPayments.stream()
+                        .filter(p -> p.getStatus() == Payment.PaymentStatus.OVERDUE).count());
+                memberPaidMonthsMap.put(m.getId(), mPayments.stream()
+                        .filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED).count());
+            } catch (Exception e) {
+                memberPaidMap.put(m.getId(), BigDecimal.ZERO);
+                memberOverdueMap.put(m.getId(), 0L);
+                memberPaidMonthsMap.put(m.getId(), 0L);
+            }
+        }
+        model.addAttribute("memberPaidMap", memberPaidMap);
+        model.addAttribute("memberOverdueMap", memberOverdueMap);
+        model.addAttribute("memberPaidMonthsMap", memberPaidMonthsMap);
+
         return "admin/chit-detail";
     }
 
@@ -140,6 +222,18 @@ public class AdminController {
             }
             chitRepository.save(chit);
 
+            // Issue 10: Auto-generate cancellation settlements when chit is cancelled
+            if (newStatus == Chit.ChitStatus.CANCELLED) {
+                try {
+                    List<Settlement> settlements = settlementService.generateCancellationSettlements(chit, getCurrentUser(auth));
+                    if (!settlements.isEmpty()) {
+                        ra.addFlashAttribute("info", settlements.size() + " settlement(s) auto-generated for affected members.");
+                    }
+                } catch (Exception e) {
+                    ra.addFlashAttribute("warning", "Settlements could not be auto-generated: " + e.getMessage());
+                }
+            }
+
             // Notify all active members of this chit
             String detail = "Name: " + name + ", Status: " + status;
             chitService.getMembershipsForChit(chit).stream()
@@ -176,6 +270,11 @@ public class AdminController {
         try {
             ChitMembership membership = membershipRepository.findById(id).orElseThrow();
             Long chitId = membership.getChit().getId();
+            // Issue 6: Require agreement acceptance before admin can approve
+            if (!membership.isAgreementAccepted()) {
+                ra.addFlashAttribute("error", "Cannot approve: Member has not accepted the agreement yet. Wait for member to review and accept.");
+                return "redirect:/admin/chits/" + chitId;
+            }
             chitService.approveMembership(id, getCurrentUser(auth));
             ra.addFlashAttribute("success", "Membership approved! Agreement PDF sent.");
             return "redirect:/admin/chits/" + chitId;
@@ -192,6 +291,7 @@ public class AdminController {
             Long chitId = membership.getChit().getId();
             membership.setStatus(ChitMembership.MembershipStatus.EXITED);
             membership.setRejectionReason(reason);
+            membership.setRejectionCount(membership.getRejectionCount() + 1);
             membershipRepository.save(membership);
 
             notificationService.notifyChitRegistrationRejected(
@@ -211,8 +311,17 @@ public class AdminController {
     @GetMapping("/payments")
     public String pendingPayments(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
-        model.addAttribute("payments", paymentService.getPendingPayments());
-        model.addAttribute("allPayments", paymentService.getAllPayments());
+        try {
+            model.addAttribute("payments", paymentService.getPendingPayments());
+        } catch (Exception e) {
+            model.addAttribute("payments", java.util.Collections.emptyList());
+            model.addAttribute("error", "Failed to load pending payments: " + e.getMessage());
+        }
+        try {
+            model.addAttribute("allPayments", paymentService.getAllPayments());
+        } catch (Exception e) {
+            model.addAttribute("allPayments", java.util.Collections.emptyList());
+        }
         return "admin/payments";
     }
 
@@ -476,17 +585,66 @@ public class AdminController {
             // 4. Notify admin
             notificationService.notifyAdminUserDeleted(admin.getEmail(), memberName);
 
-            // 5. Delete the user
-            userRepository.delete(member);
-            userRepository.flush();
+            // 5. Soft-delete: anonymize & deactivate (hard-delete would violate
+            //    FK constraints from AuditLog, Bid, Auction, Payment, Chit)
+            member.setActive(false);
+            member.setFullName("[Deleted] " + memberName);
+            member.setPhone(null);
+            member.setAddress(null);
+            member.setFirstLogin(true);
+            member.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            userRepository.save(member);
 
             ra.addFlashAttribute("success",
-                    "User '" + memberName + "' deleted. Email notification sent. " +
-                    activeMemberships.size() + " membership(s) exited.");
+                    "User '" + memberName + "' removed and anonymized. Email notification sent. "
+                    + activeMemberships.size() + " membership(s) exited.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Delete failed: " + e.getMessage());
         }
         return "redirect:/admin/members";
+    }
+
+    // ── Early Exit Management ──────────────────────────────────────────────
+    @GetMapping("/early-exits")
+    public String earlyExits(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        try {
+            model.addAttribute("requests", earlyExitService.getAllRequests());
+        } catch (Exception e) {
+            model.addAttribute("requests", java.util.Collections.emptyList());
+            model.addAttribute("error", "Failed to load exit requests: " + e.getMessage());
+        }
+        return "admin/early-exits";
+    }
+
+    @PostMapping("/early-exits/{id}/process")
+    public String processEarlyExit(@PathVariable Long id,
+                                    @RequestParam boolean approved,
+                                    @RequestParam(required = false) String remarks,
+                                    Authentication auth, RedirectAttributes ra) {
+        try {
+            earlyExitService.processExit(id, approved, remarks != null ? remarks : "", getCurrentUser(auth), null);
+            ra.addFlashAttribute("success", (approved ? "Approved" : "Rejected") + " early exit request #" + id);
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/early-exits";
+    }
+
+    // ── Risk Dashboard ──────────────────────────────────────────────────────
+    @GetMapping("/risk-dashboard")
+    public String riskDashboard(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        try {
+            model.addAttribute("alerts", riskScoreService.predictDefaulters());
+        } catch (Exception e) {
+            model.addAttribute("alerts", java.util.Collections.emptyList());
+            model.addAttribute("riskError", "Risk calculation error: " + e.getMessage());
+        }
+        try {
+            model.addAttribute("recentLogins", loginTrackingService.getRecentLogins());
+        } catch (Exception e) {
+            model.addAttribute("recentLogins", java.util.Collections.emptyList());
+        }
+        return "admin/risk-dashboard";
     }
 
     // ── Announcements ─────────────────────────────────────────────────────
@@ -496,6 +654,64 @@ public class AdminController {
         model.addAttribute("members", userRepository.findAll().stream()
                 .filter(u -> u.getRole() == User.Role.MEMBER).toList());
         return "admin/announcements";
+    }
+
+    // ── One-Time Data Flush (Admin only) ──────────────────────────────────
+    @PostMapping("/flush-test-data")
+    @org.springframework.transaction.annotation.Transactional
+    public String flushTestData(Authentication auth, RedirectAttributes ra) {
+        try {
+            User admin = getCurrentUser(auth);
+            if (admin.getRole() != User.Role.ADMIN) {
+                ra.addFlashAttribute("error", "Only admin can flush data.");
+                return "redirect:/admin/dashboard";
+            }
+
+            // Clear in dependency order to avoid FK violations
+            // 1. Clear audit logs
+            long auditCount = auditLogRepository.count();
+            auditLogRepository.deleteAll();
+
+            // 2. Clear early exit requests
+            long exitCount = earlyExitRequestRepository.count();
+            earlyExitRequestRepository.deleteAll();
+
+            // 3. Clear settlements (depends on memberships — but cascade should handle)
+            long settlementCount = settlementRepository.count();
+            settlementRepository.deleteAll();
+
+            // 4. Clear all chits (cascades to memberships, payments, auctions, commissions)
+            long chitCount = chitRepository.count();
+            List<Chit> allChits = chitRepository.findAll();
+            for (Chit c : allChits) {
+                chitRepository.delete(c);
+            }
+            chitRepository.flush();
+
+            // 5. Clear commission ledger (in case orphans remain)
+            commissionLedgerRepository.deleteAll();
+
+            // 6. Soft-delete all member users (keep admin)
+            List<User> members = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == User.Role.MEMBER)
+                    .toList();
+            long memberCount = members.size();
+            for (User m : members) {
+                m.setActive(false);
+                userRepository.save(m);
+            }
+
+            auditService.log(admin, "FLUSH_TEST_DATA", "System", null,
+                    "Flushed: " + chitCount + " chits, " + settlementCount + " settlements, "
+                    + auditCount + " audit logs, " + memberCount + " members deactivated");
+
+            ra.addFlashAttribute("success",
+                    "Test data flushed! " + chitCount + " chits deleted (with all payments, memberships, auctions), "
+                    + settlementCount + " settlements cleared, " + memberCount + " members deactivated.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Flush failed: " + e.getMessage());
+        }
+        return "redirect:/admin/dashboard";
     }
 
     @PostMapping("/announcements/send")
@@ -532,6 +748,96 @@ public class AdminController {
         model.addAttribute("auditLogs", auditLogRepository.findAll()
                 .stream().sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp())).toList());
         return "admin/audit";
+    }
+
+    // ── Issue 3: Login & Security Tracking Dashboard ──────────────────────
+    @GetMapping("/login-tracking")
+    public String loginTracking(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+
+        List<LoginHistory> allLogins = loginTrackingService.getRecentLogins();
+        model.addAttribute("recentLogins", allLogins);
+
+        // Locked accounts
+        List<User> locked = userRepository.findAll().stream()
+                .filter(User::isAccountLocked).toList();
+        model.addAttribute("lockedAccounts", locked);
+
+        // Failed login users
+        List<User> failedUsers = userRepository.findAll().stream()
+                .filter(u -> u.getConsecutiveFailedLogins() > 0)
+                .sorted((a, b) -> b.getConsecutiveFailedLogins() - a.getConsecutiveFailedLogins())
+                .toList();
+        model.addAttribute("failedLoginUsers", failedUsers);
+
+        // Aadhaar stats
+        List<User> members = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == User.Role.MEMBER && u.isActive()).toList();
+        long aadhaarVerified = members.stream().filter(User::isAadhaarVerified).count();
+        long aadhaarPending = members.stream().filter(u -> !u.isAadhaarVerified()).count();
+        model.addAttribute("aadhaarVerified", aadhaarVerified);
+        model.addAttribute("aadhaarPending", aadhaarPending);
+        model.addAttribute("allMembers", members);
+
+        // Enhanced: Login statistics (last 30 days)
+        long totalLogins = allLogins.size();
+        long failedLogins = allLogins.stream().filter(l -> !l.isSuccess()).count();
+        long successLogins = totalLogins - failedLogins;
+        int successRate = totalLogins > 0 ? (int)(successLogins * 100 / totalLogins) : 100;
+        long uniqueIPs = allLogins.stream().map(LoginHistory::getIpAddress)
+                .filter(ip -> ip != null).distinct().count();
+        model.addAttribute("totalLogins", totalLogins);
+        model.addAttribute("failedLogins", failedLogins);
+        model.addAttribute("successRate", successRate);
+        model.addAttribute("uniqueIPs", uniqueIPs);
+        model.addAttribute("aadhaarCompliancePct",
+                members.isEmpty() ? 100 : (int)(aadhaarVerified * 100 / members.size()));
+
+        // Suspicious: users with multiple different IPs in recent logins
+        java.util.Map<String, java.util.Set<String>> userIpMap = new java.util.HashMap<>();
+        for (LoginHistory l : allLogins) {
+            if (l.getUser() != null && l.getIpAddress() != null) {
+                userIpMap.computeIfAbsent(l.getUser().getEmail(), k -> new java.util.HashSet<>())
+                        .add(l.getIpAddress());
+            }
+        }
+        List<String> suspiciousUsers = userIpMap.entrySet().stream()
+                .filter(e -> e.getValue().size() >= 3)
+                .map(java.util.Map.Entry::getKey).toList();
+        model.addAttribute("suspiciousUsers", suspiciousUsers);
+        model.addAttribute("suspiciousCount", suspiciousUsers.size());
+
+        return "admin/login-tracking";
+    }
+
+    // ── Aadhaar Verification Toggle ──────────────────────────────────────
+    @PostMapping("/members/{id}/toggle-aadhaar")
+    public String toggleAadhaar(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try {
+            User member = userService.findById(id);
+            member.setAadhaarVerified(!member.isAadhaarVerified());
+            userRepository.save(member);
+            String status = member.isAadhaarVerified() ? "verified" : "unverified";
+            auditService.log(getCurrentUser(auth), "AADHAAR_" + status.toUpperCase(),
+                    "User", id, "Aadhaar " + status + " for: " + member.getFullName());
+            ra.addFlashAttribute("success", "Aadhaar " + status + " for " + member.getFullName());
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/login-tracking";
+    }
+
+    // ── Reset Failed Login Counter ──────────────────────────────────────
+    @PostMapping("/members/{id}/reset-login-counter")
+    public String resetLoginCounter(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+        try {
+            User member = userService.findById(id);
+            member.setConsecutiveFailedLogins(0);
+            member.setAccountLocked(false);
+            userRepository.save(member);
+            auditService.log(getCurrentUser(auth), "RESET_LOGIN_COUNTER",
+                    "User", id, "Reset failed login counter for: " + member.getFullName());
+            ra.addFlashAttribute("success", "Login counter reset and account unlocked for " + member.getFullName());
+        } catch (Exception e) { ra.addFlashAttribute("error", e.getMessage()); }
+        return "redirect:/admin/login-tracking";
     }
     // ── Chit Member Management ─────────────────────────────────────────────
     //  Add a member directly to a chit (admin-initiated)

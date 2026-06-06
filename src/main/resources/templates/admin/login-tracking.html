@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Login & Security Tracking')}"></head>
+<body>
+<div th:replace="~{fragments :: adminSidebar('security')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
+<div class="main-content">
+    <div th:replace="~{fragments :: topbar('Login &amp; Security Tracking', 'Monitor login attempts, Aadhaar verification, and account security', ${user.fullName})}"></div>
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <!-- Security Overview Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2 col-6"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-lock-fill"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${lockedAccounts.size()}">0</div><small class="text-muted">Locked Accounts</small></div>
+        </div></div></div>
+        <div class="col-md-2 col-6"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${failedLoginUsers.size()}">0</div><small class="text-muted">Failed Login Users</small></div>
+        </div></div></div>
+        <div class="col-md-2 col-6"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-globe"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${uniqueIPs}">0</div><small class="text-muted">Unique IPs</small></div>
+        </div></div></div>
+        <div class="col-md-2 col-6"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-shield-check"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${aadhaarVerified}">0</div><small class="text-muted">Aadhaar Verified</small></div>
+        </div></div></div>
+        <div class="col-md-2 col-6"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-shield-x"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${aadhaarPending}">0</div><small class="text-muted">Aadhaar Pending</small></div>
+        </div></div></div>
+        <div class="col-md-2 col-6"><div class="card stat-card h-100" th:classappend="${suspiciousCount > 0} ? 'border-danger' : ''"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-bug-fill"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${suspiciousCount}">0</div><small class="text-muted">Suspicious Activity</small></div>
+        </div></div></div>
+    </div>
+
+    <!-- Login Success Rate Bar -->
+    <div class="card panel mb-4">
+        <div class="card-body py-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-semibold small"><i class="bi bi-graph-up me-1 text-primary"></i>Login Success Rate</span>
+                <div class="d-flex gap-3 small text-muted">
+                    <span>Total: <strong th:text="${totalLogins}">0</strong></span>
+                    <span class="text-success">Success: <strong th:text="${totalLogins - failedLogins}">0</strong></span>
+                    <span class="text-danger">Failed: <strong th:text="${failedLogins}">0</strong></span>
+                    <span class="badge" th:classappend="${successRate >= 90} ? 'bg-success' : (${successRate >= 70} ? 'bg-warning text-dark' : 'bg-danger')" th:text="${successRate} + '%'"></span>
+                </div>
+            </div>
+            <div class="progress" style="height:10px">
+                <div class="progress-bar bg-success" th:style="'width:' + ${successRate} + '%'" role="progressbar"></div>
+                <div class="progress-bar bg-danger" th:style="'width:' + ${100 - successRate} + '%'" role="progressbar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-md-6">
+            <!-- Locked Accounts -->
+            <div class="card panel mb-4" th:if="${!lockedAccounts.isEmpty()}">
+                <div class="card-header bg-danger bg-opacity-10 d-flex justify-content-between">
+                    <span><i class="bi bi-lock-fill text-danger me-2"></i>Locked Accounts</span>
+                    <span class="badge bg-danger" th:text="${lockedAccounts.size()}"></span>
+                </div>
+                <div class="card-body p-0"><div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                    <thead class="table-light"><tr><th>Name</th><th>Fails</th><th>Actions</th></tr></thead>
+                    <tbody>
+                    <tr th:each="u : ${lockedAccounts}">
+                        <td><div class="fw-semibold small" th:text="${u.fullName}"></div><small class="text-muted" th:text="${u.email}"></small></td>
+                        <td><span class="badge bg-danger" th:text="${u.consecutiveFailedLogins}"></span></td>
+                        <td>
+                            <form th:action="@{/admin/members/{id}/reset-login-counter(id=${u.id})}" method="post" class="d-inline">
+                                <button class="btn btn-sm btn-outline-success" title="Unlock and reset counter"><i class="bi bi-unlock me-1"></i>Unlock</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                    </table>
+                </div></div>
+            </div>
+
+            <!-- Suspicious Activity -->
+            <div class="card panel mb-4" th:if="${suspiciousCount > 0}">
+                <div class="card-header bg-danger bg-opacity-10">
+                    <i class="bi bi-bug text-danger me-2"></i>Suspicious Activity
+                    <small class="text-muted ms-1">(3+ different IPs)</small>
+                </div>
+                <div class="card-body">
+                    <div th:each="email : ${suspiciousUsers}" class="d-flex align-items-center gap-2 py-1 border-bottom">
+                        <i class="bi bi-exclamation-diamond text-danger"></i>
+                        <span class="small fw-semibold" th:text="${email}"></span>
+                        <span class="badge bg-danger bg-opacity-10 text-danger ms-auto small">Multiple IPs</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users with Failed Logins -->
+            <div class="card panel mb-4" th:if="${!failedLoginUsers.isEmpty()}">
+                <div class="card-header"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Failed Login Users</div>
+                <div class="card-body p-0"><div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                    <thead class="table-light"><tr><th>Name</th><th>Fails</th><th>IP</th><th>Actions</th></tr></thead>
+                    <tbody>
+                    <tr th:each="u : ${failedLoginUsers}">
+                        <td><div class="fw-semibold small" th:text="${u.fullName}"></div><small class="text-muted" th:text="${u.email}"></small></td>
+                        <td><span class="badge" th:classappend="${u.consecutiveFailedLogins >= 5} ? 'bg-danger' : (${u.consecutiveFailedLogins >= 3} ? 'bg-warning text-dark' : 'bg-secondary')" th:text="${u.consecutiveFailedLogins}"></span></td>
+                        <td><code style="font-size:.7rem" th:text="${u.lastLoginIp != null ? u.lastLoginIp : '—'}"></code></td>
+                        <td>
+                            <form th:action="@{/admin/members/{id}/reset-login-counter(id=${u.id})}" method="post" class="d-inline">
+                                <button class="btn btn-sm btn-outline-warning" title="Reset Counter"><i class="bi bi-arrow-counterclockwise"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                    </table>
+                </div></div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-md-6">
+            <!-- Aadhaar Compliance -->
+            <div class="card panel mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-person-vcard text-primary me-2"></i>Aadhaar Compliance</span>
+                    <span class="badge" th:classappend="${aadhaarCompliancePct >= 80} ? 'bg-success' : (${aadhaarCompliancePct >= 50} ? 'bg-warning text-dark' : 'bg-danger')" th:text="${aadhaarCompliancePct} + '% verified'"></span>
+                </div>
+                <div class="card-body p-0"><div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                    <thead class="table-light"><tr><th>Member</th><th>Aadhaar</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                    <tr th:each="u : ${allMembers}">
+                        <td><div class="fw-semibold small" th:text="${u.fullName}"></div><small class="text-muted" th:text="${u.email}"></small></td>
+                        <td><code style="font-size:.7rem" th:text="${u.aadhaarNumber != null and u.aadhaarNumber.length() >= 4 ? ('XXXX-XXXX-' + u.aadhaarNumber.substring(u.aadhaarNumber.length() - 4)) : (u.aadhaarNumber != null ? u.aadhaarNumber : '—')}"></code></td>
+                        <td>
+                            <span class="badge" th:classappend="${u.aadhaarVerified} ? 'bg-success' : 'bg-secondary'"
+                                  th:text="${u.aadhaarVerified} ? '✓ Verified' : '✗ Pending'"></span>
+                        </td>
+                        <td>
+                            <form th:action="@{/admin/members/{id}/toggle-aadhaar(id=${u.id})}" method="post" class="d-inline">
+                                <button class="btn btn-sm" th:classappend="${u.aadhaarVerified} ? 'btn-outline-secondary' : 'btn-outline-success'"
+                                        th:text="${u.aadhaarVerified} ? 'Unverify' : 'Verify'" th:title="${u.aadhaarVerified} ? 'Mark as unverified' : 'Mark as verified'"></button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(allMembers)}"><td colspan="4" class="text-center text-muted py-3">No active members</td></tr>
+                    </tbody>
+                    </table>
+                </div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Login Activity (Full Width) -->
+    <div class="card panel">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span><i class="bi bi-clock-history text-info me-2"></i>Recent Login Activity</span>
+            <div class="d-flex gap-2 align-items-center">
+                <input type="text" id="loginSearch" class="form-control form-control-sm" placeholder="Search user, IP, device..." onkeyup="filterLogins()" style="width:200px;font-size:.8rem">
+                <select id="loginStatusFilter" class="form-select form-select-sm" onchange="filterLogins()" style="width:100px;font-size:.8rem">
+                    <option value="">All</option>
+                    <option value="ok">Success</option>
+                    <option value="fail">Failed</option>
+                </select>
+                <span class="badge bg-secondary" th:text="${recentLogins.size()} + ' records'"></span>
+            </div>
+        </div>
+        <div class="card-body p-0"><div class="table-responsive">
+            <table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Time</th><th>User</th><th>IP Address</th><th class="hide-mobile">Device</th><th>Status</th><th class="hide-mobile">Failure Reason</th></tr></thead>
+            <tbody id="loginBody">
+            <tr th:each="l : ${recentLogins}" class="login-row"
+                th:data-user="${l.user.fullName + ' ' + l.user.email}"
+                th:data-ip="${l.ipAddress}"
+                th:data-device="${l.userAgent}"
+                th:data-status="${l.success ? 'ok' : 'fail'}">
+                <td><small th:text="${#temporals.format(l.loginAt, 'dd MMM HH:mm')}"></small></td>
+                <td><div class="fw-semibold small" th:text="${l.user.fullName}"></div><small class="text-muted" th:text="${l.user.email}"></small></td>
+                <td><code style="font-size:.7rem" th:text="${l.ipAddress}"></code></td>
+                <td class="hide-mobile small" th:text="${l.userAgent != null ? (l.userAgent.length() > 30 ? l.userAgent.substring(0, 30) + '…' : l.userAgent) : '—'}"></td>
+                <td><span class="badge" th:classappend="${l.success} ? 'bg-success' : 'bg-danger'" th:text="${l.success} ? 'OK' : 'FAIL'"></span></td>
+                <td class="hide-mobile"><small class="text-danger" th:text="${l.failureReason != null ? l.failureReason : '—'}"></small></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(recentLogins)}"><td colspan="6" class="text-center text-muted py-3">No login records yet</td></tr>
+            </tbody>
+            </table>
+        </div></div>
+    </div>
+</div>
+<script>
+function filterLogins() {
+    var q = (document.getElementById('loginSearch').value || '').toLowerCase();
+    var s = document.getElementById('loginStatusFilter').value;
+    document.querySelectorAll('.login-row').forEach(function(row) {
+        var user = (row.dataset.user || '').toLowerCase();
+        var ip = (row.dataset.ip || '').toLowerCase();
+        var device = (row.dataset.device || '').toLowerCase();
+        var status = row.dataset.status;
+        var matchQ = !q || user.indexOf(q) >= 0 || ip.indexOf(q) >= 0 || device.indexOf(q) >= 0;
+        var matchS = !s || status === s;
+        row.style.display = (matchQ && matchS) ? '' : 'none';
+    });
+}
+</script>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

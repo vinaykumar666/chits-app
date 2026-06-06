@@ -77,7 +77,7 @@
                 <tr><th>Chit</th><th>Month</th><th class="hide-mobile">Date</th><th>Status</th><th class="hide-mobile">Bids</th><th class="hide-mobile">Winner</th><th class="hide-mobile">Payout</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
-                <tr th:each="auction : ${allAuctions}">
+                <tr th:each="auction : ${allAuctions}" style="cursor:pointer" th:onclick="'window.location.href=\'/admin/chits/' + ${auction.chit.id} + '\''">
                     <td class="fw-semibold" th:text="${auction.chit.name}"></td>
                     <td><span class="badge bg-primary" th:text="'M' + ${auction.monthNumber}"></span></td>
                     <td class="hide-mobile" th:text="${auction.auctionDate}"></td>

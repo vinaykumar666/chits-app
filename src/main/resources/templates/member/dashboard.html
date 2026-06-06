@@ -4,6 +4,7 @@
 <body>
 
 <div th:replace="~{fragments :: memberSidebar('dashboard')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
 
 <div class="main-content">
   <div class="topbar">
@@ -13,14 +14,36 @@
     </div>
     <div class="d-flex align-items-center gap-2">
       <a th:href="@{/member/reports/my-memberships/pdf}" class="btn btn-sm btn-outline-warning fw-bold" title="Download your chit memberships statement">
-        <i class="bi bi-file-earmark-pdf me-1"></i>My Statement
+        <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-action-text">My Statement</span>
       </a>
       <span class="ygc-conn-dot" title="Live notifications active"></span>
-      <span id="ygc-notif-badge" class="badge bg-danger rounded-pill" style="display:none"></span>
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
       <span class="user-badge" th:text="${user.email}">user@email.com</span>
     </div>
   </div>
   <div th:replace="~{fragments :: alerts}"></div>
+
+  <!-- Settlement Pending Acknowledgment -->
+  <div th:each="s : ${mySettlements}" th:if="${s.status.name() == 'APPROVED' and !s.userAcknowledged}">
+    <div class="alert border-success mb-3" style="border-left:4px solid #198754;background:#f0fff4;border-radius:12px">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <h6 class="fw-bold text-success mb-1"><i class="bi bi-bank me-1"></i>Settlement Ready</h6>
+          <p class="mb-1 small" th:text="'Chit: ' + ${s.membership.chit.name} + ' | Refund: ₹' + ${s.finalSettlementAmount}"></p>
+          <small class="text-muted" th:text="'Total Paid: ₹' + ${s.totalPaidAmount} + ' | Deduction: ₹' + ${s.deductionAmount}"></small>
+        </div>
+        <form th:action="@{/member/settlements/{id}/acknowledge(id=${s.id})}" method="post">
+          <button class="btn btn-success btn-sm fw-bold" onclick="return confirm('Confirm you have received ₹' + this.closest('form').querySelector('[name=amt]')?.value + '?')">
+            <i class="bi bi-check-circle me-1"></i>Payment Received
+          </button>
+          <input type="hidden" name="amt" th:value="${s.finalSettlementAmount}">
+        </form>
+      </div>
+    </div>
+  </div>
 
   <!-- Quick Stats -->
   <div class="row g-3 mb-4">
@@ -65,7 +88,8 @@
             </tr>
           </thead>
           <tbody>
-          <tr th:each="m : ${memberships}">
+          <tr th:each="m : ${memberships}" style="cursor:pointer"
+              th:onclick="'window.location.href=\'/member/memberships/' + ${m.id} + '\''">
             <td>
               <div class="fw-semibold" th:text="${m.chit.name}"></div>
               <small class="text-muted d-none d-sm-block" th:text="${m.chit.description}"></small>

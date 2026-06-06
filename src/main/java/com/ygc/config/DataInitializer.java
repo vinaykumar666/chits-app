@@ -3,34 +3,42 @@ package com.ygc.config;
 import com.ygc.model.User;
 import com.ygc.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class DataInitializer implements CommandLineRunner {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
-        if (!userRepository.existsByEmail("medipalli.vinaykumar@gmail.com")) {
+        String adminEmail = "medipalli.vinaykumar@gmail.com";
+        if (!userRepository.existsByEmail(adminEmail)) {
             User admin = new User();
-            admin.setEmail("medipalli.vinaykumar@gmail.com");
+            admin.setEmail(adminEmail);
             admin.setPassword(passwordEncoder.encode("Admin@123"));
-            admin.setFullName("YGC Administrator");
-            admin.setPhone("8919508889");
+            admin.setFullName("Vinay Kumar Medipalli");
+            admin.setPhone("+918919508889");
+            admin.setAddress("Hyderabad, Telangana");
             admin.setRole(User.Role.ADMIN);
             admin.setFirstLogin(false);
             admin.setActive(true);
+            admin.setTermsAccepted(true);
+            admin.setAadhaarVerified(false);
+            admin.setPreferredLanguage("en");
+            admin.setConsecutiveFailedLogins(0);
+            admin.setAccountLocked(false);
+            admin.setRiskScore(0);
             userRepository.save(admin);
-            System.out.println("==============================================");
-            System.out.println("Default Admin Created:");
-            System.out.println("Email: medipalli.vinaykumar@gmail.com");
-            System.out.println("Password: Admin@123");
-            System.out.println("==============================================");
+            log.info("✅ Default admin created: {}", adminEmail);
+        } else {
+            log.info("Admin already exists: {}", adminEmail);
         }
     }
 }

@@ -635,6 +635,13 @@
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   function init() {
+    // Clear notification state if arriving at login/logout page
+    if (window.location.pathname === '/login' || window.location.pathname === '/logout') {
+      try { sessionStorage.removeItem('ygc-notif-log'); } catch(e){}
+      notificationLog = [];
+      return; // Don't init SSE/notifications on login page
+    }
+
     registerSW();
     showIOSInstallHint();
     initOfflineDetection();

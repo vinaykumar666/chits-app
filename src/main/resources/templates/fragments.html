@@ -49,19 +49,32 @@
     </div>
   </a>
   <nav class="sidebar-nav">
-    <a th:href="@{/admin/dashboard}"          class="nav-link" th:classappend="${active=='dashboard'   ? ' active' : ''}"><i class="bi bi-speedometer2"></i> Dashboard</a>
-    <a th:href="@{/admin/chits}"              class="nav-link" th:classappend="${active=='chits'        ? ' active' : ''}"><i class="bi bi-collection"></i> Chit Groups</a>
-    <a th:href="@{/admin/members}"            class="nav-link" th:classappend="${active=='members'      ? ' active' : ''}"><i class="bi bi-people"></i> Members</a>
-    <a th:href="@{/admin/payments}"           class="nav-link" th:classappend="${active=='payments'     ? ' active' : ''}"><i class="bi bi-cash-coin"></i> Payments</a>
-    <a th:href="@{/admin/auctions}"           class="nav-link" th:classappend="${active=='auctions'     ? ' active' : ''}"><i class="bi bi-hammer"></i> Auctions</a>
-    <a th:href="@{/admin/settlements}"        class="nav-link" th:classappend="${active=='settlements'  ? ' active' : ''}"><i class="bi bi-bank"></i> Settlements</a>
-    <a th:href="@{/admin/reports/commission}" class="nav-link" th:classappend="${active=='commission'   ? ' active' : ''}"><i class="bi bi-graph-up"></i> Commission</a>
-    <a th:href="@{/admin/chit-history}"       class="nav-link" th:classappend="${active=='history'      ? ' active' : ''}"><i class="bi bi-archive"></i> Chit History</a>
-    <a th:href="@{/admin/announcements}"      class="nav-link" th:classappend="${active=='announce'     ? ' active' : ''}"><i class="bi bi-megaphone"></i> Announcements</a>
-    <a th:href="@{/admin/audit}"              class="nav-link" th:classappend="${active=='audit'        ? ' active' : ''}"><i class="bi bi-shield-check"></i> Audit Log</a>
-    <a th:href="@{/help}"                     class="nav-link" th:classappend="${active=='help'         ? ' active' : ''}"><i class="bi bi-question-circle"></i> Help</a>
-    <a th:href="@{/logout}"                   class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    <a th:href="@{/admin/dashboard}"          class="nav-link" th:classappend="${active=='dashboard'   ? ' active' : ''}"><i class="bi bi-speedometer2"></i> <span th:text="#{nav.dashboard}">Dashboard</span></a>
+    <a th:href="@{/admin/chits}"              class="nav-link" th:classappend="${active=='chits'        ? ' active' : ''}"><i class="bi bi-collection"></i> <span th:text="#{nav.chits}">Chit Groups</span></a>
+    <a th:href="@{/admin/members}"            class="nav-link" th:classappend="${active=='members'      ? ' active' : ''}"><i class="bi bi-people"></i> <span th:text="#{nav.members}">Members</span></a>
+    <a th:href="@{/admin/payments}"           class="nav-link" th:classappend="${active=='payments'     ? ' active' : ''}"><i class="bi bi-cash-coin"></i> <span th:text="#{nav.payments}">Payments</span></a>
+    <a th:href="@{/admin/auctions}"           class="nav-link" th:classappend="${active=='auctions'     ? ' active' : ''}"><i class="bi bi-hammer"></i> <span th:text="#{nav.auctions}">Auctions</span></a>
+    <a th:href="@{/admin/settlements}"        class="nav-link" th:classappend="${active=='settlements'  ? ' active' : ''}"><i class="bi bi-bank"></i> <span th:text="#{nav.settlements}">Settlements</span></a>
+    <a th:href="@{/admin/reports/commission}" class="nav-link" th:classappend="${active=='commission'   ? ' active' : ''}"><i class="bi bi-graph-up"></i> <span th:text="#{nav.commission}">Commission</span></a>
+    <a th:href="@{/admin/chit-history}"       class="nav-link" th:classappend="${active=='history'      ? ' active' : ''}"><i class="bi bi-archive"></i> <span th:text="#{nav.history}">Chit History</span></a>
+    <a th:href="@{/admin/announcements}"      class="nav-link" th:classappend="${active=='announce'     ? ' active' : ''}"><i class="bi bi-megaphone"></i> <span th:text="#{nav.announcements}">Announcements</span></a>
+    <a th:href="@{/admin/audit}"              class="nav-link" th:classappend="${active=='audit'        ? ' active' : ''}"><i class="bi bi-shield-check"></i> <span th:text="#{nav.audit}">Audit Log</span></a>
+    <a th:href="@{/admin/early-exits}"        class="nav-link" th:classappend="${active=='exits'        ? ' active' : ''}"><i class="bi bi-door-open"></i> <span th:text="#{nav.exits}">Early Exits</span></a>
+    <a th:href="@{/admin/risk-dashboard}"     class="nav-link" th:classappend="${active=='risk'         ? ' active' : ''}"><i class="bi bi-exclamation-triangle"></i> <span th:text="#{nav.risk}">Risk &amp; Fraud</span></a>
+    <a th:href="@{/admin/login-tracking}"    class="nav-link" th:classappend="${active=='security'     ? ' active' : ''}"><i class="bi bi-shield-lock"></i> <span>Security Log</span></a>
+    <a th:href="@{/help}"                     class="nav-link" th:classappend="${active=='help'         ? ' active' : ''}"><i class="bi bi-question-circle"></i> <span th:text="#{nav.help}">Help</span></a>
+    <a th:href="@{/logout}"                   class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> <span th:text="#{nav.logout}">Logout</span></a>
   </nav>
+  <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);margin-top:auto">
+    <small style="color:rgba(255,255,255,.3);font-size:.65rem;text-transform:uppercase;letter-spacing:.06em" th:text="#{lang.select}">Language</small>
+    <div class="d-flex flex-wrap gap-1 mt-1">
+      <a href="#" onclick="switchLang('en')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">EN</a>
+      <a href="#" onclick="switchLang('hi')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">हि</a>
+      <a href="#" onclick="switchLang('te')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">తె</a>
+      <a href="#" onclick="switchLang('kn')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">ಕ</a>
+      <a href="#" onclick="switchLang('ta')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">த</a>
+    </div>
+  </div>
 </div>
 
 <!-- MEMBER SIDEBAR -->
@@ -76,13 +89,23 @@
     </div>
   </a>
   <nav class="sidebar-nav">
-    <a th:href="@{/member/dashboard}" class="nav-link" th:classappend="${active=='dashboard' ? ' active' : ''}"><i class="bi bi-house"></i> My Dashboard</a>
-    <a th:href="@{/member/chits}"     class="nav-link" th:classappend="${active=='chits'     ? ' active' : ''}"><i class="bi bi-collection"></i> Browse Chits</a>
-    <a th:href="@{/member/help}"      class="nav-link" th:classappend="${active=='help'      ? ' active' : ''}"><i class="bi bi-question-circle"></i> Help & Rules</a>
-    <a th:href="@{/terms}"            class="nav-link" th:classappend="${active=='terms'     ? ' active' : ''}"><i class="bi bi-file-text"></i> Terms</a>
-    <a th:href="@{/logout}"           class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    <a th:href="@{/member/dashboard}" class="nav-link" th:classappend="${active=='dashboard' ? ' active' : ''}"><i class="bi bi-house"></i> <span th:text="#{nav.my_dashboard}">My Dashboard</span></a>
+    <a th:href="@{/member/chits}"     class="nav-link" th:classappend="${active=='chits'     ? ' active' : ''}"><i class="bi bi-collection"></i> <span th:text="#{nav.browse_chits}">Browse Chits</span></a>
+    <a th:href="@{/member/help}"      class="nav-link" th:classappend="${active=='help'      ? ' active' : ''}"><i class="bi bi-question-circle"></i> <span th:text="#{nav.help}">Help & Rules</span></a>
+    <a th:href="@{/terms}"            class="nav-link" th:classappend="${active=='terms'     ? ' active' : ''}"><i class="bi bi-file-text"></i> <span th:text="#{nav.terms}">Terms</span></a>
+    <a th:href="@{/logout}"           class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> <span th:text="#{nav.logout}">Logout</span></a>
   </nav>
-  <div style="padding:16px;border-top:1px solid rgba(255,255,255,.06);margin-top:auto;">
+  <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06)">
+    <small style="color:rgba(255,255,255,.3);font-size:.65rem;text-transform:uppercase;letter-spacing:.06em" th:text="#{lang.select}">Language</small>
+    <div class="d-flex flex-wrap gap-1 mt-1">
+      <a href="#" onclick="switchLang('en')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">EN</a>
+      <a href="#" onclick="switchLang('hi')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">हि</a>
+      <a href="#" onclick="switchLang('te')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">తె</a>
+      <a href="#" onclick="switchLang('kn')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">ಕ</a>
+      <a href="#" onclick="switchLang('ta')" class="badge text-decoration-none" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:.7rem">த</a>
+    </div>
+  </div>
+  <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06)">
     <small style="color:rgba(255,255,255,.3);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em" class="d-block mb-1">Support</small>
     <a href="tel:+918919508889" class="text-warning text-decoration-none small fw-bold">
       <i class="bi bi-telephone me-1"></i>+91 8919508889
@@ -98,10 +121,24 @@
   </div>
   <div class="d-flex align-items-center gap-2">
     <span class="ygc-conn-dot" title="Live notifications active"></span>
-    <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" aria-label="Show notifications" style="font-size:1.3rem;line-height:1">
-      <i class="bi bi-bell"></i>
-      <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
-    </button>
+    <!-- Issue 1: Notification bell with dropdown -->
+    <div class="dropdown">
+      <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary dropdown-toggle"
+              data-bs-toggle="dropdown" data-bs-auto-close="outside"
+              title="Notifications" aria-label="Show notifications" style="font-size:1.3rem;line-height:1">
+        <i class="bi bi-bell"></i>
+        <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
+      </button>
+      <div class="dropdown-menu dropdown-menu-end shadow-lg p-0" style="min-width:320px;max-height:400px;overflow-y:auto;border-radius:14px">
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+          <span class="fw-bold small">Notifications</span>
+          <button class="btn btn-sm btn-link text-muted p-0" onclick="clearNotifications()" style="font-size:.75rem">Clear all</button>
+        </div>
+        <div id="ygc-notif-list">
+          <div class="text-center text-muted py-4 small" id="ygc-notif-empty"><i class="bi bi-bell-slash d-block mb-1 fs-5"></i>No notifications</div>
+        </div>
+      </div>
+    </div>
     <span class="user-badge" th:text="${userDisplayName}">User</span>
   </div>
 </div>
@@ -123,6 +160,28 @@
   <div id="ygc-toast-container" aria-live="polite" aria-atomic="false"></div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script th:src="@{/js/app.js}"></script>
+  <script th:src="@{/js/i18n.js}"></script>
+  <script>function switchLang(l){var u=new URL(window.location);u.searchParams.set('lang',l);window.location=u.toString();}
+  var _notifs=[];
+  function addNotification(msg,link){
+    _notifs.unshift({msg:msg,link:link||'#',time:new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})});
+    if(_notifs.length>20)_notifs.pop();
+    renderNotifs();
+  }
+  function clearNotifications(){_notifs=[];renderNotifs();}
+  function renderNotifs(){
+    var b=document.getElementById('ygc-notif-badge');
+    var l=document.getElementById('ygc-notif-list');
+    var e=document.getElementById('ygc-notif-empty');
+    if(!l)return;
+    if(_notifs.length===0){l.innerHTML='<div class="text-center text-muted py-4 small" id="ygc-notif-empty"><i class="bi bi-bell-slash d-block mb-1 fs-5"></i>No notifications</div>';if(b)b.style.display='none';return;}
+    if(b){b.textContent=_notifs.length;b.style.display='';}
+    l.innerHTML=_notifs.map(function(n){return '<a href="'+n.link+'" class="dropdown-item d-flex gap-2 py-2 border-bottom" style="white-space:normal"><div><div class="small">'+n.msg+'</div><small class="text-muted">'+n.time+'</small></div></a>';}).join('');
+  }
+  // Hook into existing SSE toast system
+  var _origShowToast=window.showYGCToast;
+  if(typeof _origShowToast==='function'){window.showYGCToast=function(m,t){_origShowToast(m,t);var link='#';if(m.indexOf('payment')>=0||m.indexOf('Payment')>=0)link='/admin/payments';else if(m.indexOf('exit')>=0||m.indexOf('Exit')>=0)link='/admin/early-exits';else if(m.indexOf('join')>=0||m.indexOf('Join')>=0)link='/admin/chits';else if(m.indexOf('settle')>=0||m.indexOf('Settle')>=0)link='/admin/settlements';addNotification(m,link);};}
+  </script>
 </div>
 
 <!-- LEGACY alias -->

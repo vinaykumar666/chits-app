@@ -67,8 +67,16 @@ public class ChitService {
             if (LocalDate.now().isAfter(chit.getStartDate())) {
                 throw new IllegalStateException("Chit has already started; no new members allowed");
             }
-            if (membershipRepository.existsByChitAndUser(chit, user)) {
-                throw new IllegalStateException("Already requested or member of this chit");
+
+            // Issue 10A: Allow re-application after rejection (max 3 attempts)
+            // Check for active/pending membership (not EXITED)
+            if (membershipRepository.findActiveOrPendingByChitAndUser(chit, user).isPresent()) {
+                throw new IllegalStateException("You already have an active or pending membership for this chit");
+            }
+            // Check rejection count
+            int rejections = membershipRepository.countRejectionsByChitAndUser(chit, user);
+            if (rejections >= 3) {
+                throw new IllegalStateException("Maximum join attempts (3) exceeded for this chit. Please contact admin.");
             }
             long currentCount = membershipRepository.countByChitAndStatusNot(chit, ChitMembership.MembershipStatus.EXITED);
             if (currentCount >= chit.getTotalMembers()) {

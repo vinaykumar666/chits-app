@@ -62,7 +62,8 @@
                         <tr><th>#</th><th>Full Name</th><th>Email</th><th class="hide-mobile">Phone</th><th>Role</th><th>Status</th><th class="hide-mobile">First Login</th><th class="hide-mobile">Joined</th><th>Actions</th></tr>
                     </thead>
                     <tbody>
-                        <tr th:each="member,idx : ${members}">
+                        <tr th:each="member,idx : ${members}" style="cursor:pointer"
+                            th:onclick="'window.location.href=\'/admin/members/' + ${member.id} + '/edit\''">
                             <td th:text="${idx.count}"></td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">

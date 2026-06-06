@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Risk Dashboard')}"></head>
+<body>
+<div th:replace="~{fragments :: adminSidebar('risk')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
+<div class="main-content">
+    <div th:replace="~{fragments :: topbar('Risk Dashboard', 'AI-powered fraud detection and defaulter prediction', ${user.fullName})}"></div>
+
+    <!-- Risk Alerts -->
+    <div class="card panel mb-4">
+        <div class="card-header"><i class="bi bi-exclamation-triangle text-danger me-2"></i>High Risk Members</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr><th>Member</th><th>Risk Score</th><th>Tier</th><th class="hide-mobile">Email</th><th class="hide-mobile">Last Login</th></tr></thead>
+                <tbody>
+                <tr th:each="a : ${alerts}">
+                    <td class="fw-semibold" th:text="${a['user'].fullName}"></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height:8px;max-width:120px">
+                                <div class="progress-bar" role="progressbar"
+                                     th:classappend="'bg-' + ${a['color']}"
+                                     th:style="'width:' + ${a['riskScore']} + '%'"
+                                     th:attr="aria-valuenow=${a['riskScore']}"></div>
+                            </div>
+                            <span class="fw-bold small" th:text="${a['riskScore']}"></span>
+                        </div>
+                    </td>
+                    <td><span class="badge" th:classappend="'bg-' + ${a['color']}" th:text="${a['tier']}"></span></td>
+                    <td class="hide-mobile small text-muted" th:text="${a['user'].email}"></td>
+                    <td class="hide-mobile small" th:text="${a['user'].lastLoginAt != null ? #temporals.format(a['user'].lastLoginAt, 'dd MMM HH:mm') : 'Never'}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(alerts)}"><td colspan="5" class="text-center text-success py-4"><i class="bi bi-shield-check fs-3 d-block mb-2"></i>No high-risk members detected</td></tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Logins -->
+    <div class="card panel">
+        <div class="card-header"><i class="bi bi-clock-history text-info me-2"></i>Recent Login Activity</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr><th>Time</th><th>User</th><th>IP</th><th class="hide-mobile">Device</th><th>Status</th></tr></thead>
+                <tbody>
+                <tr th:each="l : ${recentLogins}">
+                    <td><small th:text="${#temporals.format(l.loginAt, 'dd MMM HH:mm')}"></small></td>
+                    <td><div class="fw-semibold small" th:text="${l.user.fullName}"></div></td>
+                    <td><code style="font-size:.75rem" th:text="${l.ipAddress}"></code></td>
+                    <td class="hide-mobile small" th:text="${l.userAgent != null ? (l.userAgent.length() > 40 ? l.userAgent.substring(0, 40) + '…' : l.userAgent) : '—'}"></td>
+                    <td><span class="badge" th:classappend="${l.success} ? 'bg-success' : 'bg-danger'" th:text="${l.success} ? 'OK' : 'FAIL'"></span></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(recentLogins)}"><td colspan="5" class="text-center text-muted py-3">No login records yet</td></tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

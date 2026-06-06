@@ -1,110 +1,64 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#1a1a2e">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="YGC Chits">
-    <link rel="manifest" th:href="@{/manifest.json}">
-    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}"><title>Chit Groups - YGC Admin</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" th:href="@{/css/app.css}">
-    <link rel="stylesheet" th:href="@{/css/responsive.css}">
-</head>
+<head th:replace="~{fragments :: head('Chit Groups')}"></head>
 <body>
-<div class="sidebar">
-    <div class="brand"><div class="brand-icon">Y</div><div><div class="brand-name">YGC Internal</div><div class="brand-tag">Save Rupee, Save Future</div></div></div>
-    <nav class="sidebar-nav">
-        <a th:href="@{/admin/dashboard}" class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a th:href="@{/admin/chits}" class="nav-link active"><i class="bi bi-collection"></i> Chit Groups</a>
-        <a th:href="@{/admin/members}" class="nav-link"><i class="bi bi-people"></i> Members</a>
-        <a th:href="@{/admin/payments}" class="nav-link"><i class="bi bi-cash-coin"></i> Payments</a>
-        <a th:href="@{/admin/auctions}" class="nav-link"><i class="bi bi-hammer"></i> Auctions</a>
-        <a th:href="@{/admin/settlements}" class="nav-link"><i class="bi bi-bank"></i> Settlements</a>
-        <a th:href="@{/admin/reports/commission}" class="nav-link"><i class="bi bi-graph-up"></i> Commission</a>
-        <a th:href="@{/admin/audit}" class="nav-link"><i class="bi bi-shield-check"></i> Audit Log</a>
-        <a th:href="@{/help}" class="nav-link"><i class="bi bi-question-circle"></i> Help &amp; Rules</a>
-        <a th:href="@{/logout}" class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
-    </nav>
-</div>
+<div th:replace="~{fragments :: adminSidebar('chits')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
 <div class="main-content">
-    <div class="topbar">
-        <div><h4><i class="bi bi-collection text-warning me-2"></i>Chit Groups</h4><div class="sub">Create and manage chit fund groups</div></div>
-        <div class="d-flex gap-2 align-items-center">
-            <a th:href="@{/admin/reports/chits/pdf}" class="btn btn-sm btn-outline-warning fw-bold" title="Export chit groups list as PDF">
-                <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
-            </a>
-            <span class="ygc-conn-dot" title="Live notifications active"></span>
-            <button id="ygc-bell-btn" class="btn btn-link p-0 position-relative text-secondary" title="Notifications" aria-label="Show notifications" style="font-size:1.3rem;line-height:1">
-              <i class="bi bi-bell"></i>
-              <span id="ygc-notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;display:none"></span>
-            </button>
+    <div th:replace="~{fragments :: topbar('Chit Groups', 'Create and manage chit fund groups', ${user.fullName})}"></div>
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <!-- Quick action bar -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="d-flex gap-2">
             <a th:href="@{/admin/chits/create}" class="btn btn-warning fw-bold"><i class="bi bi-plus-circle me-1"></i>New Chit</a>
-            <div class="user-badge" th:text="${user.fullName}">Admin</div>
+            <a th:href="@{/admin/reports/chits/pdf}" class="btn btn-sm btn-outline-secondary" title="Export PDF">
+                <i class="bi bi-file-earmark-pdf me-1"></i><span class="btn-action-text">Export PDF</span>
+            </a>
         </div>
+        <span class="badge bg-secondary" th:text="${chits.size()} + ' chit groups'"></span>
     </div>
-    <div th:if="${success}" class="alert alert-success alert-dismissible"><span th:text="${success}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    <div th:if="${error}" class="alert alert-danger alert-dismissible"><span th:text="${error}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 
     <div class="card panel">
-        <div class="card-header d-flex justify-content-between">
-            <span><i class="bi bi-collection me-2"></i>All Chit Groups</span>
-            <span class="badge bg-secondary" th:text="${chits.size()} + ' chits'"></span>
-        </div>
         <div class="card-body p-0">
             <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                <tr><th>Chit Name</th><th>Monthly</th><th>Total Value</th><th>Members</th><th>Duration</th><th>Start Date</th><th>Commission</th><th>Status</th><th>Actions</th></tr>
+                <tr><th>Chit Name</th><th>Monthly</th><th>Total Value</th><th class="hide-mobile">Members</th><th class="hide-mobile">Duration</th><th class="hide-mobile">Start Date</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
-                <tr th:each="chit : ${chits}">
+                <tr th:each="chit : ${chits}"
+                    style="cursor:pointer"
+                    th:onclick="'window.location.href=\'/admin/chits/' + ${chit.id} + '\''">
                     <td>
                         <div class="fw-semibold" th:text="${chit.name}"></div>
                         <small class="text-muted" th:text="${chit.description}"></small>
                     </td>
                     <td class="fw-bold text-success" th:text="'₹' + ${chit.monthlyAmount}"></td>
                     <td th:text="'₹' + ${chit.totalChitValue}"></td>
-                    <td th:text="${chit.totalMembers}"></td>
-                    <td th:text="${chit.durationMonths} + ' months'"></td>
-                    <td th:text="${chit.startDate}"></td>
-                    <td th:text="${chit.adminCommissionPercentage} + '%'"></td>
+                    <td class="hide-mobile" th:text="${chit.totalMembers}"></td>
+                    <td class="hide-mobile" th:text="${chit.durationMonths} + ' mo'"></td>
+                    <td class="hide-mobile" th:text="${chit.startDate}"></td>
                     <td>
                         <span class="badge"
                               th:classappend="${chit.status.name() == 'ACTIVE'} ? 'bg-success' : (${chit.status.name() == 'OPEN'} ? 'bg-primary' : (${chit.status.name() == 'COMPLETED'} ? 'bg-secondary' : 'bg-warning text-dark'))"
                               th:text="${chit.status}"></span>
                     </td>
-                    <!-- FIX: Added Edit and Delete buttons alongside View -->
-                    <td>
-                        <div class="d-flex gap-1 flex-wrap">
+                    <td onclick="event.stopPropagation()">
+                        <div class="d-flex gap-1">
                             <a th:href="@{/admin/chits/{id}(id=${chit.id})}" class="btn btn-sm btn-outline-primary" title="View Details">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            <a th:href="@{/admin/chits/{id}/edit(id=${chit.id})}" class="btn btn-sm btn-outline-secondary" title="Edit Chit">
+                            <a th:href="@{/admin/chits/{id}/edit(id=${chit.id})}" class="btn btn-sm btn-outline-secondary" title="Edit">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <!-- Delete only allowed for non-ACTIVE chits -->
-                            <form th:action="@{/admin/chits/{id}/delete(id=${chit.id})}" method="post" class="d-inline"
-                                  th:if="${chit.status.name() != 'ACTIVE'}"
-                                  onsubmit="return confirm('Delete this chit? This cannot be undone.')">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Chit">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                            <span th:if="${chit.status.name() == 'ACTIVE'}"
-                                  class="btn btn-sm btn-outline-danger disabled opacity-50"
-                                  title="Cannot delete an active chit — cancel it first">
-                                <i class="bi bi-trash"></i>
-                            </span>
                         </div>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(chits)}">
-                    <td colspan="9" class="text-center text-muted py-4">
+                    <td colspan="8" class="text-center text-muted py-4">
                         <i class="bi bi-collection fs-3 d-block mb-2"></i>No chit groups yet.
-                        <a th:href="@{/admin/chits/create}">Create the first one!</a>
+                        <a th:href="@{/admin/chits/create}" class="text-warning">Create the first one!</a>
                     </td>
                 </tr>
                 </tbody>

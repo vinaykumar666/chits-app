@@ -42,6 +42,11 @@ public class Settlement {
     private LocalDateTime requestedAt = LocalDateTime.now();
     private LocalDateTime processedAt;
 
+    // Member acknowledgment of settlement payment
+    @org.hibernate.annotations.ColumnDefault("false")
+    private boolean userAcknowledged = false;
+    private LocalDateTime acknowledgedAt;
+
     public enum SettlementType {
         EARLY_EXIT, MATURITY
     }

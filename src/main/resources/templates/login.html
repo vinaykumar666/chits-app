@@ -130,16 +130,16 @@
         <img th:src="@{/images/ygc-logo.png}" alt="YGC" class="brand-logo"
              onerror="this.style.display='none';document.getElementById('login-brand-fallback').style.display='flex'">
         <div class="brand-icon" id="login-brand-fallback" style="display:none">Y</div>
-        <div class="brand-title">YGC Internal</div>
-        <p class="tagline mb-0 mt-1">Save Rupee, Rupee Will Save You In Future</p>
+        <div class="brand-title" th:text="#{app.name}">YGC Internal</div>
+        <p class="tagline mb-0 mt-1" th:text="#{app.tagline}">Save Rupee, Rupee Will Save You In Future</p>
       </div>
 
-      <div th:if="${error}" class="alert alert-danger py-2 small"><i class="bi bi-exclamation-circle me-2"></i><span th:text="${error}"></span></div>
-      <div th:if="${message}" class="alert alert-success py-2 small"><i class="bi bi-check-circle me-2"></i><span th:text="${message}"></span></div>
+      <div th:if="${error}" class="alert alert-danger py-2 small"><i class="bi bi-exclamation-circle me-2"></i><span th:text="#{login.error}"></span></div>
+      <div th:if="${message}" class="alert alert-success py-2 small"><i class="bi bi-check-circle me-2"></i><span th:text="#{login.logout_msg}"></span></div>
 
       <form th:action="@{/login}" method="post" autocomplete="on">
         <div class="mb-3">
-          <label class="form-label">Email Address</label>
+          <label class="form-label" th:text="#{login.email}">Email Address</label>
           <input type="email" name="username" class="form-control" placeholder="you@example.com"
                  required autofocus autocomplete="username" inputmode="email">
         </div>
@@ -170,7 +170,14 @@
       </div>
     </div>
   </div>
-  <p class="text-center mt-3 small" style="color:rgba(255,255,255,.2)">YGC Internal Chit Management v3.0</p>
+  <p class="text-center mt-3 small" style="color:rgba(255,255,255,.2)">YGC Internal Chit Management v4.0</p>
+  <div class="text-center mt-2">
+    <a href="?lang=en" class="badge text-decoration-none" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)">English</a>
+    <a href="?lang=hi" class="badge text-decoration-none" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)">हिन्दी</a>
+    <a href="?lang=te" class="badge text-decoration-none" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)">తెలుగు</a>
+    <a href="?lang=kn" class="badge text-decoration-none" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)">ಕನ್ನಡ</a>
+    <a href="?lang=ta" class="badge text-decoration-none" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)">தமிழ்</a>
+  </div>
 </div>
 
 <div th:replace="~{fragments :: appScripts}"></div>

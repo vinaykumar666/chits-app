@@ -33,6 +33,11 @@ public class ChitMembership {
     // Rejection reason (set by admin on any rejection)
     private String rejectionReason;
 
+    // Issue 10A: Track rejection count for re-application (max 3)
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(nullable = false)
+    private int rejectionCount = 0;
+
     // Agreement workflow fields
     private boolean agreementRead = false;
     private boolean agreementAccepted = false;
@@ -51,6 +56,9 @@ public class ChitMembership {
 
     @OneToMany(mappedBy = "membership", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Payment> payments;
+
+    @OneToMany(mappedBy = "membership", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<EarlyExitRequest> earlyExitRequests;
     // ────────────────────────────────────────────────────────────────────────
 
     @PreUpdate

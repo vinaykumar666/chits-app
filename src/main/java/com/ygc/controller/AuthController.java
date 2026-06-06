@@ -73,11 +73,12 @@ public class AuthController {
                            @RequestParam String fullName,
                            @RequestParam String phone,
                            @RequestParam String address,
+                           @RequestParam String aadhaarNumber,
                            RedirectAttributes redirectAttributes) {
         try {
             loggingUtil.debug("User registration request for email: " + email, "AuthController.register");
 
-            userService.registerUser(email, fullName, phone, address);
+            userService.registerUser(email, fullName, phone, address, aadhaarNumber);
 
             loggingUtil.info("User registration successful for email: " + email, "AuthController.register");
             redirectAttributes.addFlashAttribute("success",

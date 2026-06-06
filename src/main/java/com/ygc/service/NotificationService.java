@@ -41,23 +41,13 @@ public class NotificationService {
         emitter.onError(e -> cleanup.run());
         loggingUtil.event("subscribe", "SSE_CONNECTED", "user", userEmail, "activeConnections", countConnections());
 
-        // FIX: send any unread history immediately on (re)connect so toasts
-        //      fire for events that arrived while this tab was closed/reloading.
-        Deque<Notification> userHistory = history.get(userEmail);
-        if (userHistory != null && !userHistory.isEmpty()) {
-            List<Notification> pending = new ArrayList<>(userHistory);
-            Collections.reverse(pending); // oldest first
-            for (Notification n : pending) {
-                try {
-                    emitter.send(SseEmitter.event()
-                            .id(n.getId())
-                            .name(n.getType().name())
-                            .data(n.toJson()));
-                } catch (IOException ignored) {
-                    break;
-                }
-            }
-        }
+        // Send a single keepalive event to confirm connection (NOT full history —
+        // that caused notification flood on every page load / login).
+        // The bell panel fetches history via GET /api/notifications/history on demand.
+        try {
+            emitter.send(SseEmitter.event().comment("connected"));
+        } catch (IOException ignored) {}
+
         return emitter;
     }
 
