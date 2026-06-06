@@ -42,6 +42,7 @@ public class AdminController {
     private final RiskScoreService riskScoreService;
     private final LoginTrackingService loginTrackingService;
     private final AuditService auditService;
+    private final EarlyExitRequestRepository earlyExitRequestRepository;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -259,8 +260,17 @@ public class AdminController {
     @GetMapping("/payments")
     public String pendingPayments(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
-        model.addAttribute("payments", paymentService.getPendingPayments());
-        model.addAttribute("allPayments", paymentService.getAllPayments());
+        try {
+            model.addAttribute("payments", paymentService.getPendingPayments());
+        } catch (Exception e) {
+            model.addAttribute("payments", java.util.Collections.emptyList());
+            model.addAttribute("error", "Failed to load pending payments: " + e.getMessage());
+        }
+        try {
+            model.addAttribute("allPayments", paymentService.getAllPayments());
+        } catch (Exception e) {
+            model.addAttribute("allPayments", java.util.Collections.emptyList());
+        }
         return "admin/payments";
     }
 
@@ -547,7 +557,12 @@ public class AdminController {
     @GetMapping("/early-exits")
     public String earlyExits(Model model, Authentication auth) {
         model.addAttribute("user", getCurrentUser(auth));
-        model.addAttribute("requests", earlyExitService.getAllRequests());
+        try {
+            model.addAttribute("requests", earlyExitService.getAllRequests());
+        } catch (Exception e) {
+            model.addAttribute("requests", java.util.Collections.emptyList());
+            model.addAttribute("error", "Failed to load exit requests: " + e.getMessage());
+        }
         return "admin/early-exits";
     }
 
@@ -588,6 +603,64 @@ public class AdminController {
         model.addAttribute("members", userRepository.findAll().stream()
                 .filter(u -> u.getRole() == User.Role.MEMBER).toList());
         return "admin/announcements";
+    }
+
+    // ── One-Time Data Flush (Admin only) ──────────────────────────────────
+    @PostMapping("/flush-test-data")
+    @org.springframework.transaction.annotation.Transactional
+    public String flushTestData(Authentication auth, RedirectAttributes ra) {
+        try {
+            User admin = getCurrentUser(auth);
+            if (admin.getRole() != User.Role.ADMIN) {
+                ra.addFlashAttribute("error", "Only admin can flush data.");
+                return "redirect:/admin/dashboard";
+            }
+
+            // Clear in dependency order to avoid FK violations
+            // 1. Clear audit logs
+            long auditCount = auditLogRepository.count();
+            auditLogRepository.deleteAll();
+
+            // 2. Clear early exit requests
+            long exitCount = earlyExitRequestRepository.count();
+            earlyExitRequestRepository.deleteAll();
+
+            // 3. Clear settlements (depends on memberships — but cascade should handle)
+            long settlementCount = settlementRepository.count();
+            settlementRepository.deleteAll();
+
+            // 4. Clear all chits (cascades to memberships, payments, auctions, commissions)
+            long chitCount = chitRepository.count();
+            List<Chit> allChits = chitRepository.findAll();
+            for (Chit c : allChits) {
+                chitRepository.delete(c);
+            }
+            chitRepository.flush();
+
+            // 5. Clear commission ledger (in case orphans remain)
+            commissionLedgerRepository.deleteAll();
+
+            // 6. Soft-delete all member users (keep admin)
+            List<User> members = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == User.Role.MEMBER)
+                    .toList();
+            long memberCount = members.size();
+            for (User m : members) {
+                m.setActive(false);
+                userRepository.save(m);
+            }
+
+            auditService.log(admin, "FLUSH_TEST_DATA", "System", null,
+                    "Flushed: " + chitCount + " chits, " + settlementCount + " settlements, "
+                    + auditCount + " audit logs, " + memberCount + " members deactivated");
+
+            ra.addFlashAttribute("success",
+                    "Test data flushed! " + chitCount + " chits deleted (with all payments, memberships, auctions), "
+                    + settlementCount + " settlements cleared, " + memberCount + " members deactivated.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Flush failed: " + e.getMessage());
+        }
+        return "redirect:/admin/dashboard";
     }
 
     @PostMapping("/announcements/send")

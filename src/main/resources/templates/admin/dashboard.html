@@ -151,6 +151,56 @@
       </div>
     </div>
   </div>
+
+  <!-- Dev: Flush Test Data -->
+  <div class="card panel mt-4 border-danger border-opacity-25">
+    <div class="card-header bg-danger bg-opacity-10 d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-trash3 text-danger me-2"></i>Developer Tools</span>
+      <span class="badge bg-danger">One-time use</span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">Flush all test data — deletes all chits (with payments, memberships, auctions, settlements) and deactivates member accounts. Admin account is preserved.</p>
+      <button class="btn btn-outline-danger btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#flushModal">
+        <i class="bi bi-trash3 me-1"></i>Flush All Test Data
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Flush Confirmation Modal -->
+<div class="modal fade" id="flushModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Data Flush</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger py-2 mb-3">
+          <strong>Warning:</strong> This will permanently delete:
+        </div>
+        <ul class="small text-muted">
+          <li>All chit groups and their memberships</li>
+          <li>All payments and payment proofs</li>
+          <li>All auctions and bids</li>
+          <li>All settlements and commission records</li>
+          <li>All audit logs</li>
+          <li>All member accounts will be deactivated</li>
+        </ul>
+        <div class="alert alert-warning py-2 mt-3 mb-0">
+          <i class="bi bi-shield-check me-1"></i>Your admin account will NOT be affected.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form th:action="@{/admin/flush-test-data}" method="post" class="d-inline">
+          <button type="submit" class="btn btn-danger fw-bold">
+            <i class="bi bi-trash3 me-1"></i>Yes, Flush Everything
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div th:replace="~{fragments :: appScripts}"></div>

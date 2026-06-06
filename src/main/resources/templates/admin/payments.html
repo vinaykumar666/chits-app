@@ -30,7 +30,7 @@
                     <td th:text="${payment.membership.chit.name}"></td>
                     <td><span class="badge bg-primary" th:text="'Month ' + ${payment.monthNumber}"></span></td>
                     <td th:text="'₹' + ${payment.amount}"></td>
-                    <td><span th:classappend="${payment.lateFine.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'text-danger fw-bold' : ''" th:text="'₹' + ${payment.lateFine}"></span></td>
+                    <td><span th:classappend="${payment.lateFine != null and payment.lateFine.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'text-danger fw-bold' : ''" th:text="'₹' + ${payment.lateFine != null ? payment.lateFine : 0}"></span></td>
                     <td class="fw-bold" th:text="'₹' + ${payment.totalAmount}"></td>
                     <td th:text="${payment.paidDate}"></td>
                     <td>

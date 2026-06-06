@@ -54,6 +54,9 @@ public class ChitMembership {
 
     @OneToMany(mappedBy = "membership", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Payment> payments;
+
+    @OneToMany(mappedBy = "membership", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<EarlyExitRequest> earlyExitRequests;
     // ────────────────────────────────────────────────────────────────────────
 
     @PreUpdate

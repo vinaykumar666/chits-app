@@ -341,7 +341,7 @@
                         <tr th:each="p : ${payments}">
                             <td th:text="'Month ' + ${p.monthNumber}"></td>
                             <td th:text="'₹' + ${p.amount}"></td>
-                            <td><span th:classappend="${p.lateFine.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'text-danger fw-bold' : 'text-muted'" th:text="'₹' + ${p.lateFine}"></span></td>
+                            <td><span th:classappend="${p.lateFine != null and p.lateFine.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'text-danger fw-bold' : 'text-muted'" th:text="'₹' + ${p.lateFine != null ? p.lateFine : 0}"></span></td>
                             <td class="fw-bold" th:text="'₹' + ${p.totalAmount}"></td>
                             <td>
                                 <span class="badge"

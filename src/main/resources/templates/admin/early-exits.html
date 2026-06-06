@@ -25,9 +25,9 @@
                     <td><div class="fw-semibold" th:text="${r.membership.user.fullName}"></div>
                         <small class="text-muted" th:text="${r.membership.user.email}"></small></td>
                     <td th:text="${r.membership.chit.name}"></td>
-                    <td class="fw-bold text-success" th:text="'₹' + ${r.totalPaid}"></td>
-                    <td class="text-danger" th:text="'₹' + ${r.penaltyAmount} + ' (' + ${r.penaltyPercentage} + '%)'"></td>
-                    <td class="fw-bold" th:text="'₹' + ${r.refundAmount}"></td>
+                    <td class="fw-bold text-success" th:text="'₹' + ${r.totalPaid != null ? r.totalPaid : 0}"></td>
+                    <td class="text-danger" th:text="'₹' + ${r.penaltyAmount != null ? r.penaltyAmount : 0} + ' (' + ${r.penaltyPercentage != null ? r.penaltyPercentage : 2} + '%)'"></td>
+                    <td class="fw-bold" th:text="'₹' + ${r.refundAmount != null ? r.refundAmount : 0}"></td>
                     <td><span class="badge" th:classappend="${r.status.name() == 'REQUESTED'} ? 'bg-warning text-dark' : (${r.status.name() == 'APPROVED'} ? 'bg-success' : (${r.status.name() == 'REJECTED'} ? 'bg-danger' : 'bg-secondary'))" th:text="${r.status}"></span></td>
                     <td class="hide-mobile"><small th:text="${r.reason}"></small></td>
                     <td>
@@ -66,9 +66,9 @@
                             <table class="table table-sm mb-0">
                                 <tr><td class="text-muted">Member</td><td class="fw-semibold" th:text="${r.membership.user.fullName}"></td></tr>
                                 <tr><td class="text-muted">Chit</td><td th:text="${r.membership.chit.name}"></td></tr>
-                                <tr><td class="text-muted">Total Paid</td><td class="text-success fw-bold" th:text="'₹' + ${r.totalPaid}"></td></tr>
-                                <tr><td class="text-muted">Penalty (<span th:text="${r.penaltyPercentage}"></span>%)</td><td class="text-danger" th:text="'-₹' + ${r.penaltyAmount}"></td></tr>
-                                <tr class="table-warning"><td class="fw-bold">Refund Amount</td><td class="fw-bold text-primary" th:text="'₹' + ${r.refundAmount}"></td></tr>
+                                <tr><td class="text-muted">Total Paid</td><td class="text-success fw-bold" th:text="'₹' + ${r.totalPaid != null ? r.totalPaid : 0}"></td></tr>
+                                <tr><td class="text-muted">Penalty (<span th:text="${r.penaltyPercentage != null ? r.penaltyPercentage : 2}"></span>%)</td><td class="text-danger" th:text="'-₹' + ${r.penaltyAmount != null ? r.penaltyAmount : 0}"></td></tr>
+                                <tr class="table-warning"><td class="fw-bold">Refund Amount</td><td class="fw-bold text-primary" th:text="'₹' + ${r.refundAmount != null ? r.refundAmount : 0}"></td></tr>
                             </table>
                         </div>
                         <div th:if="${r.reason != null}" class="mb-3">

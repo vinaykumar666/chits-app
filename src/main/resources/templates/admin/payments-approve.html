@@ -20,7 +20,7 @@
                         <tr><td class="text-muted">Chit</td><td th:text="${payment.membership.chit.name}"></td></tr>
                         <tr><td class="text-muted">Month</td><td><span class="badge bg-primary" th:text="'Month ' + ${payment.monthNumber}"></span></td></tr>
                         <tr><td class="text-muted">Amount</td><td class="fw-bold" th:text="'₹' + ${payment.amount}"></td></tr>
-                        <tr><td class="text-muted">Late Fine</td><td th:classappend="${payment.lateFine.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'text-danger fw-bold' : ''" th:text="'₹' + ${payment.lateFine}"></td></tr>
+                        <tr><td class="text-muted">Late Fine</td><td th:classappend="${payment.lateFine != null and payment.lateFine.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'text-danger fw-bold' : ''" th:text="'₹' + ${payment.lateFine != null ? payment.lateFine : 0}"></td></tr>
                         <tr><td class="text-muted">Total</td><td class="fw-bold text-success fs-5" th:text="'₹' + ${payment.totalAmount}"></td></tr>
                         <tr><td class="text-muted">Paid Date</td><td th:text="${payment.paidDate}"></td></tr>
                         <tr><td class="text-muted">Status</td><td><span class="badge bg-warning text-dark" th:text="${payment.status}"></span></td></tr>
