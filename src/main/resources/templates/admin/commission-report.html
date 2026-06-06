@@ -1,34 +1,9 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#1a1a2e">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="YGC Chits">
-    <link rel="manifest" th:href="@{/manifest.json}">
-    <link rel="apple-touch-icon" th:href="@{/icons/icon-192.png}"><title>Commission Report - YGC Admin</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" th:href="@{/css/app.css}">
-    <link rel="stylesheet" th:href="@{/css/responsive.css}">
-</head>
+<head th:replace="~{fragments :: head('Commission Report')}"></head>
 <body>
-<div class="sidebar">
-    <div class="brand"><div class="brand-icon">Y</div><div><div class="brand-name">YGC Internal</div><div class="brand-tag">Save Rupee, Save Future</div></div></div>
-    <nav class="sidebar-nav">
-        <a th:href="@{/admin/dashboard}" class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a th:href="@{/admin/chits}" class="nav-link"><i class="bi bi-collection"></i> Chit Groups</a>
-        <a th:href="@{/admin/members}" class="nav-link"><i class="bi bi-people"></i> Members</a>
-        <a th:href="@{/admin/payments}" class="nav-link"><i class="bi bi-cash-coin"></i> Payments</a>
-        <a th:href="@{/admin/auctions}" class="nav-link"><i class="bi bi-hammer"></i> Auctions</a>
-        <a th:href="@{/admin/settlements}" class="nav-link"><i class="bi bi-bank"></i> Settlements</a>
-        <a th:href="@{/admin/reports/commission}" class="nav-link active"><i class="bi bi-graph-up"></i> Commission</a>
-        <a th:href="@{/admin/audit}" class="nav-link"><i class="bi bi-shield-check"></i> Audit Log</a>
-        <a th:href="@{/help}" class="nav-link"><i class="bi bi-question-circle"></i> Help & Rules</a>
-        <a th:href="@{/logout}" class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> Logout</a>
-    </nav>
-</div>
+<div th:replace="~{fragments :: adminSidebar('commission')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
 <div class="main-content">
     <div class="topbar">
         <div><h4><i class="bi bi-graph-up text-warning me-2"></i>Commission Report</h4><div class="sub">Auto-calculated admin commissions per chit and auction</div></div>

@@ -107,36 +107,47 @@ public class AdminController {
         model.addAttribute("memberships", memberships);
         model.addAttribute("auctions", auctionService.getAuctionsByChit(chit));
 
-        // Issue 11: Chit-level analytics
-        List<Payment> chitPayments = new java.util.ArrayList<>();
+        // Issue 11: Chit-level analytics — wrapped in try-catch for safety
         BigDecimal totalCollected = BigDecimal.ZERO;
         long paidMembers = 0;
         long unpaidMembers = 0;
         long overdueCount = 0;
-        for (ChitMembership m : memberships) {
-            if (m.getStatus() == ChitMembership.MembershipStatus.ACTIVE) {
-                List<Payment> memberPayments = paymentService.getPaymentsForMembership(m);
-                chitPayments.addAll(memberPayments);
-                BigDecimal memberPaid = paymentService.getTotalPaid(m);
-                totalCollected = totalCollected.add(memberPaid);
-                if (memberPaid.compareTo(BigDecimal.ZERO) > 0) paidMembers++;
-                else unpaidMembers++;
-                overdueCount += memberPayments.stream()
-                        .filter(p -> p.getStatus() == Payment.PaymentStatus.OVERDUE).count();
+        try {
+            for (ChitMembership m : memberships) {
+                if (m.getStatus() == ChitMembership.MembershipStatus.ACTIVE) {
+                    BigDecimal memberPaid = paymentService.getTotalPaid(m);
+                    if (memberPaid == null) memberPaid = BigDecimal.ZERO;
+                    totalCollected = totalCollected.add(memberPaid);
+                    if (memberPaid.compareTo(BigDecimal.ZERO) > 0) paidMembers++;
+                    else unpaidMembers++;
+                    try {
+                        List<Payment> memberPayments = paymentService.getPaymentsForMembership(m);
+                        overdueCount += memberPayments.stream()
+                                .filter(p -> p.getStatus() == Payment.PaymentStatus.OVERDUE).count();
+                    } catch (Exception ignored) {}
+                }
             }
+        } catch (Exception e) {
+            // Analytics failure is non-fatal
         }
-        BigDecimal totalPending = chit.getTotalChitValue() != null
-                ? chit.getTotalChitValue().subtract(totalCollected) : BigDecimal.ZERO;
-        long activeMembers = memberships.stream()
-                .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count();
+
+        BigDecimal totalChitValue = chit.getTotalChitValue() != null ? chit.getTotalChitValue() : BigDecimal.ZERO;
+        BigDecimal totalPending = totalChitValue.subtract(totalCollected).max(BigDecimal.ZERO);
+        int collectionPct = 0;
+        if (totalChitValue.compareTo(BigDecimal.ZERO) > 0) {
+            collectionPct = totalCollected.multiply(BigDecimal.valueOf(100))
+                    .divide(totalChitValue, 0, java.math.RoundingMode.HALF_UP).intValue();
+            collectionPct = Math.min(100, Math.max(0, collectionPct));
+        }
 
         model.addAttribute("totalCollected", totalCollected);
-        model.addAttribute("totalPending", totalPending.max(BigDecimal.ZERO));
+        model.addAttribute("totalPending", totalPending);
         model.addAttribute("paidMembers", paidMembers);
         model.addAttribute("unpaidMembers", unpaidMembers);
         model.addAttribute("overdueCount", overdueCount);
-        model.addAttribute("activeMembers", activeMembers);
-        model.addAttribute("chitPayments", chitPayments);
+        model.addAttribute("activeMembers", memberships.stream()
+                .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count());
+        model.addAttribute("collectionPct", collectionPct);
         return "admin/chit-detail";
     }
 
