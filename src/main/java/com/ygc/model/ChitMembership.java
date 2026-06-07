@@ -33,6 +33,10 @@ public class ChitMembership {
     // Rejection reason (set by admin on any rejection)
     private String rejectionReason;
 
+    // Agreement tracking
+    private String agreementVersion = "v1.0";
+    private String acceptanceIpAddress;
+
     // Issue 10A: Track rejection count for re-application (max 3)
     @org.hibernate.annotations.ColumnDefault("0")
     @Column(nullable = false)

@@ -50,6 +50,7 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <span><i class="bi bi-shield-check me-2"></i>Activity Log</span>
             <div class="d-flex align-items-center gap-2">
+                <a th:href="@{/admin/audit/export(format=excel)}" class="btn btn-sm btn-outline-success" title="Export CSV"><i class="bi bi-file-earmark-spreadsheet"></i></a>
                 <span id="auditCount" class="badge bg-secondary" th:text="${auditLogs.size()} + ' records'"></span>
                 <select id="pageSize" class="form-select form-select-sm" style="width:auto" onchange="filterAudit()">
                     <option value="25">25/page</option>

@@ -61,7 +61,9 @@
     <a th:href="@{/admin/audit}"              class="nav-link" th:classappend="${active=='audit'        ? ' active' : ''}"><i class="bi bi-shield-check"></i> <span th:text="#{nav.audit}">Audit Log</span></a>
     <a th:href="@{/admin/early-exits}"        class="nav-link" th:classappend="${active=='exits'        ? ' active' : ''}"><i class="bi bi-door-open"></i> <span th:text="#{nav.exits}">Early Exits</span></a>
     <a th:href="@{/admin/risk-dashboard}"     class="nav-link" th:classappend="${active=='risk'         ? ' active' : ''}"><i class="bi bi-exclamation-triangle"></i> <span th:text="#{nav.risk}">Risk &amp; Fraud</span></a>
+    <a th:href="@{/admin/fraud-detection}"   class="nav-link" th:classappend="${active=='fraud'        ? ' active' : ''}"><i class="bi bi-shield-exclamation"></i> <span>Fraud Detection</span></a>
     <a th:href="@{/admin/login-tracking}"    class="nav-link" th:classappend="${active=='security'     ? ' active' : ''}"><i class="bi bi-shield-lock"></i> <span>Security Log</span></a>
+    <a th:href="@{/admin/documents}"         class="nav-link" th:classappend="${active=='documents'    ? ' active' : ''}"><i class="bi bi-folder2-open"></i> <span>Documents</span></a>
     <a th:href="@{/help}"                     class="nav-link" th:classappend="${active=='help'         ? ' active' : ''}"><i class="bi bi-question-circle"></i> <span th:text="#{nav.help}">Help</span></a>
     <a th:href="@{/logout}"                   class="nav-link logout-link"><i class="bi bi-box-arrow-left"></i> <span th:text="#{nav.logout}">Logout</span></a>
   </nav>

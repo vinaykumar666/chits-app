@@ -9,4 +9,16 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
+
+    // Fraud detection: duplicate Aadhaar / phone
+    java.util.List<User> findByAadhaarNumber(String aadhaarNumber);
+    java.util.List<User> findByPhone(String phone);
+    long countByAadhaarNumberAndIdNot(String aadhaarNumber, Long excludeId);
+    long countByPhoneAndIdNot(String phone, Long excludeId);
+
+    // Password expiry
+    java.util.List<User> findByPasswordExpiresAtBeforeAndActiveTrue(java.time.LocalDateTime now);
+
+    // Trust rating
+    java.util.List<User> findByRoleAndActiveTrue(User.Role role);
 }

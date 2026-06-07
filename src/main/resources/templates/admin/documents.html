@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Document Center')}"></head>
+<body>
+<div th:replace="~{fragments :: adminSidebar('documents')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
+<div class="main-content">
+    <div th:replace="~{fragments :: topbar('Document Center', 'Agreements, certificates, receipts, and KYC documents', ${user.fullName})}"></div>
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+            <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-file-earmark-pdf"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${agreements.size()}">0</div><small class="text-muted">Agreements</small></div>
+        </div></div></div>
+        <div class="col-md-4"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+            <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-award"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${certificates.size()}">0</div><small class="text-muted">Certificates</small></div>
+        </div></div></div>
+        <div class="col-md-4"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+            <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-bank"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${settlements.size()}">0</div><small class="text-muted">Settlements</small></div>
+        </div></div></div>
+    </div>
+
+    <!-- Agreements -->
+    <div class="card panel mb-4">
+        <div class="card-header"><i class="bi bi-file-earmark-pdf text-danger me-2"></i>Agreement Documents</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Member</th><th>Chit</th><th>Agreement No</th><th>Version</th><th>Accepted</th><th>Action</th></tr></thead>
+            <tbody>
+            <tr th:each="m : ${agreements}">
+                <td class="fw-semibold small" th:text="${m.user.fullName}"></td>
+                <td th:text="${m.chit.name}"></td>
+                <td><code style="font-size:.75rem" th:text="${m.agreementNumber != null ? m.agreementNumber : '—'}"></code></td>
+                <td><span class="badge bg-secondary" th:text="${m.agreementVersion != null ? m.agreementVersion : 'v1.0'}"></span></td>
+                <td><small th:text="${m.agreementAcceptedAt != null ? #temporals.format(m.agreementAcceptedAt, 'dd MMM yy') : '—'}"></small></td>
+                <td><a th:href="@{/admin/agreements/{id}/download(id=${m.id})}" class="btn btn-sm btn-outline-danger" target="_blank"><i class="bi bi-download me-1"></i>PDF</a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(agreements)}"><td colspan="6" class="text-center text-muted py-3">No agreements yet</td></tr>
+            </tbody>
+        </table></div></div>
+    </div>
+
+    <!-- Certificates -->
+    <div class="card panel mb-4">
+        <div class="card-header"><i class="bi bi-award text-success me-2"></i>Membership Certificates</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Member</th><th>Chit</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>
+            <tr th:each="m : ${certificates}">
+                <td class="fw-semibold small" th:text="${m.user.fullName}"></td>
+                <td th:text="${m.chit.name}"></td>
+                <td><span class="badge bg-success" th:text="${m.status}"></span></td>
+                <td><a th:href="@{/member/memberships/{id}/certificate(id=${m.id})}" class="btn btn-sm btn-outline-success" target="_blank"><i class="bi bi-download me-1"></i>PDF</a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(certificates)}"><td colspan="4" class="text-center text-muted py-3">No certificates yet</td></tr>
+            </tbody>
+        </table></div></div>
+    </div>
+</div>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

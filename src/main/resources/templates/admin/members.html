@@ -63,7 +63,7 @@
                     </thead>
                     <tbody>
                         <tr th:each="member,idx : ${members}" style="cursor:pointer"
-                            th:onclick="'window.location.href=\'/admin/members/' + ${member.id} + '/edit\''">
+                            th:onclick="'window.location.href=\'/admin/members/' + ${member.id} + '/profile\''">
                             <td th:text="${idx.count}"></td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">

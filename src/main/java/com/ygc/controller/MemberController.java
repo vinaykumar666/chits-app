@@ -148,7 +148,8 @@ public class MemberController {
     }
 
     @PostMapping("/memberships/{id}/accept-terms")
-    public String acceptTerms(@PathVariable Long id, Authentication auth, RedirectAttributes ra) {
+    public String acceptTerms(@PathVariable Long id, Authentication auth,
+                              jakarta.servlet.http.HttpServletRequest request, RedirectAttributes ra) {
         try {
             ChitMembership membership = membershipRepository.findById(id).orElseThrow();
             User user = getCurrentUser(auth);
@@ -161,6 +162,7 @@ public class MemberController {
             membership.setAgreementAcceptedAt(java.time.LocalDateTime.now());
             membership.setAgreementRead(true);
             membership.setInfoProcessingAuthorized(true);
+            membership.setAcceptanceIpAddress(request.getRemoteAddr());
             membershipRepository.save(membership);
 
             // Notify admin that member accepted — they can now approve

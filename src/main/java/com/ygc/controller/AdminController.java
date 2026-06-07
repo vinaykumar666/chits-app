@@ -43,6 +43,7 @@ public class AdminController {
     private final LoginTrackingService loginTrackingService;
     private final AuditService auditService;
     private final EarlyExitRequestRepository earlyExitRequestRepository;
+    private final PaymentRepository paymentRepository;
 
     private User getCurrentUser(Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow();
@@ -54,6 +55,22 @@ public class AdminController {
         model.addAttribute("user", getCurrentUser(auth));
         model.addAttribute("totalChits", chitRepository.count());
         model.addAttribute("totalMembers", userRepository.findAll().stream().filter(u -> u.getRole() == User.Role.MEMBER).count());
+
+        // Financial overview widgets
+        BigDecimal totalChitValue = BigDecimal.ZERO;
+        BigDecimal totalCollections = BigDecimal.ZERO;
+        try {
+            for (Chit c : chitRepository.findAll()) {
+                if (c.getTotalChitValue() != null) totalChitValue = totalChitValue.add(c.getTotalChitValue());
+            }
+            for (Payment p : paymentService.getAllPayments()) {
+                if (p.getStatus() == Payment.PaymentStatus.APPROVED && p.getTotalAmount() != null)
+                    totalCollections = totalCollections.add(p.getTotalAmount());
+            }
+        } catch (Exception ignored) {}
+        model.addAttribute("totalChitValue", totalChitValue);
+        model.addAttribute("totalCollections", totalCollections);
+        model.addAttribute("totalPendingCollections", totalChitValue.subtract(totalCollections).max(BigDecimal.ZERO));
         long pendingPay = 0; long pendingSettle = 0; long openAuct = 0;
         long pendingJoins = 0; long pendingExits = 0;
         try { pendingPay = paymentService.getPendingPayments().size(); } catch (Exception ignored) {}
@@ -182,6 +199,36 @@ public class AdminController {
         model.addAttribute("activeMembers", memberships.stream()
                 .filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count());
         model.addAttribute("collectionPct", collectionPct);
+
+        // Remaining installments
+        int elapsed = 0;
+        if (chit.getStartDate() != null && !LocalDate.now().isBefore(chit.getStartDate())) {
+            elapsed = (int) java.time.temporal.ChronoUnit.MONTHS.between(
+                    chit.getStartDate().withDayOfMonth(1), LocalDate.now().withDayOfMonth(1)) + 1;
+        }
+        model.addAttribute("remainingInstallments", Math.max(0, chit.getDurationMonths() - elapsed));
+        model.addAttribute("elapsedMonths", Math.min(elapsed, chit.getDurationMonths()));
+
+        // Bid winners
+        List<Auction> completedAuctions = auctionService.getAuctionsByChit(chit).stream()
+                .filter(a -> a.getWinner() != null).toList();
+        model.addAttribute("bidWinners", completedAuctions);
+
+        // Collection forecast
+        try {
+            model.addAttribute("forecast", riskScoreService.forecastCollection(chit));
+        } catch (Exception e) {
+            model.addAttribute("forecast", java.util.Collections.emptyMap());
+        }
+
+        // Defaulter list within chit
+        List<User> chitDefaulters = new java.util.ArrayList<>();
+        for (ChitMembership m : memberships) {
+            if (m.getStatus() == ChitMembership.MembershipStatus.ACTIVE && m.getUser().getRiskScore() > 50) {
+                chitDefaulters.add(m.getUser());
+            }
+        }
+        model.addAttribute("chitDefaulters", chitDefaulters);
 
         // Pre-compute per-member payment stats (avoids lazy-loading m.payments in template)
         java.util.Map<Long, BigDecimal> memberPaidMap = new java.util.HashMap<>();
@@ -701,6 +748,93 @@ public class AdminController {
             model.addAttribute("recentLogins", java.util.Collections.emptyList());
         }
         return "admin/risk-dashboard";
+    }
+
+    // ── Member Profile — financial health + history ──────────────────────
+    @GetMapping("/members/{id}/profile")
+    public String memberProfile(@PathVariable Long id, Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        User member = userService.findById(id);
+        model.addAttribute("member", member);
+        List<ChitMembership> memberships = membershipRepository.findByUser(member);
+        model.addAttribute("memberships", memberships);
+        model.addAttribute("activeChits", memberships.stream().filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count());
+        model.addAttribute("completedChits", memberships.stream().filter(m -> m.getStatus() == ChitMembership.MembershipStatus.SETTLED).count());
+        model.addAttribute("exitedChits", memberships.stream().filter(m -> m.getStatus() == ChitMembership.MembershipStatus.EXITED).count());
+        // Payment stats
+        List<Payment> allPayments = paymentRepository.findByMembershipUser(member);
+        long totalPayments = allPayments.stream().filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED).count();
+        long onTime = allPayments.stream().filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED
+                && (p.getLateFine() == null || p.getLateFine().compareTo(BigDecimal.ZERO) == 0)).count();
+        long overdue = allPayments.stream().filter(p -> p.getStatus() == Payment.PaymentStatus.OVERDUE).count();
+        model.addAttribute("totalPayments", totalPayments);
+        model.addAttribute("onTimePayments", onTime);
+        model.addAttribute("overduePayments", overdue);
+        model.addAttribute("paymentScore", totalPayments > 0 ? (int)(onTime * 100 / totalPayments) : 100);
+        // Trust rating (compute live)
+        int risk = riskScoreService.calculateRiskScore(member);
+        model.addAttribute("riskScore", risk);
+        model.addAttribute("trustRating", riskScoreService.calculateTrustRating(member, risk));
+        model.addAttribute("loginHistory", loginTrackingService.getUserLogins(member));
+        return "admin/member-profile";
+    }
+
+    // ── Document Center ──────────────────────────────────────────────────
+    @GetMapping("/documents")
+    public String documentCenter(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        // Agreements
+        List<ChitMembership> withAgreements = membershipRepository.findAll().stream()
+                .filter(m -> m.getAgreementPdfPath() != null).toList();
+        model.addAttribute("agreements", withAgreements);
+        // Certificates
+        List<ChitMembership> withCerts = membershipRepository.findAll().stream()
+                .filter(m -> m.getCertificatePath() != null).toList();
+        model.addAttribute("certificates", withCerts);
+        // Settlements
+        model.addAttribute("settlements", settlementRepository.findAll());
+        return "admin/documents";
+    }
+
+    // ── Fraud Detection ──────────────────────────────────────────────────
+    @GetMapping("/fraud-detection")
+    public String fraudDetection(Model model, Authentication auth) {
+        model.addAttribute("user", getCurrentUser(auth));
+        model.addAttribute("duplicateAadhaar", riskScoreService.detectDuplicateAadhaar());
+        model.addAttribute("duplicatePhone", riskScoreService.detectDuplicatePhone());
+        model.addAttribute("highRiskMembers", riskScoreService.predictDefaulters());
+        model.addAttribute("watchlistMembers", userRepository.findAll().stream()
+                .filter(u -> "WATCHLIST".equals(u.getTrustRating())).toList());
+        return "admin/fraud-detection";
+    }
+
+    // ── Audit Export ─────────────────────────────────────────────────────
+    @GetMapping("/audit/export")
+    public org.springframework.http.ResponseEntity<byte[]> exportAudit(
+            @RequestParam(defaultValue = "pdf") String format) {
+        try {
+            if ("excel".equals(format)) {
+                // Excel export
+                StringBuilder csv = new StringBuilder();
+                csv.append("Time,User,Action,Entity,IP,Description\n");
+                auditLogRepository.findAll().stream()
+                        .sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()))
+                        .forEach(a -> csv.append('"').append(a.getTimestamp()).append("\",\"")
+                                .append(a.getUser() != null ? a.getUser().getFullName() : "System").append("\",\"")
+                                .append(a.getAction()).append("\",\"")
+                                .append(a.getEntityType()).append("\",\"")
+                                .append(a.getIpAddress() != null ? a.getIpAddress() : "").append("\",\"")
+                                .append(a.getDescription() != null ? a.getDescription().replace("\"", "'") : "")
+                                .append("\"\n"));
+                return org.springframework.http.ResponseEntity.ok()
+                        .header("Content-Type", "text/csv")
+                        .header("Content-Disposition", "attachment; filename=audit_log.csv")
+                        .body(csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+        } catch (Exception e) {
+            return org.springframework.http.ResponseEntity.internalServerError().build();
+        }
+        return org.springframework.http.ResponseEntity.badRequest().build();
     }
 
     // ── Announcements ─────────────────────────────────────────────────────

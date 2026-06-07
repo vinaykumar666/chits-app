@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Fraud Detection')}"></head>
+<body>
+<div th:replace="~{fragments :: adminSidebar('risk')}"></div>
+<button id="ygc-mob-toggle" aria-label="Toggle menu"><i class="bi bi-list"></i></button>
+<div class="main-content">
+    <div th:replace="~{fragments :: topbar('Fraud &amp; Risk Detection', 'Duplicate identity detection, watchlist management, and risk alerts', ${user.fullName})}"></div>
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-person-x"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${duplicateAadhaar.size()}">0</div><small class="text-muted">Duplicate Aadhaar</small></div>
+        </div></div></div>
+        <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-phone"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${duplicatePhone.size()}">0</div><small class="text-muted">Duplicate Phone</small></div>
+        </div></div></div>
+        <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-exclamation-diamond"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${highRiskMembers.size()}">0</div><small class="text-muted">High Risk</small></div>
+        </div></div></div>
+        <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-2">
+            <div class="stat-icon bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-eye"></i></div>
+            <div><div class="fw-bold fs-4" th:text="${watchlistMembers.size()}">0</div><small class="text-muted">Watchlist</small></div>
+        </div></div></div>
+    </div>
+
+    <!-- Duplicate Aadhaar Alert -->
+    <div class="card panel mb-4" th:if="${!duplicateAadhaar.isEmpty()}">
+        <div class="card-header bg-danger bg-opacity-10"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Duplicate Aadhaar Numbers Detected</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Type</th><th>Value</th><th>User</th><th>Email</th></tr></thead>
+            <tbody>
+            <tr th:each="d : ${duplicateAadhaar}">
+                <td><span class="badge bg-danger">AADHAAR</span></td>
+                <td><code th:text="${d['value']}"></code></td>
+                <td class="fw-semibold" th:text="${d['userName']}"></td>
+                <td><small th:text="${d['email']}"></small></td>
+            </tr>
+            </tbody>
+        </table></div></div>
+    </div>
+
+    <!-- Duplicate Phone -->
+    <div class="card panel mb-4" th:if="${!duplicatePhone.isEmpty()}">
+        <div class="card-header bg-warning bg-opacity-10"><i class="bi bi-phone text-warning me-2"></i>Duplicate Phone Numbers Detected</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Type</th><th>Value</th><th>User</th><th>Email</th></tr></thead>
+            <tbody>
+            <tr th:each="d : ${duplicatePhone}">
+                <td><span class="badge bg-warning text-dark">PHONE</span></td>
+                <td><code th:text="${d['value']}"></code></td>
+                <td class="fw-semibold" th:text="${d['userName']}"></td>
+                <td><small th:text="${d['email']}"></small></td>
+            </tr>
+            </tbody>
+        </table></div></div>
+    </div>
+
+    <!-- Watchlist Members -->
+    <div class="card panel mb-4">
+        <div class="card-header"><i class="bi bi-eye text-secondary me-2"></i>Watchlist Members (Trust Rating)</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Member</th><th>Email</th><th>Risk Score</th><th>Trust Rating</th><th>Action</th></tr></thead>
+            <tbody>
+            <tr th:each="u : ${watchlistMembers}" style="cursor:pointer" th:onclick="'window.location.href=\'/admin/members/' + ${u.id} + '/profile\''">
+                <td class="fw-semibold" th:text="${u.fullName}"></td>
+                <td><small th:text="${u.email}"></small></td>
+                <td><span class="badge bg-danger" th:text="${u.riskScore}"></span></td>
+                <td><span class="badge bg-danger">WATCHLIST</span></td>
+                <td onclick="event.stopPropagation()"><a th:href="@{/admin/members/{id}/profile(id=${u.id})}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(watchlistMembers)}"><td colspan="5" class="text-center text-muted py-3">No watchlist members — all members have healthy trust ratings</td></tr>
+            </tbody>
+        </table></div></div>
+    </div>
+
+    <!-- High Risk -->
+    <div class="card panel">
+        <div class="card-header"><i class="bi bi-exclamation-diamond text-danger me-2"></i>High Risk Members (Defaulter Prediction)</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Member</th><th>Risk Score</th><th>Tier</th><th>Action</th></tr></thead>
+            <tbody>
+            <tr th:each="entry : ${highRiskMembers}" style="cursor:pointer" th:onclick="'window.location.href=\'/admin/members/' + ${entry['userId']} + '/profile\''">
+                <td class="fw-semibold" th:text="${entry['userName']}"></td>
+                <td><span class="badge bg-danger" th:text="${entry['riskScore']}"></span></td>
+                <td><span class="badge" th:classappend="${entry['tier'] == 'CRITICAL'} ? 'bg-danger' : 'bg-warning text-dark'" th:text="${entry['tier']}"></span></td>
+                <td onclick="event.stopPropagation()"><a th:href="@{/admin/members/{id}/profile(id=${entry['userId']})}" class="btn btn-sm btn-outline-danger"><i class="bi bi-eye"></i> Profile</a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(highRiskMembers)}"><td colspan="4" class="text-center text-muted py-3">No high-risk members detected</td></tr>
+            </tbody>
+        </table></div></div>
+    </div>
+</div>
+<div th:replace="~{fragments :: appScripts}"></div>
+</body></html>

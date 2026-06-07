@@ -92,7 +92,14 @@
       "months":"నెలలు","mo":"నె","overdue":"గడువు దాటినది",
       "ACTIVE":"యాక్టివ్","PENDING":"పెండింగ్","OPEN":"తెరిచి ఉంది","CANCELLED":"రద్దు","COMPLETED":"పూర్తయింది",
       "APPROVED":"ఆమోదించబడింది","REJECTED":"తిరస్కరించబడింది","EXITED":"నిష్క్రమించారు","SETTLED":"సెటిల్ అయింది",
-      "OK":"సరే","FAIL":"విఫలం"
+      "OK":"సరే","FAIL":"విఫలం","Member Profile":"సభ్యుడి ప్రొఫైల్","Financial health, trust rating, and activity history":"ఆర్థిక ఆరోగ్యం, నమ్మకం రేటింగ్ మరియు కార్యకలాప చరిత్ర",
+      "Trust Rating":"నమ్మకం రేటింగ్","Payment Score":"చెల్లింపు స్కోర్","On Time":"సమయానికి","Completed":"పూర్తయింది",
+      "Document Center":"పత్ర కేంద్రం","Fraud Detection":"ఫ్రాడ్ గుర్తింపు","Fraud & Risk Detection":"ఫ్రాడ్ & రిస్క్ గుర్తింపు",
+      "Duplicate Aadhaar":"నకిలీ ఆధార్","Duplicate Phone":"నకిలీ ఫోన్","High Risk":"అధిక రిస్క్","Watchlist":"వాచ్‌లిస్ట్",
+      "PLATINUM":"ప్లాటినం","GOLD":"గోల్డ్","SILVER":"సిల్వర్","WATCHLIST":"వాచ్‌లిస్ట్",
+      "Total Chit Value":"మొత్తం చిట్ విలువ","Collections":"సేకరణలు","Pending":"పెండింగ్",
+      "Remaining Installments":"మిగిలిన వాయిదాలు","Collection Forecast":"సేకరణ అంచనా",
+      "Personal Information":"వ్యక్తిగత సమాచారం","Chit Memberships":"చిట్ సభ్యత్వాలు","Recent Logins":"ఇటీవల లాగిన్లు"
     },
     hi: {
       "Admin Dashboard":"एडमिन डैशबोर्ड","YGC Internal Chit Management":"YGC आंतरिक चिट प्रबंधन",

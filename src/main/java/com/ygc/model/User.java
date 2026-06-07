@@ -73,6 +73,14 @@ public class User {
     @Column(nullable = false)
     private int riskScore = 0;
 
+    // Trust rating: PLATINUM, GOLD, SILVER, WATCHLIST
+    @ColumnDefault("'SILVER'")
+    private String trustRating = "SILVER";
+
+    // Password expiry (90-day cycle)
+    private LocalDateTime passwordChangedAt = LocalDateTime.now();
+    private LocalDateTime passwordExpiresAt = LocalDateTime.now().plusDays(90);
+
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 
