@@ -27,12 +27,26 @@ c_green(){ printf "\033[0;32m%s\033[0m\n" "$1"; }
 c_red(){   printf "\033[0;31m%s\033[0m\n" "$1"; }
 c_yellow(){ printf "\033[0;33m%s\033[0m\n" "$1"; }
 
+install_yum_pkg(){
+  local pkg="$1"
+  if rpm -q "$pkg" >/dev/null 2>&1; then
+    return 0
+  fi
+  sudo yum install -y "$pkg"
+}
+
 install_dependencies(){
   c_blue "▶ Installing system dependencies..."
 
   if command -v yum >/dev/null 2>&1; then
-    sudo yum update -y
-    sudo yum install -y docker git curl openssl bind-utils
+    sudo yum update -y || true
+    # AL2023 ships curl-minimal — do NOT install full curl (package conflict)
+    for pkg in docker git openssl bind-utils; do
+      install_yum_pkg "$pkg"
+    done
+    if ! command -v curl >/dev/null 2>&1; then
+      install_yum_pkg curl-minimal || install_yum_pkg curl
+    fi
   elif command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update -y
     sudo apt-get install -y docker.io docker-compose-plugin git curl openssl dnsutils
