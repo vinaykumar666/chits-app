@@ -13,9 +13,23 @@ HEALTH_URL="http://localhost:8080/login"
 DOMAIN="${YGC_DOMAIN:-chits.example.com}"
 EMAIL="${YGC_SSL_EMAIL:-admin@example.com}"
 
-c_green(){ printf "\033[0;32m%s\033[0m\n" "$1"; }
-c_red(){ printf "\033[0;31m%s\033[0m\n" "$1"; }
 c_blue(){ printf "\033[0;34m%s\033[0m\n" "$1"; }
+c_red(){ printf "\033[0;31m%s\033[0m\n" "$1"; }
+c_green(){ printf "\033[0;32m%s\033[0m\n" "$1"; }
+
+docker_cleanup(){
+  c_blue "▶ Freeing disk space before deploy..."
+  if [[ -x "${ROOT}/scripts/docker-cleanup.sh" ]]; then
+    bash "${ROOT}/scripts/docker-cleanup.sh"
+  else
+    docker container prune -f || true
+    docker image prune -af || true
+    docker builder prune -af || true
+    docker network prune -f || true
+  fi
+}
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 build(){
   c_blue "▶ Building React frontend..."
@@ -30,6 +44,9 @@ build(){
 deploy(){
   c_blue "▶ Tagging current image for rollback..."
   docker tag "${IMAGE}:latest" "${IMAGE}:previous" 2>/dev/null || true
+  c_blue "▶ Stopping existing stack..."
+  ${COMPOSE} down --remove-orphans 2>/dev/null || true
+  docker_cleanup
   c_blue "▶ Starting services..."
   ${COMPOSE} up -d --remove-orphans
   c_blue "▶ Waiting for health check..."

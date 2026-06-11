@@ -149,6 +149,11 @@ render_https_nginx(){
 }
 
 start_stack(){
+  c_blue "▶ Freeing disk space before start..."
+  if [[ -x "${ROOT}/scripts/docker-cleanup.sh" ]]; then
+    bash "${ROOT}/scripts/docker-cleanup.sh"
+  fi
+
   c_blue "▶ Starting production stack (app + postgres + nginx)..."
   ${COMPOSE} up -d --remove-orphans
 
