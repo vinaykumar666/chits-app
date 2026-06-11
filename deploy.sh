@@ -49,8 +49,11 @@ deploy(){
   docker tag "${IMAGE}:latest" "${IMAGE}:previous" 2>/dev/null || true
   c_blue "▶ Stopping existing stack..."
   ${COMPOSE} down --remove-orphans 2>/dev/null || true
+  c_blue "▶ Pulling postgres + nginx..."
+  docker pull postgres:16-alpine
+  docker pull nginx:1.27-alpine
   c_blue "▶ Starting services..."
-  ${COMPOSE} up -d --remove-orphans --pull never
+  ${COMPOSE} up -d --remove-orphans --pull missing
   c_blue "▶ Waiting for health check..."
   for i in $(seq 1 30); do
     if curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then

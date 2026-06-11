@@ -227,13 +227,21 @@ render_https_nginx(){
   c_green "✓ nginx/nginx.conf updated for ${DOMAIN}"
 }
 
+ensure_base_images(){
+  c_blue "▶ Ensuring postgres + nginx images are available..."
+  docker pull postgres:16-alpine
+  docker pull nginx:1.27-alpine
+  c_green "✓ Base images ready"
+}
+
 start_stack(){
   c_blue "▶ Starting production stack (app + postgres + nginx)..."
   if ! docker image inspect "${IMAGE}" >/dev/null 2>&1; then
     c_red "✗ Local image ${IMAGE} not found — run build first (./start.sh)"
     exit 1
   fi
-  ${COMPOSE} up -d --remove-orphans --pull never
+  ensure_base_images
+  ${COMPOSE} up -d --remove-orphans --pull missing
 
   c_blue "▶ Waiting for app to become healthy..."
   for i in $(seq 1 36); do
