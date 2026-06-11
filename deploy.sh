@@ -6,9 +6,13 @@
 ###############################################################################
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/lib-compose.sh
+source "${ROOT}/scripts/lib-compose.sh"
+
 APP_NAME="ygc-chits"
 IMAGE="${DOCKER_USERNAME:-ygc}/${APP_NAME}"
-COMPOSE="docker compose -f docker-compose.prod.yml"
+COMPOSE="$(ygc_compose_prod)"
 HEALTH_URL="http://localhost:8080/login"
 DOMAIN="${YGC_DOMAIN:-chits.example.com}"
 EMAIL="${YGC_SSL_EMAIL:-admin@example.com}"
@@ -28,8 +32,6 @@ docker_cleanup(){
     docker network prune -f || true
   fi
 }
-
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 build(){
   c_blue "▶ Building React frontend..."

@@ -59,11 +59,11 @@ install_dependencies(){
   sudo systemctl enable docker
   sudo usermod -aG docker "${USER}" 2>/dev/null || true
 
-  if ! docker compose version >/dev/null 2>&1; then
-    c_blue "▶ Installing Docker Compose v2..."
-    sudo curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-      -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
+  # shellcheck source=scripts/lib-compose.sh
+  source "${ROOT}/scripts/lib-compose.sh"
+  if ! ygc_compose_cmd >/dev/null 2>&1; then
+    c_blue "▶ Installing Docker Compose..."
+    ygc_install_compose || { c_red "Failed to install Docker Compose"; exit 1; }
   fi
 
   if ! docker info >/dev/null 2>&1; then
@@ -76,7 +76,7 @@ install_dependencies(){
     exit 1
   fi
 
-  c_green "✓ Docker ready: $(docker compose version 2>/dev/null || docker-compose --version)"
+  c_green "✓ Docker ready: $($(ygc_compose_cmd) version 2>/dev/null | head -1)"
 }
 
 set_env_var(){

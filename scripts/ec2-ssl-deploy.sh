@@ -21,7 +21,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-COMPOSE="docker compose -f docker-compose.prod.yml"
+# shellcheck source=lib-compose.sh
+source "${ROOT}/scripts/lib-compose.sh"
+
+COMPOSE="$(ygc_compose_prod)"
 IMAGE="${DOCKER_USERNAME:-ygc}/ygc-chits:latest"
 DOMAIN="${YGC_DOMAIN:-}"
 EMAIL="${YGC_SSL_EMAIL:-}"
@@ -73,7 +76,16 @@ ensure_env(){
 preflight(){
   c_blue "▶ Preflight checks..."
   require_cmd docker
-  docker compose version >/dev/null 2>&1 || { c_red "Docker Compose v2 required"; exit 1; }
+  if ! ygc_compose_cmd >/dev/null 2>&1; then
+    c_blue "▶ Installing Docker Compose..."
+    ygc_install_compose || { c_red "Docker Compose required — re-run ./start.sh"; exit 1; }
+    COMPOSE="$(ygc_compose_prod)"
+  fi
+  if docker compose version >/dev/null 2>&1; then
+    c_green "✓ Compose: $(docker compose version 2>/dev/null | head -1)"
+  else
+    c_green "✓ Compose: $(docker-compose version 2>/dev/null | head -1)"
+  fi
 
   mkdir -p certbot/conf certbot/www uploads
 
