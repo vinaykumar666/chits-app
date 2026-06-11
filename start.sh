@@ -82,35 +82,62 @@ install_dependencies(){
 set_env_var(){
   local key="$1"
   local value="$2"
-  if grep -q "^${key}=" .env 2>/dev/null; then
-    sed -i "s|^${key}=.*|${key}=${value}|" .env
+  local envfile="${ROOT}/.env"
+  if grep -q "^${key}=" "$envfile" 2>/dev/null; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$envfile"
   else
-    echo "${key}=${value}" >> .env
+    echo "${key}=${value}" >> "$envfile"
   fi
+}
+
+write_default_env(){
+  cat > "${ROOT}/.env" <<EOF
+YGC_DOMAIN=${YGC_DOMAIN}
+YGC_SSL_EMAIL=${YGC_SSL_EMAIL}
+DB_NAME=ygcdb
+DB_USERNAME=ygcuser
+DB_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
+JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')
+JWT_EXPIRATION=86400000
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=noreply@localhost
+MAIL_PASSWORD=unused
+DUCKDNS_TOKEN=
+EOF
 }
 
 ensure_env_file(){
   c_blue "▶ Preparing .env..."
 
-  if [[ ! -f .env ]]; then
-    cp .env.example .env
+  if [[ ! -f "${ROOT}/.env" ]]; then
+    if [[ -f "${ROOT}/.env.example" ]]; then
+      cp "${ROOT}/.env.example" "${ROOT}/.env"
+    else
+      write_default_env
+    fi
   fi
 
-  if grep -q 'change_me_strong_password' .env 2>/dev/null; then
+  if [[ ! -f "${ROOT}/.env" ]]; then
+    c_red "ERROR: Could not create ${ROOT}/.env"
+    exit 1
+  fi
+
+  if grep -q 'change_me_strong_password' "${ROOT}/.env" 2>/dev/null; then
     set_env_var DB_PASSWORD "$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)"
   fi
-  if grep -q 'replace_with_64char_random_secret' .env 2>/dev/null; then
+  if grep -q 'replace_with_64char_random_secret' "${ROOT}/.env" 2>/dev/null; then
     set_env_var JWT_SECRET "$(openssl rand -base64 48 | tr -d '\n')"
   fi
 
   set_env_var YGC_DOMAIN "${YGC_DOMAIN}"
   set_env_var YGC_SSL_EMAIL "${YGC_SSL_EMAIL}"
 
-  grep -q '^MAIL_USERNAME=' .env || echo 'MAIL_USERNAME=noreply@localhost' >> .env
-  grep -q '^MAIL_PASSWORD=' .env || echo 'MAIL_PASSWORD=unused' >> .env
+  grep -q '^MAIL_USERNAME=' "${ROOT}/.env" || echo 'MAIL_USERNAME=noreply@localhost' >> "${ROOT}/.env"
+  grep -q '^MAIL_PASSWORD=' "${ROOT}/.env" || echo 'MAIL_PASSWORD=unused' >> "${ROOT}/.env"
 
   # shellcheck disable=SC1091
-  set -a; source .env; set +a
+  set -a; source "${ROOT}/.env"; set +a
 
   c_green "✓ .env ready (domain: ${YGC_DOMAIN})"
 }
