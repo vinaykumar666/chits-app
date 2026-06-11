@@ -228,11 +228,6 @@ render_https_nginx(){
 }
 
 start_stack(){
-  c_blue "▶ Freeing disk space before start..."
-  if [[ -x "${ROOT}/scripts/docker-cleanup.sh" ]]; then
-    bash "${ROOT}/scripts/docker-cleanup.sh"
-  fi
-
   c_blue "▶ Starting production stack (app + postgres + nginx)..."
   if ! docker image inspect "${IMAGE}" >/dev/null 2>&1; then
     c_red "✗ Local image ${IMAGE} not found — run build first (./start.sh)"
@@ -301,6 +296,9 @@ main(){
 
   ensure_env
   preflight
+  if [[ -x "${ROOT}/scripts/docker-cleanup.sh" ]]; then
+    bash "${ROOT}/scripts/docker-cleanup.sh"
+  fi
   build_frontend
   build_app_image
   obtain_certificate

@@ -24,8 +24,8 @@ cleanup_docker(){
   c_blue "▶ Stopping unused containers..."
   docker container prune -f 2>/dev/null || true
 
-  c_blue "▶ Removing unused images..."
-  docker image prune -af 2>/dev/null || true
+  c_blue "▶ Removing dangling unused images (keeps tagged app images)..."
+  docker image prune -f 2>/dev/null || true
 
   c_blue "▶ Removing build cache..."
   docker builder prune -af 2>/dev/null || true

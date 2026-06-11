@@ -27,13 +27,14 @@ docker_cleanup(){
     bash "${ROOT}/scripts/docker-cleanup.sh"
   else
     docker container prune -f || true
-    docker image prune -af || true
+    docker image prune -f || true
     docker builder prune -af || true
     docker network prune -f || true
   fi
 }
 
 build(){
+  docker_cleanup
   c_blue "▶ Building React frontend..."
   docker run --rm -v "$(pwd)/ygc-web:/frontend" -w /frontend node:22-alpine \
     sh -c "npm ci && npm run build"
@@ -48,7 +49,6 @@ deploy(){
   docker tag "${IMAGE}:latest" "${IMAGE}:previous" 2>/dev/null || true
   c_blue "▶ Stopping existing stack..."
   ${COMPOSE} down --remove-orphans 2>/dev/null || true
-  docker_cleanup
   c_blue "▶ Starting services..."
   ${COMPOSE} up -d --remove-orphans --pull never
   c_blue "▶ Waiting for health check..."
