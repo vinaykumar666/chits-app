@@ -120,12 +120,63 @@ build_app_image(){
   c_green "✓ Docker image: ${IMAGE}"
 }
 
+cert_paths(){
+  echo "certbot/conf/live/${DOMAIN}/fullchain.pem"
+  echo "certbot/conf/live/${DOMAIN}/privkey.pem"
+}
+
+fix_cert_permissions(){
+  if [[ -d certbot/conf/live ]]; then
+    sudo chmod -R a+rX certbot/conf/live certbot/conf/archive 2>/dev/null || true
+  fi
+}
+
 cert_exists(){
-  # Let's Encrypt live/*.pem are symlinks — use -e not -f
-  [[ -e "certbot/conf/live/${DOMAIN}/fullchain.pem" && -e "certbot/conf/live/${DOMAIN}/privkey.pem" ]]
+  local p
+  fix_cert_permissions
+  while IFS= read -r p; do
+    if [[ -e "$p" ]]; then
+      continue
+    fi
+    if sudo test -e "$p" 2>/dev/null; then
+      continue
+    fi
+    return 1
+  done < <(cert_paths)
+  return 0
+}
+
+run_certbot(){
+  local out status
+  set +e
+  out="$(docker run --rm -p 80:80 \
+    -v "${ROOT}/certbot/conf:/etc/letsencrypt" \
+    -v "${ROOT}/certbot/www:/var/www/certbot" \
+    certbot/certbot certonly --standalone \
+    --preferred-challenges http \
+    -d "${DOMAIN}" \
+    --email "${EMAIL}" \
+    --agree-tos \
+    --non-interactive \
+    --no-eff-email 2>&1)"
+  status=$?
+  set -e
+  echo "$out"
+
+  fix_cert_permissions
+
+  if cert_exists; then
+    return 0
+  fi
+  if echo "$out" | grep -qiE "Successfully received certificate|Certificate not yet due for renewal|not yet due for renewal"; then
+    fix_cert_permissions
+    cert_exists && return 0
+  fi
+  return "${status:-1}"
 }
 
 obtain_certificate(){
+  fix_cert_permissions
   if cert_exists; then
     c_green "✓ SSL certificate already exists for ${DOMAIN}"
     return 0
@@ -149,19 +200,7 @@ obtain_certificate(){
   local attempt
   for attempt in 1 2 3; do
     c_blue "▶ Certbot attempt ${attempt}/3..."
-    if docker run --rm -p 80:80 \
-      -v "${ROOT}/certbot/conf:/etc/letsencrypt" \
-      -v "${ROOT}/certbot/www:/var/www/certbot" \
-      certbot/certbot certonly --standalone \
-      --preferred-challenges http \
-      -d "${DOMAIN}" \
-      --email "${EMAIL}" \
-      --agree-tos \
-      --non-interactive \
-      --no-eff-email; then
-      break
-    fi
-    if cert_exists; then
+    if run_certbot; then
       break
     fi
     if [[ "$attempt" -lt 3 ]]; then
@@ -175,10 +214,11 @@ obtain_certificate(){
     c_yellow "  • Confirm DuckDNS subdomain: ${DOMAIN%%.duckdns.org}"
     c_yellow "  • Set DUCKDNS_TOKEN in .env and re-run ./start.sh"
     c_yellow "  • Security group port 80 must be open to 0.0.0.0/0"
+    c_yellow "  • Check: ls -la certbot/conf/live/${DOMAIN}/"
     c_yellow "  • Check global DNS: https://dnschecker.org/#A/${DOMAIN}"
     exit 1
   fi
-  c_green "✓ Certificate obtained"
+  c_green "✓ Certificate ready for ${DOMAIN}"
 }
 
 render_https_nginx(){
