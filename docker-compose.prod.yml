@@ -23,15 +23,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    ports:
+      - "8080:8080"
     volumes:
       - ./uploads:/app/uploads
     networks: [ygc-net]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/login"]
       interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 40s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
   postgres:
     image: postgres:16-alpine

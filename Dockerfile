@@ -20,26 +20,25 @@ RUN mvn -B -ntp clean package -DskipTests
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
+RUN apk add --no-cache wget \
+    && addgroup -g 1001 -S appgroup \
+    && adduser -u 1001 -S appuser -G appgroup
 
 COPY --from=builder /build/target/*.jar app.jar
 
-RUN mkdir -p /app/uploads/agreements && \
-    chown -R appuser:appgroup /app
+RUN mkdir -p /app/uploads/agreements \
+    && chown -R appuser:appgroup /app
 
 USER appuser
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+ENV JAVA_OPTS=""
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
   CMD wget -qO- http://localhost:8080/login || exit 1
 
-ENTRYPOINT ["java", \
-  "-XX:+UseContainerSupport", \
-  "-XX:MaxRAMPercentage=75.0", \
-  "-Djava.security.egd=file:/dev/./urandom", \
-  "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java ${JAVA_OPTS} -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom -jar app.jar"]
 
 # React build output available for nginx via:
 # COPY --from=frontend /frontend/dist /usr/share/nginx/html
