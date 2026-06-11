@@ -2,17 +2,38 @@
 
 ## Quick start (one command)
 
-On your EC2 instance, after cloning the repo:
+### Option A — No git on server yet (curl only)
+
+On a fresh EC2 instance:
 
 ```bash
-# 1. Point DuckDNS chits-live → EC2 public IP at https://www.duckdns.org
-# 2. Open security group ports: 22, 80, 443
+# 1. DuckDNS: point chits-live → EC2 public IP at https://www.duckdns.org
+# 2. Security group: open 22, 80, 443
 
+curl -fsSL https://raw.githubusercontent.com/vinaykumar666/chits-app/feature/extreme-features/scripts/bootstrap-ec2.sh | bash
+```
+
+With your email for Let's Encrypt:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vinaykumar666/chits-app/feature/extreme-features/scripts/bootstrap-ec2.sh | YGC_SSL_EMAIL=you@gmail.com bash
+```
+
+### Option B — Git already installed
+
+```bash
 git clone https://github.com/vinaykumar666/chits-app.git
 cd chits-app
 git checkout feature/extreme-features
 chmod +x start.sh
 ./start.sh
+```
+
+If `git: command not found`, install it first:
+
+```bash
+sudo yum install -y git    # Amazon Linux
+# sudo apt-get install -y git   # Ubuntu
 ```
 
 When finished:
