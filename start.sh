@@ -2,7 +2,7 @@
 ###############################################################################
 # YGC Chits — One-command EC2 bootstrap + HTTPS
 #
-# Default domain: chits-live.duckdns.org
+# Default domain: yg-chits.duckdns.org
 #
 # Usage (Amazon Linux 2023 / Ubuntu, from repo root):
 #   chmod +x start.sh
@@ -10,7 +10,7 @@
 #
 # Optional:
 #   export YGC_SSL_EMAIL=you@gmail.com
-#   export YGC_DOMAIN=chits-live.duckdns.org
+#   export YGC_DOMAIN=yg-chits.duckdns.org
 #   export CONTINUE_ON_DNS_MISMATCH=1   # skip DNS IP mismatch prompt
 ###############################################################################
 set -euo pipefail
@@ -18,7 +18,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-export YGC_DOMAIN="${YGC_DOMAIN:-chits-live.duckdns.org}"
+export YGC_DOMAIN="${YGC_DOMAIN:-yg-chits.duckdns.org}"
 export YGC_SSL_EMAIL="${YGC_SSL_EMAIL:-admin@${YGC_DOMAIN}}"
 export DOCKER_USERNAME="${DOCKER_USERNAME:-ygc}"
 
@@ -123,7 +123,7 @@ check_dns(){
 
   if [[ -z "$RESOLVED" ]]; then
     c_red "ERROR: ${YGC_DOMAIN} does not resolve."
-    c_yellow "  Fix at https://www.duckdns.org — point chits-live to ${PUBLIC_IP}"
+    c_yellow "  Fix at https://www.duckdns.org — point yg-chits to ${PUBLIC_IP}"
     exit 1
   fi
 

@@ -7,7 +7,7 @@
 On a fresh EC2 instance:
 
 ```bash
-# 1. DuckDNS: point chits-live → EC2 public IP at https://www.duckdns.org
+# 1. DuckDNS: point yg-chits → EC2 public IP at https://www.duckdns.org
 # 2. Security group: open 22, 80, 443
 
 curl -fsSL https://raw.githubusercontent.com/vinaykumar666/chits-app/feature/extreme-features/scripts/bootstrap-ec2.sh | bash
@@ -39,7 +39,7 @@ sudo yum install -y git    # Amazon Linux
 When finished:
 
 ```
-https://chits-live.duckdns.org/login
+https://yg-chits.duckdns.org/login
 ```
 
 ### Manual / custom domain
