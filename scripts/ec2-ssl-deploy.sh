@@ -234,7 +234,11 @@ start_stack(){
   fi
 
   c_blue "▶ Starting production stack (app + postgres + nginx)..."
-  ${COMPOSE} up -d --remove-orphans
+  if ! docker image inspect "${IMAGE}" >/dev/null 2>&1; then
+    c_red "✗ Local image ${IMAGE} not found — run build first (./start.sh)"
+    exit 1
+  fi
+  ${COMPOSE} up -d --remove-orphans --pull never
 
   c_blue "▶ Waiting for app to become healthy..."
   for i in $(seq 1 36); do

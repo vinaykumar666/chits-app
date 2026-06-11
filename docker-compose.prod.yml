@@ -1,6 +1,7 @@
 services:
   app:
     image: ${DOCKER_USERNAME:-ygc}/ygc-chits:latest
+    pull_policy: never
     container_name: ygc-app
     restart: unless-stopped
     env_file:
