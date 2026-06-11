@@ -5,6 +5,25 @@
 On your EC2 instance, after cloning the repo:
 
 ```bash
+# 1. Point DuckDNS chits-live → EC2 public IP at https://www.duckdns.org
+# 2. Open security group ports: 22, 80, 443
+
+git clone https://github.com/vinaykumar666/chits-app.git
+cd chits-app
+git checkout feature/extreme-features
+chmod +x start.sh
+./start.sh
+```
+
+When finished:
+
+```
+https://chits-live.duckdns.org/login
+```
+
+### Manual / custom domain
+
+```bash
 # 1. Point DNS A-record → EC2 public IP (required before SSL)
 #    e.g. chits.yourdomain.com → 54.x.x.x
 
@@ -19,12 +38,6 @@ chmod +x scripts/ec2-ssl-deploy.sh
 export YGC_DOMAIN=chits.yourdomain.com
 export YGC_SSL_EMAIL=you@yourdomain.com
 ./scripts/ec2-ssl-deploy.sh
-```
-
-When finished, the script prints your login URL:
-
-```
-https://chits.yourdomain.com/login
 ```
 
 ---
