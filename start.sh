@@ -67,9 +67,12 @@ install_dependencies(){
   fi
 
   if ! docker info >/dev/null 2>&1; then
-    c_yellow "Docker group not active in this shell."
+    if [[ "${YGC_DOCKER_REEXEC:-}" != "1" ]] && getent group docker 2>/dev/null | grep -q "${USER}"; then
+      c_blue "▶ Activating docker group for this session..."
+      exec sg docker -c "cd '${ROOT}' && YGC_DOCKER_REEXEC=1 YGC_DOMAIN='${YGC_DOMAIN}' YGC_SSL_EMAIL='${YGC_SSL_EMAIL}' DOCKER_USERNAME='${DOCKER_USERNAME}' bash ./start.sh"
+    fi
+    c_yellow "Docker not accessible in this shell."
     c_yellow "Run:  newgrp docker   then   ./start.sh"
-    c_yellow "Or log out, SSH back in, and run ./start.sh again."
     exit 1
   fi
 
