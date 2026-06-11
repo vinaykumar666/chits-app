@@ -53,7 +53,7 @@ deploy(){
   docker pull postgres:16-alpine
   docker pull nginx:1.27-alpine
   c_blue "▶ Starting services..."
-  ${COMPOSE} up -d --remove-orphans --pull missing
+  ${COMPOSE} up -d --remove-orphans $(ygc_compose_up_args)
   c_blue "▶ Waiting for health check..."
   for i in $(seq 1 30); do
     if curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then

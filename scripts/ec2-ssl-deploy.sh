@@ -241,7 +241,7 @@ start_stack(){
     exit 1
   fi
   ensure_base_images
-  ${COMPOSE} up -d --remove-orphans --pull missing
+  ${COMPOSE} up -d --remove-orphans $(ygc_compose_up_args)
 
   c_blue "▶ Waiting for app to become healthy..."
   for i in $(seq 1 36); do

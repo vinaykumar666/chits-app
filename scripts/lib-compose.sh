@@ -2,15 +2,23 @@
 # Resolve Docker Compose command (plugin v2 or standalone binary).
 
 ygc_compose_cmd() {
-  if docker compose version >/dev/null 2>&1; then
-    echo "docker compose"
-    return 0
-  fi
+  # Prefer standalone binary (EC2 install script puts it at /usr/local/bin/docker-compose)
   if command -v docker-compose >/dev/null 2>&1 && docker-compose version >/dev/null 2>&1; then
     echo "docker-compose"
     return 0
   fi
+  if docker compose version >/dev/null 2>&1; then
+    echo "docker compose"
+    return 0
+  fi
   return 1
+}
+
+ygc_compose_up_args() {
+  # --pull missing requires Compose v2 plugin; v1 standalone ignores unknown flags
+  if docker compose version >/dev/null 2>&1; then
+    echo "--pull missing"
+  fi
 }
 
 ygc_compose_prod() {
