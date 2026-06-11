@@ -22,3 +22,7 @@ uploads/
 # OS
 .DS_Store
 Thumbs.db
+
+# React frontend
+ygc-web/node_modules/
+ygc-web/dist/

@@ -1,4 +1,12 @@
-# Build Stage
+# Build React frontend
+FROM node:22-alpine AS frontend
+WORKDIR /frontend
+COPY ygc-web/package.json ygc-web/package-lock.json* ./
+RUN npm ci || npm install
+COPY ygc-web/ .
+RUN npm run build
+
+# Build Spring Boot backend
 FROM maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /build
 
@@ -32,3 +40,7 @@ ENTRYPOINT ["java", \
   "-XX:MaxRAMPercentage=75.0", \
   "-Djava.security.egd=file:/dev/./urandom", \
   "-jar", "app.jar"]
+
+# React build output available for nginx via:
+# COPY --from=frontend /frontend/dist /usr/share/nginx/html
+# (mounted in docker-compose.prod.yml from ygc-web/dist)

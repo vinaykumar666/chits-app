@@ -23,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
     private final UserDetailsServiceImpl userDetailsService;
     private final JwtAuthFilter jwtAuthFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -46,10 +47,20 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .cors(cors -> {})
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            if (request.getRequestURI().startsWith("/api/")) {
+                                jwtAuthenticationEntryPoint.commence(request, response, authException);
+                            } else {
+                                response.sendRedirect("/login");
+                            }
+                        }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/register", "/login", "/css/**", "/js/**", "/sw.js", "/manifest.json", "/icons/**", "/offline.html",
-                                "/h2-console/**", "/api/auth/**", "/terms", "/help").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                                "/h2-console/**", "/api/auth/**", "/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh",
+                                "/terms", "/help", "/assets/**", "/index.html").permitAll()
+                        .requestMatchers("/admin/**", "/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form

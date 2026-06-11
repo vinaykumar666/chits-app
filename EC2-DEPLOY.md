@@ -1,127 +1,114 @@
-# YGC Chits App — EC2 Docker Deployment Guide
+# YGC Chits — EC2 Deploy with HTTPS (Let's Encrypt)
 
-## Prerequisites on EC2 (Amazon Linux 2 / Ubuntu)
+## Quick start (one command)
+
+On your EC2 instance, after cloning the repo:
 
 ```bash
-# Install Docker
-sudo yum update -y                          # Amazon Linux
+# 1. Point DNS A-record → EC2 public IP (required before SSL)
+#    e.g. chits.yourdomain.com → 54.x.x.x
+
+# 2. Open security group ports: 22, 80, 443
+
+# 3. Configure secrets
+cp .env.example .env
+nano .env   # set DB_PASSWORD, JWT_SECRET, YGC_DOMAIN, YGC_SSL_EMAIL, MAIL_*
+
+# 4. Run SSL deploy script
+chmod +x scripts/ec2-ssl-deploy.sh
+export YGC_DOMAIN=chits.yourdomain.com
+export YGC_SSL_EMAIL=you@yourdomain.com
+./scripts/ec2-ssl-deploy.sh
+```
+
+When finished, the script prints your login URL:
+
+```
+https://chits.yourdomain.com/login
+```
+
+---
+
+## Prerequisites on EC2
+
+```bash
+# Amazon Linux 2023 / AL2
+sudo yum update -y
 sudo yum install -y docker
 sudo systemctl start docker
 sudo systemctl enable docker
-sudo usermod -aG docker ec2-user            # allow ec2-user to run docker
+sudo usermod -aG docker ec2-user
+# log out and back in for group change
 
-# Install Docker Compose v2
+# Docker Compose v2
 sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
   -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
-docker-compose --version
+docker compose version
 ```
 
-## 1. Upload / Clone Project
+## Security group (AWS Console)
+
+| Port | Protocol | Source    | Purpose        |
+|------|----------|-----------|----------------|
+| 22   | TCP      | Your IP   | SSH            |
+| 80   | TCP      | 0.0.0.0/0 | HTTP + ACME    |
+| 443  | TCP      | 0.0.0.0/0 | HTTPS          |
+
+## What the script does
+
+1. Validates Docker, DNS, and `.env` secrets
+2. Builds React frontend (`ygc-web/dist`) via Docker
+3. Builds Spring Boot Docker image
+4. Obtains Let's Encrypt certificate (certbot standalone on port 80)
+5. Renders `nginx/nginx.conf` from template for your domain
+6. Starts `docker-compose.prod.yml` (app + postgres + nginx)
+7. Prints **https://YOUR_DOMAIN/login**
+
+## Demo credentials
+
+```
+Admin:  admin@ygc.internal / Admin@123
+Member: aarav.sharma@example.com / Member@123
+```
+
+## SSL renewal
 
 ```bash
-# Option A: SCP from local
-scp -i your-key.pem chits-app.zip ec2-user@<EC2-IP>:~/
-
-# Option B: Git clone (recommended)
-git clone https://github.com/your-org/chits-app.git
-cd chits-app
+./deploy.sh ssl-renew
 ```
 
-## 2. Configure Environment
+Optional cron (auto-renew nightly):
 
 ```bash
-cp .env.example .env
-nano .env                  # fill in DB_PASSWORD, JWT_SECRET, MAIL_* values
+crontab -e
+# add:
+0 3 * * * cd /home/ec2-user/chits-app && ./deploy.sh ssl-renew >> /var/log/ygc-ssl-renew.log 2>&1
 ```
 
-Generate a strong JWT secret:
-```bash
-openssl rand -base64 64
-```
-
-## 3. Open EC2 Security Group Ports
-
-In AWS Console → EC2 → Security Groups, allow inbound:
-- **8080** (TCP) — app (or use 80/443 via nginx reverse proxy)
-- **22** (TCP) — SSH
-
-## 4. Build & Start
+## Manual steps (alternative)
 
 ```bash
-docker-compose up -d --build
-docker-compose logs -f app          # watch startup logs
+export YGC_DOMAIN=chits.yourdomain.com
+export YGC_SSL_EMAIL=you@yourdomain.com
+./deploy.sh ssl-init    # obtain certificate
+./deploy.sh deploy      # build + start stack
 ```
 
-## 5. Verify
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Certbot fails | DNS must point to EC2 **before** running script; port 80 must be open |
+| nginx won't start | Check cert exists: `ls certbot/conf/live/$YGC_DOMAIN/` |
+| 502 on login | Wait 60s for app startup: `docker compose -f docker-compose.prod.yml logs app` |
+| CORS errors | Set `YGC_DOMAIN` in `.env` and redeploy |
+
+## Useful commands
 
 ```bash
-# Check containers are healthy
-docker-compose ps
-
-# Test app
-curl http://localhost:8080/login
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f nginx
+docker compose -f docker-compose.prod.yml logs -f app
+curl -I https://YOUR_DOMAIN/login
 ```
-
-## 6. Nginx Reverse Proxy (Optional — port 80/443)
-
-```bash
-sudo yum install -y nginx
-sudo nano /etc/nginx/conf.d/ygc.conf
-```
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass         http://localhost:8080;
-        proxy_set_header   Host              $host;
-        proxy_set_header   X-Real-IP         $remote_addr;
-        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto $scheme;
-        proxy_read_timeout 120s;
-    }
-}
-```
-
-```bash
-sudo systemctl enable nginx && sudo systemctl start nginx
-```
-
-## 7. Useful Commands
-
-```bash
-# Stop everything
-docker-compose down
-
-# Stop and wipe DB data (destructive!)
-docker-compose down -v
-
-# Rebuild app only after code change
-docker-compose up -d --build app
-
-# Connect to PostgreSQL
-docker exec -it ygc-postgres psql -U ygcuser -d ygcdb
-
-# View app logs
-docker-compose logs -f app
-
-# View postgres logs
-docker-compose logs -f postgres
-```
-
-## Environment Variables Reference
-
-| Variable | Required | Description |
-|---|---|---|
-| `DB_NAME` | No (default: `ygcdb`) | PostgreSQL database name |
-| `DB_USERNAME` | No (default: `ygcuser`) | DB user |
-| `DB_PASSWORD` | **Yes** | DB password |
-| `JWT_SECRET` | **Yes** | Random 64-char secret |
-| `JWT_EXPIRATION` | No (default: `86400000`) | Token TTL in ms |
-| `MAIL_HOST` | **Yes** | SMTP host |
-| `MAIL_PORT` | No (default: `587`) | SMTP port |
-| `MAIL_USERNAME` | **Yes** | SMTP user |
-| `MAIL_PASSWORD` | **Yes** | SMTP password / app password |
