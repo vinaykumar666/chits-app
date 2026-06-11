@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
+import Topbar from '../../components/Topbar';
 import AlertBanner from '../../components/AlertBanner';
 import { memberApi } from '../../api/member';
 import { getErrorMessage } from '../../api/client';
 import { formatCurrency, formatDate, statusBadge } from '../../utils/format';
+import { downloadProtectedFile } from '../../utils/download';
 
 export default function MembershipDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const membershipId = Number(id);
   const queryClient = useQueryClient();
@@ -15,6 +19,8 @@ export default function MembershipDetailPage() {
   const [monthNumber, setMonthNumber] = useState(1);
   const [screenshot, setScreenshot] = useState<File | undefined>();
   const [bidAmount, setBidAmount] = useState('');
+  const [calcBid, setCalcBid] = useState('');
+  const [calcMonth, setCalcMonth] = useState(1);
 
   const { data, isLoading } = useQuery({
     queryKey: ['membership', membershipId],
@@ -46,19 +52,62 @@ export default function MembershipDetailPage() {
     onError: (err) => setAlert({ type: 'error', message: getErrorMessage(err) }),
   });
 
+  const ackMutation = useMutation({
+    mutationFn: (settlementId: number) => memberApi.acknowledgeSettlement(settlementId),
+    onSuccess: () => {
+      setAlert({ type: 'success', message: 'Settlement acknowledged.' });
+      queryClient.invalidateQueries({ queryKey: ['membership', membershipId] });
+    },
+    onError: (err) => setAlert({ type: 'error', message: getErrorMessage(err) }),
+  });
+
+  const calcQuery = useQuery({
+    queryKey: ['bid-calc', data?.membership.chit.id, calcBid, calcMonth],
+    queryFn: () =>
+      memberApi
+        .bidCalculator(data!.membership.chit.id, calcBid ? Number(calcBid) : undefined, calcMonth)
+        .then((r) => r.data),
+    enabled: !!data?.membership.chit.id && !!calcBid,
+  });
+
+  const pendingSettlement = data?.mySettlements?.find(
+    (s) => s.status === 'APPROVED' && !s.userAcknowledged,
+  );
+
   if (isLoading || !data) return <Layout role="MEMBER"><div className="p-4">Loading…</div></Layout>;
 
   const openAuction = data.auctions.find((a) => a.status === 'OPEN');
 
   return (
     <Layout role="MEMBER">
-      <div className="topbar">
-        <div>
-          <h4>{data.membership.chit.name}</h4>
-          <div className="sub">Membership #{data.membership.id} · <span className={`badge ${statusBadge(data.membership.status)}`}>{data.membership.status}</span></div>
-        </div>
-      </div>
+      <Topbar
+        title={data.membership.chit.name}
+        subtitle={<>Membership #{data.membership.id} · <span className={`badge ${statusBadge(data.membership.status)}`}>{data.membership.status}</span></>}
+        actions={
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-warning"
+            onClick={() => downloadProtectedFile(`/member/reports/memberships/${membershipId}/payments/pdf`, `payments-${membershipId}.pdf`)}
+          >
+            <i className="bi bi-file-pdf me-1" />{t('pages.pdf_export')}
+          </button>
+        }
+      />
       {alert && <AlertBanner type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
+
+      {pendingSettlement && (
+        <div className="card mb-4 border-warning">
+          <div className="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+              <div className="fw-bold text-warning"><i className="bi bi-cash-stack me-2" />{t('pages.settlement_ready')}</div>
+              <div className="small">Amount: {formatCurrency(pendingSettlement.finalSettlementAmount)}</div>
+            </div>
+            <button className="btn btn-warning" disabled={ackMutation.isPending} onClick={() => ackMutation.mutate(pendingSettlement.id)}>
+              {t('pages.settlement_ack')}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="row g-4 mb-4">
         <div className="col-md-4"><div className="card stat-card"><div className="card-body">
@@ -87,6 +136,31 @@ export default function MembershipDetailPage() {
           </div>
         </div>
       </div>
+
+      {data.bidRecommendations && (
+        <div className="card mb-4">
+          <div className="card-header">{t('pages.bid_calculator')}</div>
+          <div className="card-body">
+            <div className="row g-3 align-items-end mb-3">
+              <div className="col-md-4">
+                <label className="form-label">Month #</label>
+                <input type="number" min={1} className="form-control" value={calcMonth} onChange={(e) => setCalcMonth(Number(e.target.value))} />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">Bid Amount (₹)</label>
+                <input type="number" className="form-control" value={calcBid} onChange={(e) => setCalcBid(e.target.value)} />
+              </div>
+            </div>
+            {calcQuery.data && (
+              <div className="row g-2 small">
+                {Object.entries(calcQuery.data).map(([k, v]) => (
+                  <div key={k} className="col-md-4"><span className="text-muted">{k}:</span> <strong>{String(v)}</strong></div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {data.hasOpenAuction && openAuction && !data.membership.hasWonAuction && (
         <div className="card mb-4">

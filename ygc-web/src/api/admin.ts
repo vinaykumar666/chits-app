@@ -6,7 +6,14 @@ import type {
   ChitHistory,
   ChitMembership,
   CommissionLedgerEntry,
+  DocumentRecord,
+  DuplicateRecord,
+  EarlyExitRequest,
+  LoginHistoryEntry,
+  LoginTrackingData,
+  MemberProfileData,
   Payment,
+  RiskAlert,
   Settlement,
   User,
 } from '../types';
@@ -99,6 +106,40 @@ export const adminApi = {
       completedCount: number;
       cancelledCount: number;
     }>('/api/v1/admin/chit-history'),
+
+  earlyExits: () =>
+    api.get<{ requests: EarlyExitRequest[] }>('/api/v1/admin/early-exits'),
+
+  processEarlyExit: (id: number, approved: boolean, remarks?: string) =>
+    api.post(`/api/v1/admin/early-exits/${id}/process`, { approved, remarks }),
+
+  riskDashboard: () =>
+    api.get<{ alerts: RiskAlert[]; recentLogins: LoginHistoryEntry[] }>('/api/v1/admin/risk-dashboard'),
+
+  fraudDetection: () =>
+    api.get<{
+      duplicateAadhaar: DuplicateRecord[];
+      duplicatePhone: DuplicateRecord[];
+      highRiskMembers: RiskAlert[];
+      watchlistMembers: User[];
+    }>('/api/v1/admin/fraud-detection'),
+
+  loginTracking: () => api.get<LoginTrackingData>('/api/v1/admin/login-tracking'),
+
+  toggleAadhaar: (id: number) => api.post(`/api/v1/admin/members/${id}/toggle-aadhaar`),
+
+  resetLoginCounter: (id: number) => api.post(`/api/v1/admin/members/${id}/reset-login-counter`),
+
+  memberProfile: (id: number) => api.get<MemberProfileData>(`/api/v1/admin/members/${id}/profile`),
+
+  documents: () =>
+    api.get<{
+      agreements: DocumentRecord[];
+      certificates: DocumentRecord[];
+      settlements: Settlement[];
+    }>('/api/v1/admin/documents'),
+
+  paymentScreenshotUrl: (id: number) => `/api/v1/admin/payments/${id}/screenshot`,
 
   addMemberToChit: (chitId: number, memberEmail: string) =>
     api.post(`/api/v1/admin/chits/${chitId}/members`, { memberEmail }),

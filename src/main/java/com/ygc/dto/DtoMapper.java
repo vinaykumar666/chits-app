@@ -132,6 +132,8 @@ public class DtoMapper {
                 .adminRemarks(s.getAdminRemarks())
                 .requestedAt(s.getRequestedAt())
                 .processedAt(s.getProcessedAt())
+                .userAcknowledged(s.isUserAcknowledged())
+                .acknowledgedAt(s.getAcknowledgedAt())
                 .build();
     }
 

@@ -176,4 +176,25 @@ public class MemberApiController {
         settlementService.requestEarlyExit(id, apiSupport.currentUser(auth));
         return ResponseEntity.ok(Map.of("message", "Early exit request submitted."));
     }
+
+    @PostMapping("/settlements/{id}/acknowledge")
+    public ResponseEntity<Map<String, String>> acknowledgeSettlement(@PathVariable Long id, Authentication auth) {
+        User user = apiSupport.currentUser(auth);
+        Settlement settlement = settlementRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Settlement not found"));
+        if (!settlement.getMembership().getUser().getId().equals(user.getId())) {
+            throw new com.ygc.exception.AccessDeniedException("Unauthorized");
+        }
+        if (settlement.getStatus() != Settlement.SettlementStatus.APPROVED) {
+            throw new IllegalStateException("Settlement is not in approved state.");
+        }
+        settlement.setUserAcknowledged(true);
+        settlement.setAcknowledgedAt(java.time.LocalDateTime.now());
+        settlementRepository.save(settlement);
+        ChitMembership membership = settlement.getMembership();
+        membership.setStatus(ChitMembership.MembershipStatus.EXITED);
+        membershipRepository.save(membership);
+        return ResponseEntity.ok(Map.of("message",
+                "Settlement acknowledged. Your participation in this chit is now closed."));
+    }
 }

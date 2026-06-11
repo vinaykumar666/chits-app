@@ -26,4 +26,6 @@ public class SettlementDto {
     private String adminRemarks;
     private LocalDateTime requestedAt;
     private LocalDateTime processedAt;
+    private boolean userAcknowledged;
+    private LocalDateTime acknowledgedAt;
 }

@@ -3,6 +3,8 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import ChangePasswordPage from './pages/ChangePassword';
+import HelpPage from './pages/Help';
+import TermsPage from './pages/Terms';
 import MemberDashboard from './pages/member/Dashboard';
 import MemberChitsPage from './pages/member/Chits';
 import MembershipDetailPage from './pages/member/MembershipDetail';
@@ -10,6 +12,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminChitsPage from './pages/admin/Chits';
 import AdminChitDetailPage from './pages/admin/ChitDetail';
 import AdminMembersPage from './pages/admin/Members';
+import AdminMemberProfilePage from './pages/admin/MemberProfile';
 import AdminPaymentsPage from './pages/admin/Payments';
 import AdminAuctionsPage from './pages/admin/Auctions';
 import AdminSettlementsPage from './pages/admin/Settlements';
@@ -17,6 +20,11 @@ import CommissionReportPage from './pages/admin/CommissionReport';
 import AnnouncementsPage from './pages/admin/Announcements';
 import AuditPage from './pages/admin/Audit';
 import ChitHistoryPage from './pages/admin/ChitHistory';
+import EarlyExitsPage from './pages/admin/EarlyExits';
+import RiskDashboardPage from './pages/admin/RiskDashboard';
+import FraudDetectionPage from './pages/admin/FraudDetection';
+import LoginTrackingPage from './pages/admin/LoginTracking';
+import DocumentsPage from './pages/admin/Documents';
 import { useAuthStore } from './store/authStore';
 
 function HomeRedirect() {
@@ -34,6 +42,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="/terms" element={<TermsPage />} />
 
         <Route element={<ProtectedRoute role="MEMBER" />}>
           <Route path="/member/dashboard" element={<MemberDashboard />} />
@@ -46,6 +56,7 @@ export default function App() {
           <Route path="/admin/chits" element={<AdminChitsPage />} />
           <Route path="/admin/chits/:id" element={<AdminChitDetailPage />} />
           <Route path="/admin/members" element={<AdminMembersPage />} />
+          <Route path="/admin/members/:id/profile" element={<AdminMemberProfilePage />} />
           <Route path="/admin/payments" element={<AdminPaymentsPage />} />
           <Route path="/admin/auctions" element={<AdminAuctionsPage />} />
           <Route path="/admin/settlements" element={<AdminSettlementsPage />} />
@@ -53,6 +64,11 @@ export default function App() {
           <Route path="/admin/announcements" element={<AnnouncementsPage />} />
           <Route path="/admin/audit" element={<AuditPage />} />
           <Route path="/admin/chit-history" element={<ChitHistoryPage />} />
+          <Route path="/admin/early-exits" element={<EarlyExitsPage />} />
+          <Route path="/admin/risk-dashboard" element={<RiskDashboardPage />} />
+          <Route path="/admin/fraud-detection" element={<FraudDetectionPage />} />
+          <Route path="/admin/login-tracking" element={<LoginTrackingPage />} />
+          <Route path="/admin/documents" element={<DocumentsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

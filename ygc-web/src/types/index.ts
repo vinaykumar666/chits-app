@@ -97,6 +97,8 @@ export interface Settlement {
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
   adminRemarks?: string;
   requestedAt?: string;
+  userAcknowledged?: boolean;
+  acknowledgedAt?: string;
 }
 
 export interface AuditLog {
@@ -126,6 +128,95 @@ export interface ChitHistory {
   finalStatus: string;
   closingReason?: string;
   closedAt?: string;
+}
+
+export interface EarlyExitRequest {
+  id: number;
+  membershipId?: number;
+  memberName?: string;
+  memberEmail?: string;
+  chitName?: string;
+  status: string;
+  reason?: string;
+  totalPaid?: number;
+  penaltyAmount?: number;
+  refundAmount?: number;
+  adminRemarks?: string;
+  requestedAt?: string;
+}
+
+export interface LoginHistoryEntry {
+  id: number;
+  userEmail?: string;
+  userName?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  success: boolean;
+  failureReason?: string;
+  loginAt?: string;
+}
+
+export interface RiskAlert {
+  user: User;
+  riskScore: number;
+  tier: string;
+  color?: string;
+}
+
+export interface DuplicateRecord {
+  value?: string;
+  emails?: string;
+  count?: string;
+  [key: string]: string | undefined;
+}
+
+export interface SecurityUser extends User {
+  aadhaarVerified?: boolean;
+  accountLocked?: boolean;
+  consecutiveFailedLogins?: number;
+  lastLoginIp?: string;
+  lastLoginAt?: string;
+  riskScore?: number;
+  trustRating?: string;
+}
+
+export interface LoginTrackingData {
+  recentLogins: LoginHistoryEntry[];
+  lockedAccounts: User[];
+  failedLoginUsers: User[];
+  allMembers: SecurityUser[];
+  aadhaarVerified: number;
+  aadhaarPending: number;
+  totalLogins: number;
+  failedLogins: number;
+  successRate: number;
+  uniqueIPs: number;
+  aadhaarCompliancePct: number;
+  suspiciousUsers: string[];
+  suspiciousCount: number;
+}
+
+export interface MemberProfileData {
+  member: SecurityUser;
+  memberships: ChitMembership[];
+  activeChits: number;
+  completedChits: number;
+  exitedChits: number;
+  totalPayments: number;
+  onTimePayments: number;
+  overduePayments: number;
+  paymentScore: number;
+  riskScore: number;
+  trustRating: string;
+  loginHistory: LoginHistoryEntry[];
+}
+
+export interface DocumentRecord {
+  membershipId: number;
+  memberName: string;
+  chitName: string;
+  path: string;
+  agreementNumber?: string;
 }
 
 export interface ApiError {

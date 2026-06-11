@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Layout from '../../components/Layout';
@@ -53,7 +54,10 @@ export default function AdminMembersPage() {
                 <td>{m.email}</td>
                 <td>{m.role}</td>
                 <td><span className={`badge ${m.active ? 'bg-success' : 'bg-secondary'}`}>{m.active ? 'Active' : 'Inactive'}</span></td>
-                <td><button className="btn btn-sm btn-outline-warning" onClick={() => toggleMutation.mutate(m.id)}>Toggle Status</button></td>
+                <td className="d-flex gap-1 flex-wrap">
+                  <Link to={`/admin/members/${m.id}/profile`} className="btn btn-sm btn-outline-light">Profile</Link>
+                  <button className="btn btn-sm btn-outline-warning" onClick={() => toggleMutation.mutate(m.id)}>Toggle Status</button>
+                </td>
               </tr>
             ))}
           </tbody>

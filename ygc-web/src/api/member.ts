@@ -53,4 +53,12 @@ export const memberApi = {
 
   requestExit: (membershipId: number) =>
     api.post(`/api/v1/member/memberships/${membershipId}/exit`),
+
+  acknowledgeSettlement: (settlementId: number) =>
+    api.post(`/api/v1/member/settlements/${settlementId}/acknowledge`),
+
+  bidCalculator: (chitId: number, bidAmount?: number, monthNumber = 1) =>
+    api.get<Record<string, unknown>>(`/api/v1/member/chits/${chitId}/bid-calculator`, {
+      params: { bidAmount, monthNumber },
+    }),
 };

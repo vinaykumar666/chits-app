@@ -1,34 +1,42 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Layout from '../../components/Layout';
-import NotificationBell from '../../components/NotificationBell';
+import Topbar from '../../components/Topbar';
 import { adminApi } from '../../api/admin';
 import { useAuthStore } from '../../store/authStore';
 import { formatDate } from '../../utils/format';
-import { Link } from 'react-router-dom';
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { data, isLoading } = useQuery({ queryKey: ['admin-dashboard'], queryFn: () => adminApi.dashboard().then((r) => r.data) });
 
-  if (isLoading) return <Layout role="ADMIN"><div className="p-4">Loading…</div></Layout>;
+  if (isLoading) return <Layout role="ADMIN"><div className="p-4">{t('common.loading')}</div></Layout>;
 
   const stats = [
-    { label: 'Total Chits', value: data?.totalChits, icon: 'bi-collection', link: '/admin/chits' },
-    { label: 'Members', value: data?.totalMembers, icon: 'bi-people', link: '/admin/members' },
-    { label: 'Pending Payments', value: data?.pendingPayments, icon: 'bi-credit-card', link: '/admin/payments' },
-    { label: 'Pending Settlements', value: data?.pendingSettlements, icon: 'bi-cash-stack', link: '/admin/settlements' },
-    { label: 'Open Auctions', value: data?.openAuctions, icon: 'bi-hammer', link: '/admin/auctions' },
+    { label: t('dash.total_chits'), value: data?.totalChits, icon: 'bi-collection', link: '/admin/chits' },
+    { label: t('dash.total_members'), value: data?.totalMembers, icon: 'bi-people', link: '/admin/members' },
+    { label: t('dash.pending_pay'), value: data?.pendingPayments, icon: 'bi-credit-card', link: '/admin/payments' },
+    { label: t('dash.pending_settlements'), value: data?.pendingSettlements, icon: 'bi-cash-stack', link: '/admin/settlements' },
+    { label: t('dash.open_auctions'), value: data?.openAuctions, icon: 'bi-hammer', link: '/admin/auctions' },
+  ];
+
+  const quickActions = [
+    { to: '/admin/chits', icon: 'bi-plus-circle', label: 'Create Chit' },
+    { to: '/admin/payments', icon: 'bi-cash-coin', label: 'Verify Payments' },
+    { to: '/admin/auctions', icon: 'bi-hammer', label: 'Auctions' },
+    { to: '/admin/early-exits', icon: 'bi-door-open', label: 'Early Exits' },
+    { to: '/admin/risk-dashboard', icon: 'bi-exclamation-triangle', label: 'Risk' },
+    { to: '/admin/reports/commission', icon: 'bi-file-pdf', label: 'Reports' },
   ];
 
   return (
     <Layout role="ADMIN">
-      <div className="topbar">
-        <div>
-          <h4><i className="bi bi-speedometer2 text-warning me-2" />Admin Dashboard</h4>
-          <div className="sub">Welcome, {user?.fullName}</div>
-        </div>
-        <NotificationBell />
-      </div>
+      <Topbar
+        title={<><i className="bi bi-speedometer2 text-warning me-2" />{t('dash.admin_title')}</>}
+        subtitle={`${t('dash.welcome')}, ${user?.fullName}`}
+      />
 
       <div className="row g-3 mb-4">
         {stats.map((s) => (
@@ -43,8 +51,20 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      <div className="card mb-4">
+        <div className="card-header">{t('dash.quick_actions')}</div>
+        <div className="card-body quick-action-grid">
+          {quickActions.map((a) => (
+            <Link key={a.to} to={a.to} className="quick-action-btn">
+              <i className={`bi ${a.icon}`} />
+              <span className="small fw-semibold text-center">{a.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       <div className="card">
-        <div className="card-header">Recent Audit Activity</div>
+        <div className="card-header">{t('dash.recent_activity')}</div>
         <div className="table-responsive">
           <table className="table mb-0">
             <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Description</th></tr></thead>
