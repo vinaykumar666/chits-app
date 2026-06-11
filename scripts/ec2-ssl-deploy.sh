@@ -132,23 +132,49 @@ obtain_certificate(){
 
   c_blue "▶ Obtaining Let's Encrypt certificate for ${DOMAIN}..."
 
+  local resolved
+  resolved="$(dig +short "${DOMAIN}" A @8.8.8.8 2>/dev/null | tail -1 || true)"
+  if [[ -z "$resolved" ]]; then
+    c_red "✗ Google DNS (8.8.8.8) cannot resolve ${DOMAIN} yet."
+    c_yellow "  Wait 5–10 min after DuckDNS update, then re-run ./start.sh"
+    c_yellow "  Check: https://dnschecker.org/#A/${DOMAIN}"
+    exit 1
+  fi
+
   # Free port 80 for certbot standalone
   ${COMPOSE} down 2>/dev/null || true
   sleep 2
 
-  docker run --rm -p 80:80 \
-    -v "${ROOT}/certbot/conf:/etc/letsencrypt" \
-    -v "${ROOT}/certbot/www:/var/www/certbot" \
-    certbot/certbot certonly --standalone \
-    --preferred-challenges http \
-    -d "${DOMAIN}" \
-    --email "${EMAIL}" \
-    --agree-tos \
-    --non-interactive \
-    --no-eff-email
+  local attempt
+  for attempt in 1 2 3; do
+    c_blue "▶ Certbot attempt ${attempt}/3..."
+    if docker run --rm -p 80:80 \
+      -v "${ROOT}/certbot/conf:/etc/letsencrypt" \
+      -v "${ROOT}/certbot/www:/var/www/certbot" \
+      certbot/certbot certonly --standalone \
+      --preferred-challenges http \
+      -d "${DOMAIN}" \
+      --email "${EMAIL}" \
+      --agree-tos \
+      --non-interactive \
+      --no-eff-email; then
+      break
+    fi
+    if cert_exists; then
+      break
+    fi
+    if [[ "$attempt" -lt 3 ]]; then
+      c_yellow "  Retrying in 60s (DNS may still be propagating)..."
+      sleep 60
+    fi
+  done
 
   if ! cert_exists; then
-    c_red "✗ Certificate issuance failed. Check DNS and security group (port 80 open)."
+    c_red "✗ Certificate issuance failed."
+    c_yellow "  • Confirm DuckDNS subdomain: ${DOMAIN%%.duckdns.org}"
+    c_yellow "  • Set DUCKDNS_TOKEN in .env and re-run ./start.sh"
+    c_yellow "  • Security group port 80 must be open to 0.0.0.0/0"
+    c_yellow "  • Check global DNS: https://dnschecker.org/#A/${DOMAIN}"
     exit 1
   fi
   c_green "✓ Certificate obtained"

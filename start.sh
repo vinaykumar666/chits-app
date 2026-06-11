@@ -109,6 +109,9 @@ ensure_env_file(){
   grep -q '^MAIL_USERNAME=' .env || echo 'MAIL_USERNAME=noreply@localhost' >> .env
   grep -q '^MAIL_PASSWORD=' .env || echo 'MAIL_PASSWORD=unused' >> .env
 
+  # shellcheck disable=SC1091
+  set -a; source .env; set +a
+
   c_green "✓ .env ready (domain: ${YGC_DOMAIN})"
 }
 
@@ -116,20 +119,44 @@ check_dns(){
   c_blue "▶ Checking DuckDNS / DNS..."
 
   PUBLIC_IP="$(curl -fsS --max-time 5 http://checkip.amazonaws.com | tr -d '[:space:]')"
-  RESOLVED="$(dig +short "${YGC_DOMAIN}" 2>/dev/null | tail -1 || true)"
 
-  c_blue "  EC2 public IP:  ${PUBLIC_IP}"
-  c_blue "  DNS resolves:   ${RESOLVED:-<none>}"
+  # Auto-update DuckDNS when token is configured
+  if [[ -n "${DUCKDNS_TOKEN:-}" ]] && [[ "${YGC_DOMAIN}" == *.duckdns.org ]]; then
+    local sub="${YGC_DOMAIN%%.duckdns.org}"
+    c_blue "▶ Updating DuckDNS (${sub}) → ${PUBLIC_IP}..."
+    local resp
+    resp="$(curl -fsS --max-time 10 "https://www.duckdns.org/update?domains=${sub}&token=${DUCKDNS_TOKEN}&ip=${PUBLIC_IP}" || true)"
+    if [[ "$resp" == "OK" ]]; then
+      c_green "✓ DuckDNS updated"
+      sleep 15
+    else
+      c_yellow "  DuckDNS update returned: ${resp:-error} — check DUCKDNS_TOKEN in .env"
+    fi
+  fi
 
-  if [[ -z "$RESOLVED" ]]; then
-    c_red "ERROR: ${YGC_DOMAIN} does not resolve."
-    c_yellow "  Fix at https://www.duckdns.org — point yg-chits to ${PUBLIC_IP}"
+  local resolved_google resolved_cloudflare resolved_local
+  resolved_google="$(dig +short "${YGC_DOMAIN}" A @8.8.8.8 2>/dev/null | tail -1 || true)"
+  resolved_cloudflare="$(dig +short "${YGC_DOMAIN}" A @1.1.1.1 2>/dev/null | tail -1 || true)"
+  resolved_local="$(dig +short "${YGC_DOMAIN}" A 2>/dev/null | tail -1 || true)"
+
+  c_blue "  EC2 public IP:          ${PUBLIC_IP}"
+  c_blue "  Google DNS (8.8.8.8):   ${resolved_google:-<none>}"
+  c_blue "  Cloudflare (1.1.1.1):   ${resolved_cloudflare:-<none>}"
+  c_blue "  Local resolver:         ${resolved_local:-<none>}"
+
+  if [[ -z "$resolved_google" && -z "$resolved_cloudflare" ]]; then
+    c_red "ERROR: ${YGC_DOMAIN} is not visible on public DNS yet."
+    c_yellow "  1. Open https://www.duckdns.org — subdomain must be: ${YGC_DOMAIN%%.duckdns.org}"
+    c_yellow "  2. Set DUCKDNS_TOKEN in .env and re-run ./start.sh"
+    c_yellow "  3. Wait 5–10 minutes, then: dig +short ${YGC_DOMAIN} @8.8.8.8"
+    c_yellow "  4. Global check: https://dnschecker.org/#A/${YGC_DOMAIN}"
     exit 1
   fi
 
-  if [[ "$RESOLVED" != "$PUBLIC_IP" ]]; then
-    c_yellow "  WARNING: DNS (${RESOLVED}) ≠ EC2 IP (${PUBLIC_IP}). SSL may fail."
-    c_yellow "  Update DuckDNS, wait 2 minutes, re-run ./start.sh"
+  local resolved="${resolved_google:-$resolved_cloudflare}"
+  if [[ "$resolved" != "$PUBLIC_IP" ]]; then
+    c_yellow "  WARNING: Public DNS (${resolved}) ≠ EC2 IP (${PUBLIC_IP}). SSL may fail."
+    c_yellow "  Update DuckDNS, wait 5 minutes, re-run ./start.sh"
     if [[ "${CONTINUE_ON_DNS_MISMATCH:-0}" == "1" ]]; then
       c_yellow "  CONTINUE_ON_DNS_MISMATCH=1 — proceeding anyway."
     elif [[ -t 0 ]]; then
@@ -139,7 +166,7 @@ check_dns(){
       exit 1
     fi
   else
-    c_green "✓ DNS OK"
+    c_green "✓ Public DNS OK (Let's Encrypt should resolve this domain)"
   fi
 }
 
