@@ -121,7 +121,8 @@ build_app_image(){
 }
 
 cert_exists(){
-  [[ -f "certbot/conf/live/${DOMAIN}/fullchain.pem" && -f "certbot/conf/live/${DOMAIN}/privkey.pem" ]]
+  # Let's Encrypt live/*.pem are symlinks — use -e not -f
+  [[ -e "certbot/conf/live/${DOMAIN}/fullchain.pem" && -e "certbot/conf/live/${DOMAIN}/privkey.pem" ]]
 }
 
 obtain_certificate(){
