@@ -37,6 +37,8 @@ class ChitServiceTest {
     @InjectMocks
     private ChitService chitService;
 
+    private static final String JOIN_REASON = "I want to join this chit to save monthly and build financial discipline.";
+
     private User admin;
     private User member;
     private Chit testChit;
@@ -115,7 +117,8 @@ class ChitServiceTest {
         @DisplayName("should create pending membership for valid request")
         void shouldCreatePendingMembership() {
             when(chitRepository.findById(1L)).thenReturn(Optional.of(testChit));
-            when(membershipRepository.existsByChitAndUser(testChit, member)).thenReturn(false);
+            when(membershipRepository.findActiveOrPendingByChitAndUser(testChit, member)).thenReturn(Optional.empty());
+            when(membershipRepository.countRejectionsByChitAndUser(testChit, member)).thenReturn(0);
             when(membershipRepository.countByChitAndStatusNot(testChit, ChitMembership.MembershipStatus.EXITED)).thenReturn(5L);
             when(membershipRepository.save(any(ChitMembership.class))).thenAnswer(inv -> {
                 ChitMembership m = inv.getArgument(0);
@@ -123,7 +126,7 @@ class ChitServiceTest {
                 return m;
             });
 
-            ChitMembership result = chitService.requestJoin(1L, member, true, true, true);
+            ChitMembership result = chitService.requestJoin(1L, member, true, true, true, JOIN_REASON);
 
             assertThat(result.getStatus()).isEqualTo(ChitMembership.MembershipStatus.PENDING);
             assertThat(result.getChit()).isEqualTo(testChit);
@@ -137,7 +140,7 @@ class ChitServiceTest {
             testChit.setStatus(Chit.ChitStatus.ACTIVE);
             when(chitRepository.findById(1L)).thenReturn(Optional.of(testChit));
 
-            assertThatThrownBy(() -> chitService.requestJoin(1L, member, true, true, true))
+            assertThatThrownBy(() -> chitService.requestJoin(1L, member, true, true, true, JOIN_REASON))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("not open");
         }
@@ -148,7 +151,7 @@ class ChitServiceTest {
             testChit.setStartDate(LocalDate.now().minusDays(1));
             when(chitRepository.findById(1L)).thenReturn(Optional.of(testChit));
 
-            assertThatThrownBy(() -> chitService.requestJoin(1L, member, true, true, true))
+            assertThatThrownBy(() -> chitService.requestJoin(1L, member, true, true, true, JOIN_REASON))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("already started");
         }
@@ -157,22 +160,25 @@ class ChitServiceTest {
         @DisplayName("should throw when user already a member")
         void shouldThrowWhenAlreadyMember() {
             when(chitRepository.findById(1L)).thenReturn(Optional.of(testChit));
-            when(membershipRepository.existsByChitAndUser(testChit, member)).thenReturn(true);
+            ChitMembership existing = new ChitMembership();
+            existing.setStatus(ChitMembership.MembershipStatus.ACTIVE);
+            when(membershipRepository.findActiveOrPendingByChitAndUser(testChit, member)).thenReturn(Optional.of(existing));
 
-            assertThatThrownBy(() -> chitService.requestJoin(1L, member, true, true, true))
+            assertThatThrownBy(() -> chitService.requestJoin(1L, member, true, true, true, JOIN_REASON))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Already requested");
+                    .hasMessageContaining("already have an active or pending");
         }
 
         @Test
         @DisplayName("should throw when chit is full")
         void shouldThrowWhenChitFull() {
             when(chitRepository.findById(1L)).thenReturn(Optional.of(testChit));
-            when(membershipRepository.existsByChitAndUser(testChit, member)).thenReturn(false);
+            when(membershipRepository.findActiveOrPendingByChitAndUser(testChit, member)).thenReturn(Optional.empty());
+            when(membershipRepository.countRejectionsByChitAndUser(testChit, member)).thenReturn(0);
             when(membershipRepository.countByChitAndStatusNot(testChit, ChitMembership.MembershipStatus.EXITED))
                     .thenReturn(10L); // equal to totalMembers
 
-            assertThatThrownBy(() -> chitService.requestJoin(1L, member, true, true, true))
+            assertThatThrownBy(() -> chitService.requestJoin(1L, member, true, true, true, JOIN_REASON))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("full");
         }
@@ -182,7 +188,7 @@ class ChitServiceTest {
         void shouldThrowWhenChitNotFound() {
             when(chitRepository.findById(999L)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> chitService.requestJoin(999L, member, true, true, true))
+            assertThatThrownBy(() -> chitService.requestJoin(999L, member, true, true, true, JOIN_REASON))
                     .isInstanceOf(EntityNotFoundException.class);
         }
     }

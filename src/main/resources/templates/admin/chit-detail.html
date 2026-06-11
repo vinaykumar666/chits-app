@@ -145,6 +145,7 @@
                     <tr>
                         <th>Member</th>
                         <th>Status</th>
+                        <th class="hide-mobile">Join Reason</th>
                         <th class="hide-mobile">Agreement</th>
                         <th class="hide-mobile">Won Bid</th>
                         <th>Paid</th>
@@ -164,6 +165,11 @@
                         <span class="badge"
                               th:classappend="${m.status.name() == 'ACTIVE'} ? 'bg-success' : (${m.status.name() == 'PENDING'} ? 'bg-warning text-dark' : (${m.status.name() == 'EXITED'} ? 'bg-danger' : 'bg-secondary'))"
                               th:text="${m.status}"></span>
+                    </td>
+                    <td class="hide-mobile" style="max-width:220px">
+                        <small th:if="${m.status.name() == 'PENDING' and m.joinReason != null}" class="text-muted d-block text-truncate"
+                               th:text="${m.joinReason}" th:title="${m.joinReason}"></small>
+                        <small th:if="${m.status.name() != 'PENDING' or m.joinReason == null}" class="text-muted">—</small>
                     </td>
                     <td class="hide-mobile">
                         <span class="badge" th:classappend="${m.agreementAccepted} ? 'bg-success' : 'bg-danger'"
@@ -229,7 +235,7 @@
                         </div>
                     </td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(memberships)}"><td colspan="9" class="text-center text-muted py-4">No members yet</td></tr>
+                <tr th:if="${#lists.isEmpty(memberships)}"><td colspan="10" class="text-center text-muted py-4">No members yet</td></tr>
                 </tbody>
             </table>
             </div>

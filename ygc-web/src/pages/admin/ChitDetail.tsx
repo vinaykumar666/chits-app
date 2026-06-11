@@ -65,12 +65,21 @@ export default function AdminChitDetailPage() {
         <div className="card-header">Memberships</div>
         <div className="table-responsive">
           <table className="table mb-0">
-            <thead><tr><th>Member</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Member</th><th>Status</th><th>Join reason</th><th>Joined</th><th>Actions</th></tr></thead>
             <tbody>
               {data.memberships.map((m) => (
                 <tr key={m.id}>
                   <td>{m.user?.fullName}<br /><small className="text-muted">{m.user?.email}</small></td>
                   <td><span className={`badge ${statusBadge(m.status)}`}>{m.status}</span></td>
+                  <td style={{ maxWidth: 280 }}>
+                    {m.status === 'PENDING' && m.joinReason ? (
+                      <span className="small text-muted" title={m.joinReason}>
+                        {m.joinReason.length > 120 ? `${m.joinReason.slice(0, 120)}…` : m.joinReason}
+                      </span>
+                    ) : (
+                      <span className="text-muted small">—</span>
+                    )}
+                  </td>
                   <td>{m.joinedAt?.slice(0, 10)}</td>
                   <td className="d-flex gap-1">
                     {m.status === 'PENDING' && <>

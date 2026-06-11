@@ -16,6 +16,7 @@ public class ChitMembershipDto {
     private boolean hasWonAuction;
     private boolean termsAccepted;
     private String rejectionReason;
+    private String joinReason;
     private boolean agreementRead;
     private boolean agreementAccepted;
     private boolean infoProcessingAuthorized;

@@ -33,6 +33,10 @@ public class ChitMembership {
     // Rejection reason (set by admin on any rejection)
     private String rejectionReason;
 
+    /** Member's stated reason for wanting to join this chit group */
+    @Column(columnDefinition = "TEXT")
+    private String joinReason;
+
     // Agreement tracking
     private String agreementVersion = "v1.0";
     private String acceptanceIpAddress;

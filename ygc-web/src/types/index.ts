@@ -49,6 +49,7 @@ export interface ChitMembership {
   agreementAccepted: boolean;
   infoProcessingAuthorized: boolean;
   agreementNumber?: string;
+  joinReason?: string;
   joinedAt?: string;
 }
 

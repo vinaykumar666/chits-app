@@ -842,3 +842,36 @@ body.modal-open { overflow: hidden; position: fixed; width: 100%; }
   .main-content { margin-left: 0; padding: 72px 16px 24px; }
   .mobile-toggle { display: flex; align-items: center; justify-content: center; }
 }
+
+/* ── Chit browse cards (React + Thymeleaf) ───────────────── */
+.chit-card {
+  border-radius: 14px !important;
+  overflow: hidden;
+  transition: transform var(--transition-spring), box-shadow var(--transition);
+}
+.chit-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md) !important;
+}
+.chit-card-accent {
+  height: 5px;
+  background: var(--gradient-gold);
+}
+.chit-stat-box {
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+  background: #f8f9fb;
+}
+.chit-stat-highlight {
+  background: rgba(240, 165, 0, 0.08);
+}
+.chit-search-bar {
+  border-radius: 14px !important;
+}
+.join-panel {
+  background: linear-gradient(180deg, #fffdf8, #fff);
+  border: 1px solid rgba(240, 165, 0, 0.25);
+  border-radius: 12px;
+  padding: 14px;
+}

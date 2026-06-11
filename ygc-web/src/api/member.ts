@@ -13,12 +13,19 @@ export const memberApi = {
     }>('/api/v1/member/dashboard'),
 
   chits: () =>
-    api.get<{ chits: Chit[]; myChitStatus: Record<number, string> }>('/api/v1/member/chits'),
+    api.get<{ chits: Chit[]; myChitStatus: Record<string, string> }>('/api/v1/member/chits'),
 
   chit: (id: number) => api.get<Chit>(`/api/v1/member/chits/${id}`),
 
-  joinChit: (id: number, body: { agreementRead: boolean; termsAccepted: boolean; infoProcessingAuthorized: boolean }) =>
-    api.post(`/api/v1/member/chits/${id}/join`, body),
+  joinChit: (
+    id: number,
+    body: {
+      agreementRead: boolean;
+      termsAccepted: boolean;
+      infoProcessingAuthorized: boolean;
+      joinReason: string;
+    },
+  ) => api.post(`/api/v1/member/chits/${id}/join`, body),
 
   membership: (id: number) =>
     api.get<{

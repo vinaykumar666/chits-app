@@ -56,8 +56,27 @@ public class ChitService {
                                        boolean agreementRead,
                                        boolean termsAccepted,
                                        boolean infoProcessingAuthorized) {
+        return requestJoin(chitId, user, agreementRead, termsAccepted, infoProcessingAuthorized, null);
+    }
+
+    @Transactional
+    public ChitMembership requestJoin(Long chitId, User user,
+                                       boolean agreementRead,
+                                       boolean termsAccepted,
+                                       boolean infoProcessingAuthorized,
+                                       String joinReason) {
         loggingUtil.transactionStart("requestJoin", "ChitService");
         try {
+            if (joinReason == null || joinReason.isBlank()) {
+                throw new IllegalArgumentException("Please explain why you want to join this chit group.");
+            }
+            joinReason = joinReason.trim();
+            if (joinReason.length() < 15) {
+                throw new IllegalArgumentException("Please write at least 15 characters explaining why you want to join.");
+            }
+            if (joinReason.length() > 2000) {
+                throw new IllegalArgumentException("Join reason is too long (max 2000 characters).");
+            }
             Chit chit = chitRepository.findById(chitId)
                     .orElseThrow(() -> new EntityNotFoundException("Chit not found"));
 
@@ -87,6 +106,7 @@ public class ChitService {
             membership.setChit(chit);
             membership.setUser(user);
             membership.setStatus(ChitMembership.MembershipStatus.PENDING);
+            membership.setJoinReason(joinReason);
 
             loggingUtil.databaseOperation("INSERT", "ChitMembership", "ChitService.requestJoin");
             ChitMembership saved = membershipRepository.save(membership);
@@ -95,7 +115,7 @@ public class ChitService {
             agreementService.recordAgreementAcceptance(saved, agreementRead, termsAccepted, infoProcessingAuthorized);
 
             auditService.log(user, "JOIN_REQUEST", "ChitMembership", saved.getId(),
-                    "Join request with agreement for chit: " + chit.getName());
+                    "Join request for chit: " + chit.getName() + " — Reason: " + joinReason);
 
             // Notify admin about the new join request
             if (chit.getCreatedBy() != null) {

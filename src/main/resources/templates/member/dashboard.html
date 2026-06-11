@@ -159,7 +159,13 @@
           <div class="card border h-100" style="border-radius:12px;overflow:hidden">
             <div style="height:4px;background:linear-gradient(90deg,#f0a500,#c8870a)"></div>
             <div class="card-body">
-              <h6 class="fw-bold" th:text="${chit.name}">Chit Name</h6>
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="fw-bold mb-0" th:text="${chit.name}">Chit Name</h6>
+                <th:block th:with="myStatus=${myChitStatus != null ? myChitStatus[chit.id] : null}">
+                  <span th:if="${myStatus == 'ACTIVE'}" class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>Active Member</span>
+                  <span th:if="${myStatus == 'PENDING'}" class="badge bg-warning text-dark">Pending</span>
+                </th:block>
+              </div>
               <p class="text-muted small mb-3" th:text="${chit.description}"></p>
               <div class="row g-2 mb-3">
                 <div class="col-6">
@@ -175,11 +181,14 @@
                   </div>
                 </div>
               </div>
-              <form th:action="@{/member/chits/{id}/join(id=${chit.id})}" method="post">
-                <button type="submit" class="btn btn-warning w-100 fw-bold btn-sm">
-                  <i class="bi bi-person-plus me-1"></i>Request to Join
+              <th:block th:with="myStatus=${myChitStatus != null ? myChitStatus[chit.id] : null}">
+                <button th:if="${myStatus == 'ACTIVE' or myStatus == 'PENDING'}" type="button" class="btn btn-secondary w-100 fw-bold btn-sm" disabled>
+                  <span th:text="${myStatus == 'ACTIVE' ? 'Active Member' : 'Request Pending'}"></span>
                 </button>
-              </form>
+                <a th:if="${myStatus == null or myStatus == 'EXITED' or myStatus == 'SETTLED'}" th:href="@{/member/chits}" class="btn btn-warning w-100 fw-bold btn-sm">
+                  <i class="bi bi-person-plus me-1"></i>View &amp; Join
+                </a>
+              </th:block>
             </div>
           </div>
         </div>

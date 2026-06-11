@@ -46,6 +46,11 @@ public class MemberController {
         model.addAttribute("memberships", memberships);
         model.addAttribute("activeCount", activeCount);
         model.addAttribute("availableChits", chitService.getAvailableChits());
+        java.util.Map<Long, String> myChitStatus = new java.util.HashMap<>();
+        for (ChitMembership m : memberships) {
+            myChitStatus.put(m.getChit().getId(), m.getStatus().name());
+        }
+        model.addAttribute("myChitStatus", myChitStatus);
         model.addAttribute("openAuctions", auctionService.getOpenAuctions());
         model.addAttribute("mySettlements", mySettlements);
         return "member/dashboard";
@@ -53,8 +58,14 @@ public class MemberController {
 
     @GetMapping("/chits")
     public String availableChits(Authentication auth, Model model) {
-        model.addAttribute("user", getCurrentUser(auth));
+        User user = getCurrentUser(auth);
+        java.util.Map<Long, String> myChitStatus = new java.util.HashMap<>();
+        for (ChitMembership m : chitService.getMembershipsForUser(user)) {
+            myChitStatus.put(m.getChit().getId(), m.getStatus().name());
+        }
+        model.addAttribute("user", user);
         model.addAttribute("chits", chitService.getAvailableChits());
+        model.addAttribute("myChitStatus", myChitStatus);
         return "member/chits";
     }
 
@@ -77,11 +88,12 @@ public class MemberController {
                            @RequestParam(defaultValue = "false") boolean agreementRead,
                            @RequestParam(defaultValue = "false") boolean termsAccepted,
                            @RequestParam(defaultValue = "false") boolean infoProcessingAuthorized,
+                           @RequestParam(required = false) String joinReason,
                            Authentication auth,
                            RedirectAttributes ra) {
         try {
             chitService.requestJoin(id, getCurrentUser(auth),
-                    agreementRead, termsAccepted, infoProcessingAuthorized);
+                    agreementRead, termsAccepted, infoProcessingAuthorized, joinReason);
             ra.addFlashAttribute("success",
                     "Join request submitted! Awaiting admin approval. You'll receive a signed agreement by email upon approval.");
         } catch (Exception e) {

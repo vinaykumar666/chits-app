@@ -3,10 +3,17 @@ package com.ygc.service;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.geom.Rectangle;
+import com.itextpdf.kernel.events.Event;
+import com.itextpdf.kernel.events.IEventHandler;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
+import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.Canvas;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.properties.*;
@@ -92,6 +99,7 @@ public class ReportExportService {
                                                java.util.Map<String, Object> data) throws Exception {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            registerPageNumbers(pdf);
             Document doc = new Document(pdf, PageSize.A4);
             doc.setMargins(40, 40, 50, 40);
 
@@ -105,6 +113,10 @@ public class ReportExportService {
 
             // ── Header ─────────────────────────────────────────────────
             addHeader(doc, "Chit Analysis Report", "Complete Record for: " + chitName);
+            addReportIntro(doc,
+                    "This certified archive report summarises the full lifecycle of the chit group — "
+                            + "members, payments, auctions, commissions, and settlements — "
+                            + "generated from YGC Internal records at the time of closure.");
 
             // ── Meta info row ──────────────────────────────────────────
             String status    = str(chit.get("status"));
@@ -301,10 +313,14 @@ public class ReportExportService {
     public byte[] generateCommissionReport(List<CommissionLedger> ledger, BigDecimal totalCommission) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            registerPageNumbers(pdf);
             Document doc = new Document(pdf, PageSize.A4);
             doc.setMargins(40, 40, 50, 40);
 
             addHeader(doc, "Commission Report", "Admin Commission Ledger");
+            addReportIntro(doc,
+                    "Commission ledger showing admin earnings per chit cycle. "
+                            + "Amounts are recorded when auctions close and payouts are processed.");
             addMetaRow(doc, "Generated", LocalDateTime.now().format(FMT), "Total Records", String.valueOf(ledger.size()));
 
             // Summary box
@@ -341,10 +357,14 @@ public class ReportExportService {
     public byte[] generatePaymentReport(List<Payment> payments) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            registerPageNumbers(pdf);
             Document doc = new Document(pdf, PageSize.A4.rotate()); // landscape for more cols
             doc.setMargins(36, 36, 48, 36);
 
             addHeader(doc, "Payment Report", "All Payment Records");
+            addReportIntro(doc,
+                    "Consolidated payment register with verification status, fines, and admin remarks. "
+                            + "Use this report for reconciliation and audit trails.");
             addMetaRow(doc, "Generated", LocalDateTime.now().format(FMT), "Total Payments", String.valueOf(payments.size()));
 
             long approved = payments.stream().filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED).count();
@@ -387,10 +407,14 @@ public class ReportExportService {
     public byte[] generateSettlementReport(List<Settlement> settlements) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            registerPageNumbers(pdf);
             Document doc = new Document(pdf, PageSize.A4);
             doc.setMargins(40, 40, 50, 40);
 
             addHeader(doc, "Settlement Report", "Early Exit & Maturity Settlements");
+            addReportIntro(doc,
+                    "Settlement summary for members exiting early or at maturity, "
+                            + "including deductions, final payout amounts, and processing status.");
             addMetaRow(doc, "Generated", LocalDateTime.now().format(FMT), "Total", String.valueOf(settlements.size()));
 
             float[] cols = {30f, 120f, 110f, 70f, 70f, 70f, 80f, 80f, 130f};
@@ -449,7 +473,12 @@ public class ReportExportService {
                 logoCell.add(new Paragraph("Y&G").setFontColor(GOLD).setFontSize(22).setBold());
             }
         } else {
-            logoCell.add(new Paragraph("Y&G").setFontColor(GOLD).setFontSize(22).setBold());
+            Table logoBadge = new Table(UnitValue.createPercentArray(new float[]{1})).useAllAvailableWidth();
+            Cell badge = new Cell().setBorder(Border.NO_BORDER).setPadding(4);
+            badge.add(new Paragraph("Y&G").setFontColor(GOLD).setFontSize(20).setBold().setTextAlignment(TextAlignment.CENTER));
+            badge.add(new Paragraph("CHITS").setFontColor(DeviceRgb.WHITE).setFontSize(8).setTextAlignment(TextAlignment.CENTER).setMarginTop(-2));
+            logoBadge.addCell(badge);
+            logoCell.add(logoBadge);
         }
         header.addCell(logoCell);
 
@@ -478,6 +507,48 @@ public class ReportExportService {
         ls.setStrokeColor(GOLD);
         doc.add(ls);
         doc.add(new Paragraph("").setMarginBottom(8));
+    }
+
+    private void addReportIntro(Document doc, String text) {
+        Table intro = new Table(UnitValue.createPercentArray(new float[]{1})).useAllAvailableWidth().setMarginBottom(14);
+        Cell cell = new Cell()
+                .setBackgroundColor(GOLD_LIGHT)
+                .setBorder(new com.itextpdf.layout.borders.SolidBorder(GOLD, 1.5f))
+                .setPadding(12);
+        cell.add(new Paragraph("About this report")
+                .setFontSize(9).setBold().setFontColor(NAVY).setMarginBottom(4));
+        cell.add(new Paragraph(text)
+                .setFontSize(9).setFontColor(new DeviceRgb(60, 60, 80)).setMultipliedLeading(1.3f));
+        intro.addCell(cell);
+        doc.add(intro);
+    }
+
+    private void registerPageNumbers(PdfDocument pdf) {
+        pdf.addEventHandler(PdfDocumentEvent.END_PAGE, new IEventHandler() {
+            @Override
+            public void handleEvent(Event event) {
+                PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+                PdfDocument pdfDoc = docEvent.getDocument();
+                PdfPage page = docEvent.getPage();
+                int pageNumber = pdfDoc.getPageNumber(page);
+                Rectangle pageSize = page.getPageSize();
+                PdfCanvas canvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdfDoc);
+                try (Canvas c = new Canvas(canvas, pageSize)) {
+                    c.showTextAligned(
+                            new Paragraph("Page " + pageNumber)
+                                    .setFontSize(8)
+                                    .setFontColor(new DeviceRgb(140, 140, 155)),
+                            pageSize.getWidth() / 2, 18, TextAlignment.CENTER);
+                    c.showTextAligned(
+                            new Paragraph("YGC Internal · Confidential")
+                                    .setFontSize(7)
+                                    .setFontColor(new DeviceRgb(180, 180, 190)),
+                            pageSize.getWidth() - 40, 18, TextAlignment.RIGHT);
+                } catch (Exception e) {
+                    log.debug("Could not render page number: {}", e.getMessage());
+                }
+            }
+        });
     }
 
     private void addMetaRow(Document doc, String k1, String v1, String k2, String v2) {
@@ -612,10 +683,13 @@ public class ReportExportService {
     public byte[] generateMembersReport(List<User> members) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            registerPageNumbers(pdf);
             Document doc = new Document(pdf, PageSize.A4.rotate());
             doc.setMargins(36, 36, 48, 36);
 
             addHeader(doc, "Members Report", "All Registered Members");
+            addReportIntro(doc,
+                    "Directory of all registered members with contact details, role, and account status.");
             addMetaRow(doc, "Generated", LocalDateTime.now().format(FMT), "Total Members", String.valueOf(members.size()));
 
             float[] cols = {30f, 160f, 200f, 80f, 80f, 80f, 130f};
@@ -646,10 +720,13 @@ public class ReportExportService {
     public byte[] generateChitsReport(List<Chit> chits) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            registerPageNumbers(pdf);
             Document doc = new Document(pdf, PageSize.A4.rotate());
             doc.setMargins(36, 36, 48, 36);
 
             addHeader(doc, "Chit Groups Report", "All Chit Fund Groups");
+            addReportIntro(doc,
+                    "Overview of every chit fund group — monthly contribution, pool size, duration, and lifecycle status.");
             addMetaRow(doc, "Generated", LocalDateTime.now().format(FMT), "Total Chits", String.valueOf(chits.size()));
 
             long open      = chits.stream().filter(c -> c.getStatus() == Chit.ChitStatus.OPEN).count();
@@ -690,10 +767,13 @@ public class ReportExportService {
     public byte[] generateMemberSummaryReport(User user, List<ChitMembership> memberships) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            registerPageNumbers(pdf);
             Document doc = new Document(pdf, PageSize.A4);
             doc.setMargins(40, 40, 50, 40);
 
             addHeader(doc, "My Chit Memberships", "Personal Summary — " + user.getFullName());
+            addReportIntro(doc,
+                    "Your personal membership portfolio across all chit groups, including monthly commitment and current status.");
             addMetaRow(doc, "Member", user.getEmail(), "Generated", LocalDateTime.now().format(FMT));
 
             long active = memberships.stream().filter(m -> m.getStatus() == ChitMembership.MembershipStatus.ACTIVE).count();
@@ -731,11 +811,14 @@ public class ReportExportService {
     public byte[] generateMemberPaymentHistoryReport(User user, ChitMembership membership, List<Payment> payments) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
+            registerPageNumbers(pdf);
             Document doc = new Document(pdf, PageSize.A4);
             doc.setMargins(40, 40, 50, 40);
 
             addHeader(doc, "Payment History",
                     membership.getChit().getName() + " — " + user.getFullName());
+            addReportIntro(doc,
+                    "Month-by-month payment statement for this membership, including fines, verification status, and admin remarks.");
             addMetaRow(doc, "Member", user.getEmail(), "Generated", LocalDateTime.now().format(FMT));
 
             // Totals

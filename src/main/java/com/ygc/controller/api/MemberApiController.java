@@ -31,6 +31,14 @@ public class MemberApiController {
     private final ChitMembershipRepository membershipRepository;
     private final BidCalculationService bidCalculationService;
 
+    private Map<String, String> buildMyChitStatusMap(User user) {
+        Map<String, String> myChitStatus = new HashMap<>();
+        for (ChitMembership m : chitService.getMembershipsForUser(user)) {
+            myChitStatus.put(String.valueOf(m.getChit().getId()), m.getStatus().name());
+        }
+        return myChitStatus;
+    }
+
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> dashboard(Authentication auth) {
         User user = apiSupport.currentUser(auth);
@@ -46,6 +54,7 @@ public class MemberApiController {
         body.put("memberships", dtoMapper.toMembershipDtos(memberships));
         body.put("activeCount", activeCount);
         body.put("availableChits", dtoMapper.toChitDtos(chitService.getAvailableChits()));
+        body.put("myChitStatus", buildMyChitStatusMap(user));
         body.put("openAuctions", dtoMapper.toAuctionDtos(auctionService.getOpenAuctions()));
         body.put("mySettlements", dtoMapper.toSettlementDtos(mySettlements));
         return ResponseEntity.ok(body);
@@ -54,13 +63,9 @@ public class MemberApiController {
     @GetMapping("/chits")
     public ResponseEntity<Map<String, Object>> availableChits(Authentication auth) {
         User user = apiSupport.currentUser(auth);
-        Map<Long, String> myChitStatus = new HashMap<>();
-        for (ChitMembership m : chitService.getMembershipsForUser(user)) {
-            myChitStatus.put(m.getChit().getId(), m.getStatus().name());
-        }
         return ResponseEntity.ok(Map.of(
                 "chits", dtoMapper.toChitDtos(chitService.getAvailableChits()),
-                "myChitStatus", myChitStatus));
+                "myChitStatus", buildMyChitStatusMap(user)));
     }
 
     @GetMapping("/chits/{id}")
@@ -71,13 +76,14 @@ public class MemberApiController {
     @PostMapping("/chits/{id}/join")
     public ResponseEntity<Map<String, String>> joinChit(
             @PathVariable Long id,
-            @RequestBody Map<String, Boolean> body,
+            @RequestBody Map<String, Object> body,
             Authentication auth) {
         boolean agreementRead = Boolean.TRUE.equals(body.get("agreementRead"));
         boolean termsAccepted = Boolean.TRUE.equals(body.get("termsAccepted"));
         boolean infoProcessingAuthorized = Boolean.TRUE.equals(body.get("infoProcessingAuthorized"));
+        String joinReason = body.get("joinReason") != null ? body.get("joinReason").toString() : null;
         chitService.requestJoin(id, apiSupport.currentUser(auth),
-                agreementRead, termsAccepted, infoProcessingAuthorized);
+                agreementRead, termsAccepted, infoProcessingAuthorized, joinReason);
         return ResponseEntity.ok(Map.of("message",
                 "Join request submitted! Awaiting admin approval."));
     }

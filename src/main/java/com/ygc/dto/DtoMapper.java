@@ -60,6 +60,7 @@ public class DtoMapper {
                 .hasWonAuction(m.isHasWonAuction())
                 .termsAccepted(m.isTermsAccepted())
                 .rejectionReason(m.getRejectionReason())
+                .joinReason(m.getJoinReason())
                 .agreementRead(m.isAgreementRead())
                 .agreementAccepted(m.isAgreementAccepted())
                 .infoProcessingAuthorized(m.isInfoProcessingAuthorized())
